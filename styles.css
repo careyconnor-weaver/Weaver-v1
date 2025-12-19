@@ -63,6 +63,7 @@ body {
     align-items: center;
     gap: 1rem;
     position: relative;
+    margin-left: 2rem;
 }
 
 .profile-btn {
@@ -108,6 +109,9 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    margin-right: auto;
+    margin-left: -1rem;
+    flex-shrink: 0;
 }
 
 .logo-image {
@@ -178,15 +182,9 @@ body {
 
 .section-title {
     font-size: 2.5rem;
-    margin-top: 3rem;
     margin-bottom: 2rem;
     text-align: center;
     color: var(--text-dark);
-}
-
-/* Exclude "Strengthening the Net" from the extra top margin */
-#strengthening-net .section-title {
-    margin-top: 0;
 }
 
 /* Hero Section */
