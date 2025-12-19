@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: weaver
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://weaver_user:C0KZ2FZFot9azEUJMGdVdrYb3hVgGfeq@dpg-d52dup63jp1c73c1ms2g-a/weaver?sslmode=require
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://weaver.onrender.com/api/gmail/callback
+      - key: OPENAI_API_KEY
+        sync: false
+
+databases:
+  - name: weaver-db
+    plan: free
+

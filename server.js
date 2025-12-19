@@ -7,6 +7,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
+const dbAPI = require('./db/api');
 
 // Load environment variables
 dotenv.config();
@@ -974,6 +975,168 @@ app.get('/api/gmail/sync-label', async (req, res) => {
     }
 });
 
+// ============ DATABASE API ROUTES ============
+
+// Users
+app.post('/api/users/signup', async (req, res) => {
+    try {
+        const { userId, email, password } = req.body;
+        if (!userId || !email || !password) {
+            return res.status(400).json({ error: 'userId, email, and password are required' });
+        }
+        const user = await dbAPI.createUser(userId, email, password);
+        res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+        console.error('Signup error:', error);
+        if (error.code === '23505') { // Unique constraint violation
+            return res.status(400).json({ error: 'An account with this email already exists' });
+        }
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
+app.post('/api/users/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+        const user = await dbAPI.getUserByEmail(email);
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Failed to login' });
+    }
+});
+
+// Contacts
+app.get('/api/contacts', async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        const contacts = await dbAPI.getContactsByUserId(userId);
+        res.json({ success: true, contacts });
+    } catch (error) {
+        console.error('Get contacts error:', error);
+        res.status(500).json({ error: 'Failed to fetch contacts' });
+    }
+});
+
+app.get('/api/contacts/:contactId', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        const contact = await dbAPI.getContactById(contactId, userId);
+        if (!contact) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+        res.json({ success: true, contact });
+    } catch (error) {
+        console.error('Get contact error:', error);
+        res.status(500).json({ error: 'Failed to fetch contact' });
+    }
+});
+
+app.post('/api/contacts', async (req, res) => {
+    try {
+        const contactData = req.body;
+        if (!contactData.userId || !contactData.id || !contactData.name) {
+            return res.status(400).json({ error: 'userId, id, and name are required' });
+        }
+        const contact = await dbAPI.createContact(contactData);
+        res.json({ success: true, contact });
+    } catch (error) {
+        console.error('Create contact error:', error);
+        res.status(500).json({ error: 'Failed to create contact' });
+    }
+});
+
+app.put('/api/contacts/:contactId', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const { userId, ...updates } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        const contact = await dbAPI.updateContact(contactId, userId, updates);
+        if (!contact) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+        res.json({ success: true, contact });
+    } catch (error) {
+        console.error('Update contact error:', error);
+        res.status(500).json({ error: 'Failed to update contact' });
+    }
+});
+
+app.delete('/api/contacts/:contactId', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        await dbAPI.deleteContact(contactId, userId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete contact error:', error);
+        res.status(500).json({ error: 'Failed to delete contact' });
+    }
+});
+
+app.delete('/api/contacts', async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        await dbAPI.deleteAllContacts(userId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete all contacts error:', error);
+        res.status(500).json({ error: 'Failed to delete contacts' });
+    }
+});
+
+// Emails
+app.post('/api/contacts/:contactId/emails', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const emailData = { ...req.body, contactId };
+        if (!emailData.id || !emailData.date || !emailData.direction) {
+            return res.status(400).json({ error: 'id, date, and direction are required' });
+        }
+        const email = await dbAPI.addEmail(contactId, emailData);
+        res.json({ success: true, email });
+    } catch (error) {
+        console.error('Add email error:', error);
+        res.status(500).json({ error: 'Failed to add email' });
+    }
+});
+
+// Notes
+app.post('/api/contacts/:contactId/notes', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const noteData = { ...req.body, contactId };
+        if (!noteData.id || !noteData.date || !noteData.summary) {
+            return res.status(400).json({ error: 'id, date, and summary are required' });
+        }
+        const note = await dbAPI.addNote(contactId, noteData);
+        res.json({ success: true, note });
+    } catch (error) {
+        console.error('Add note error:', error);
+        res.status(500).json({ error: 'Failed to add note' });
+    }
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
