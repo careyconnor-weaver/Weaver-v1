@@ -178,9 +178,15 @@ body {
 
 .section-title {
     font-size: 2.5rem;
+    margin-top: 3rem;
     margin-bottom: 2rem;
     text-align: center;
     color: var(--text-dark);
+}
+
+/* Exclude "Strengthening the Net" from the extra top margin */
+#strengthening-net .section-title {
+    margin-top: 0;
 }
 
 /* Hero Section */
