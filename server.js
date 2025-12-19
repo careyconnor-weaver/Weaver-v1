@@ -36,10 +36,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.')); // Serve static files
 
-// Initialize OpenAI
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize OpenAI (optional - only if API key is provided)
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+    try {
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+    } catch (error) {
+        console.warn('⚠️  Failed to initialize OpenAI client:', error.message);
+    }
+} else {
+    console.warn('⚠️  OPENAI_API_KEY not set. AI features (call notes processing) will not work.');
+}
 
 // Web search function using DuckDuckGo Instant Answer API (free, no API key needed)
 async function searchWeb(query) {
