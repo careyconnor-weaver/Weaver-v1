@@ -1219,6 +1219,14 @@ app.get('/api/gmail/test-labels', async (req, res) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`Weaver server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+        console.warn('⚠️  WARNING: DATABASE_URL not set. Database features will not work.');
+    } else {
+        console.log('✅ Database connection configured');
+    }
     
     // Check if API key is set
     if (!process.env.OPENAI_API_KEY) {
