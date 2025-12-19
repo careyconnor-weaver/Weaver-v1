@@ -22,8 +22,13 @@ const upload = multer({
 });
 
 // Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
+try {
+    if (!fs.existsSync('uploads')) {
+        fs.mkdirSync('uploads', { recursive: true });
+    }
+} catch (error) {
+    console.warn('⚠️  Could not create uploads directory:', error.message);
+    console.warn('   File uploads may not work properly.');
 }
 
 // Middleware
