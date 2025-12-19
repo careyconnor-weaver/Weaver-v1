@@ -2,6 +2,11 @@ const { db } = require('./index');
 const { users, contacts, emails, notes, gmailTokens } = require('./schema');
 const { eq, and, desc } = require('drizzle-orm');
 
+// Check if db is available
+if (!db) {
+    console.warn('⚠️  Database not initialized. Database operations will fail.');
+}
+
 // ============ USERS ============
 async function createUser(userId, email, password) {
     const result = await db.insert(users).values({
@@ -24,6 +29,9 @@ async function getUserById(userId) {
 
 // ============ CONTACTS ============
 async function getContactsByUserId(userId) {
+    if (!db) {
+        throw new Error('Database not initialized. Check DATABASE_URL environment variable.');
+    }
     const contactsList = await db.select().from(contacts).where(eq(contacts.userId, userId));
     
     // Get emails and notes for each contact
