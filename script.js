@@ -1295,6 +1295,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modeButtons = document.querySelectorAll('.mode-btn');
     const existingMode = document.getElementById('existing-contact-mode');
     const newMode = document.getElementById('new-contact-mode');
+    const spreadsheetMode = document.getElementById('spreadsheet-mode');
 
     modeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1307,11 +1308,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show/hide modes
             existingMode.classList.remove('active');
             newMode.classList.remove('active');
+            if (spreadsheetMode) spreadsheetMode.classList.remove('active');
             
             if (mode === 'existing') {
                 existingMode.classList.add('active');
-            } else {
+            } else if (mode === 'new') {
                 newMode.classList.add('active');
+            } else if (mode === 'spreadsheet' && spreadsheetMode) {
+                spreadsheetMode.classList.add('active');
             }
         });
     });

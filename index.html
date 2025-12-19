@@ -19,8 +19,7 @@
             <ul class="nav-menu">
                 <li><a href="#home" class="nav-link active">Home</a></li>
                 <li><a href="#about" class="nav-link">About</a></li>
-                <li><a href="#upload-spreadsheet" class="nav-link">Upload Spreadsheet</a></li>
-                <li><a href="#upload-notes" class="nav-link">Add Contact</a></li>
+                <li><a href="#upload-notes" class="nav-link">Add Contacts</a></li>
                 <li><a href="#contacts" class="nav-link">My <span class="underline-net">Net</span>work</a></li>
                 <li><a href="#strengthening-net" class="nav-link">Strengthening the <span class="underline-net">Net</span></a></li>
                 <li><a href="#tips-tricks" class="nav-link">Tips & Tricks</a></li>
@@ -56,7 +55,7 @@
                     automated follow-ups, and personalized article recommendations.
                 </p>
                 <div class="hero-buttons">
-                    <a href="#upload-spreadsheet" class="btn btn-primary">Get Started</a>
+                    <a href="#upload-notes" class="btn btn-primary">Get Started</a>
                     <a href="#about" class="btn btn-secondary">Learn More</a>
                 </div>
             </div>
@@ -117,64 +116,20 @@
         </div>
     </section>
 
-    <!-- Upload Spreadsheet Section -->
-    <section id="upload-spreadsheet" class="section">
-        <div class="container">
-            <h2 class="section-title">Upload Your Networking Tracker</h2>
-            <div class="upload-container">
-                <div class="upload-box">
-                    <div class="upload-icon">📁</div>
-                    <h3>Upload Spreadsheet</h3>
-                    <p>Upload your networking tracker spreadsheet (CSV or Excel format)</p>
-                    
-                    <div class="spreadsheet-instructions">
-                        <h4>Required Columns:</h4>
-                        <ul>
-                            <li><strong>Name</strong> - Contact's full name</li>
-                            <li><strong>Company</strong> - Company name (synonyms: Firm, Bank, Organization, Org)</li>
-                            <li><strong>Contact Date</strong> - Contact date(s) in MM/DD/YEAR format (synonyms: Date, First Email Date, First Contact)</li>
-                            <li class="date-format-note">📅 <strong>Date Format:</strong> Use MM/DD/YEAR (e.g., 1/15/2024 or 01/15/2024). You can list multiple dates separated by commas, colons, or semicolons (e.g., "1/15/2024, 2/20/2024" or "1/15/2024; 2/20/2024"). Each date will appear on the contact's timeline.</li>
-                        </ul>
-                        <h4>Optional Columns (will be saved if included):</h4>
-                        <ul>
-                            <li>Position, Title, Role</li>
-                            <li>Phone, Phone Number, Mobile</li>
-                            <li>Location, City, Address</li>
-                            <li>Email, Email Address</li>
-                            <li>Priority (Low, Medium, High)</li>
-                            <li>Any other columns will be saved as additional notes</li>
-                        </ul>
-                    </div>
-                    
-                    <input type="file" id="spreadsheet-input" accept=".csv,.xlsx,.xls" class="file-input">
-                    <label for="spreadsheet-input" class="btn btn-primary">Choose File</label>
-                    <div id="spreadsheet-status" class="upload-status" style="display: none;"></div>
-                    <div style="display: none; margin-top: 1rem;" id="process-button-container">
-                        <button type="button" id="process-spreadsheet" class="btn btn-secondary">
-                            Process Spreadsheet
-                        </button>
-                        <p class="header-note" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-medium); font-style: italic;">
-                            ⚠️ Note: Headers must be in the first row and column (e.g., Name must be in cell A1)
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Upload Call Notes / Add Contact Section -->
+    <!-- Add Contacts Section -->
     <section id="upload-notes" class="section">
         <div class="container">
-            <h2 class="section-title">Add Contact or Add Call Notes</h2>
+            <h2 class="section-title">Add Contacts</h2>
             <div class="upload-notes-container">
                 <!-- Mode Toggle -->
                 <div class="mode-toggle">
-                    <button class="mode-btn active" data-mode="existing">Add Notes to Existing Contact</button>
-                    <button class="mode-btn" data-mode="new">Add New Contact</button>
+                    <button class="mode-btn active" data-mode="new">Add New Contact</button>
+                    <button class="mode-btn" data-mode="spreadsheet">Upload Spreadsheet</button>
+                    <button class="mode-btn" data-mode="existing">Add Notes to Existing Contact</button>
                 </div>
 
                 <!-- Existing Contact Mode -->
-                <div id="existing-contact-mode" class="contact-mode active">
+                <div id="existing-contact-mode" class="contact-mode">
                     <div class="upload-box">
                         <div class="form-group">
                             <label for="contact-select">Select Contact: *</label>
@@ -217,7 +172,7 @@
                 </div>
 
                 <!-- New Contact Mode -->
-                <div id="new-contact-mode" class="contact-mode">
+                <div id="new-contact-mode" class="contact-mode active">
                     <div class="upload-box">
                         <h3>Add New Contact</h3>
                         <p>Fill in the contact information and optionally add call notes</p>
@@ -286,6 +241,55 @@
                                 Add Contact
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Upload Spreadsheet Mode -->
+                <div id="spreadsheet-mode" class="contact-mode">
+                    <div class="upload-box">
+                        <div class="upload-icon">📁</div>
+                        <h3>Upload Spreadsheet</h3>
+                        <p>Upload your networking tracker spreadsheet (CSV or Excel format)</p>
+                        
+                        <div class="spreadsheet-instructions">
+                            <h4>Required Columns:</h4>
+                            <ul>
+                                <li><strong>Name</strong> - Contact's full name</li>
+                                <li><strong>Company</strong> - Company name (synonyms: Firm, Bank, Organization, Org)</li>
+                                <li><strong>Contact Date</strong> - Contact date(s) in MM/DD/YEAR format (synonyms: Date, First Email Date, First Contact)</li>
+                                <li class="date-format-note">📅 <strong>Date Format:</strong> Use MM/DD/YEAR (e.g., 1/15/2024 or 01/15/2024). You can list multiple dates separated by commas, colons, or semicolons (e.g., "1/15/2024, 2/20/2024" or "1/15/2024; 2/20/2024"). Each date will appear on the contact's timeline.</li>
+                            </ul>
+                            <div style="border: 2px solid #ffc107; border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0; font-weight: 600;">
+                                <p style="margin: 0 0 0.75rem 0; color: var(--text-dark); font-size: 1.05rem;">
+                                    ⚠️ <strong>IMPORTANT:</strong> Your upload will only work if:
+                                </p>
+                                <ul style="margin: 0 0 0 1.5rem; padding: 0; color: var(--text-dark); font-size: 1rem;">
+                                    <li style="margin-bottom: 0.5rem;">Contacts are in the <strong>FIRST tab</strong> of your spreadsheet</li>
+                                    <li style="margin-bottom: 0;">Headers start in the <strong>first row and column (A1)</strong></li>
+                                </ul>
+                            </div>
+                            <h4>Optional Columns (will be saved if included):</h4>
+                            <ul>
+                                <li>Position, Title, Role</li>
+                                <li>Phone, Phone Number, Mobile</li>
+                                <li>Location, City, Address</li>
+                                <li>Email, Email Address</li>
+                                <li>Priority (Low, Medium, High)</li>
+                                <li>Any other columns will be saved as additional notes</li>
+                            </ul>
+                        </div>
+                        
+                        <input type="file" id="spreadsheet-input" accept=".csv,.xlsx,.xls" class="file-input">
+                        <label for="spreadsheet-input" class="btn btn-primary">Choose File</label>
+                        <div id="spreadsheet-status" class="upload-status" style="display: none;"></div>
+                        <div style="display: none; margin-top: 1rem;" id="process-button-container">
+                            <button type="button" id="process-spreadsheet" class="btn btn-secondary">
+                                Process Spreadsheet
+                            </button>
+                            <p class="header-note" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-medium); font-style: italic;">
+                                ⚠️ Note: Headers must be in the first row and column (e.g., Name must be in cell A1)
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
