@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weaver - Networking Services for Students</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="api.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="assets/Gemini_Generated_Image_apewf0apewf0apew.png" alt="Weaver Logo" class="logo-image">
+                <h1 class="logo-text">Weaver</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#upload-spreadsheet" class="nav-link">Upload Spreadsheet</a></li>
+                <li><a href="#upload-notes" class="nav-link">Add Contact</a></li>
+                <li><a href="#contacts" class="nav-link">My <span class="underline-net">Net</span>work</a></li>
+                <li><a href="#strengthening-net" class="nav-link"><span class="nav-multiline">Strengthening the<br><span class="underline-net">Net</span></span></a></li>
+                <li><a href="#tips-tricks" class="nav-link">Tips & Tricks</a></li>
+            </ul>
+            <div class="nav-right">
+                <button id="profile-btn" class="profile-btn" onclick="toggleProfileMenu()" title="Profile">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </button>
+                <div id="profile-menu" class="profile-menu" style="display: none;">
+                    <div id="profile-menu-content"></div>
+                </div>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Section -->
+    <section id="home" class="section active">
+        <div class="hero">
+            <div class="hero-content">
+                <img src="assets/Gemini_Generated_Image_apewf0apewf0apew.png" alt="Weaver Logo" class="hero-logo">
+                <h1 class="hero-title">Weaver</h1>
+                <p class="hero-subtitle">Intelligent Networking Services for Students</p>
+                <p class="hero-description">
+                    Transform your networking efforts with AI-powered contact management, 
+                    automated follow-ups, and personalized article recommendations.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#upload-spreadsheet" class="btn btn-primary">Get Started</a>
+                    <a href="#about" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section">
+        <div class="container">
+            <div class="about-hero">
+                <h1 class="about-slogan">WEAVE THE NET</h1>
+                <p class="about-tagline">Your <span class="underline-net">Net</span>working Solution</p>
+            </div>
+            <div class="about-description">
+                <p>
+                    Weaver makes networking simple and systematic whether you are starting from zero or managing hundreds of relationships. Upload a spreadsheet of existing contacts to instantly get follow-up recommendations and automated outreach, or add people one-by-one as you meet them and build a clean, exportable database you can download to Excel anytime. You can also upload photos of your call notes—Weaver will log them to the right contact and summarize the key takeaways so you always know what to do next.
+                </p>
+            </div>
+            <h2 class="section-title">About Weaver</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Our Mission</h3>
+                    <p>
+                        Weaver is dedicated to helping students build and maintain meaningful professional 
+                        relationships through intelligent networking management. We understand that networking 
+                        is crucial for career success, but keeping track of contacts, follow-ups, and 
+                        maintaining relationships can be overwhelming.
+                    </p>
+                    <h3>How Weaver Helps</h3>
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h4>Contact Database</h4>
+                            <p>Upload your networking tracker spreadsheet and instantly create a comprehensive 
+                            database of all your contacts with their firms, positions, and interaction history.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📝</div>
+                            <h4>Call Notes Summarization</h4>
+                            <p>Upload photos of your call notes and let our AI summarize and log them directly 
+                            into each contact's profile for easy reference.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📧</div>
+                            <h4>Smart Follow-ups</h4>
+                            <p>Never miss a follow-up opportunity. Weaver analyzes priority levels, last email 
+                            dates, and interaction frequency to send timely reminders.</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📰</div>
+                            <h4>Personalized Articles</h4>
+                            <p>Receive 3 relevant news articles for each contact based on your call notes, 
+                            their interests, industry, and position - perfect for meaningful follow-ups.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload Spreadsheet Section -->
+    <section id="upload-spreadsheet" class="section">
+        <div class="container">
+            <h2 class="section-title">Upload Your Networking Tracker</h2>
+            <div class="upload-container">
+                <div class="upload-box">
+                    <div class="upload-icon">📁</div>
+                    <h3>Upload Spreadsheet</h3>
+                    <p>Upload your networking tracker spreadsheet (CSV or Excel format)</p>
+                    
+                    <div class="spreadsheet-instructions">
+                        <h4>Required Columns:</h4>
+                        <ul>
+                            <li><strong>Name</strong> - Contact's full name</li>
+                            <li><strong>Company</strong> - Company name (synonyms: Firm, Bank, Organization, Org)</li>
+                            <li><strong>Contact Date</strong> - Contact date(s) in MM/DD/YEAR format (synonyms: Date, First Email Date, First Contact)</li>
+                            <li class="date-format-note">📅 <strong>Date Format:</strong> Use MM/DD/YEAR (e.g., 1/15/2024 or 01/15/2024). You can list multiple dates separated by commas, colons, or semicolons (e.g., "1/15/2024, 2/20/2024" or "1/15/2024; 2/20/2024"). Each date will appear on the contact's timeline.</li>
+                        </ul>
+                        <h4>Optional Columns (will be saved if included):</h4>
+                        <ul>
+                            <li>Position, Title, Role</li>
+                            <li>Phone, Phone Number, Mobile</li>
+                            <li>Location, City, Address</li>
+                            <li>Email, Email Address</li>
+                            <li>Priority (Low, Medium, High)</li>
+                            <li>Any other columns will be saved as additional notes</li>
+                        </ul>
+                    </div>
+                    
+                    <input type="file" id="spreadsheet-input" accept=".csv,.xlsx,.xls" class="file-input">
+                    <label for="spreadsheet-input" class="btn btn-primary">Choose File</label>
+                    <div id="spreadsheet-status" class="upload-status" style="display: none;"></div>
+                    <div style="display: none; margin-top: 1rem;" id="process-button-container">
+                        <button type="button" id="process-spreadsheet" class="btn btn-secondary">
+                            Process Spreadsheet
+                        </button>
+                        <p class="header-note" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-medium); font-style: italic;">
+                            ⚠️ Note: Headers must be in the first row and column (e.g., Name must be in cell A1)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload Call Notes / Add Contact Section -->
+    <section id="upload-notes" class="section">
+        <div class="container">
+            <h2 class="section-title">Add Contact or Add Call Notes</h2>
+            <div class="upload-notes-container">
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <button class="mode-btn active" data-mode="existing">Add Notes to Existing Contact</button>
+                    <button class="mode-btn" data-mode="new">Add New Contact</button>
+                </div>
+
+                <!-- Existing Contact Mode -->
+                <div id="existing-contact-mode" class="contact-mode active">
+                    <div class="upload-box">
+                        <div class="form-group">
+                            <label for="contact-select">Select Contact: *</label>
+                            <select id="contact-select" class="contact-dropdown" required>
+                                <option value="">-- Select a contact --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="call-date">Call Date: *</label>
+                            <input type="date" id="call-date" max="" required>
+                        </div>
+                        <div class="notes-input-toggle">
+                            <button type="button" class="toggle-btn active" data-mode="text">Write Notes</button>
+                            <button type="button" class="toggle-btn" data-mode="image">Upload Image</button>
+                        </div>
+                        
+                        <!-- Text Notes Input -->
+                        <div id="text-notes-mode" class="notes-input-mode active">
+                            <div class="form-group">
+                                <label for="notes-text">Call Notes: *</label>
+                                <textarea id="notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Image Upload Mode -->
+                        <div id="image-notes-mode" class="notes-input-mode">
+                        <div class="upload-icon">📞</div>
+                        <h3>Add Call Notes</h3>
+                        <p>Write notes or upload a photo from your call</p>
+                            <input type="file" id="notes-input" accept="image/*" class="file-input">
+                            <label for="notes-input" class="btn btn-primary btn-choose-image">Choose Image</label>
+                            <div id="notes-preview" class="image-preview"></div>
+                        </div>
+                        
+                        <div id="notes-status" class="upload-status"></div>
+                        <button id="process-notes" class="btn btn-primary btn-submit-large" style="margin-top: 2rem;">
+                            Add Call Notes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- New Contact Mode -->
+                <div id="new-contact-mode" class="contact-mode">
+                    <div class="upload-box">
+                        <h3>Add New Contact</h3>
+                        <p>Fill in the contact information and optionally add call notes</p>
+                        <form id="new-contact-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="new-contact-name">Name *</label>
+                                    <input type="text" id="new-contact-name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-contact-email">Email</label>
+                                    <input type="email" id="new-contact-email">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="new-contact-firm">Firm</label>
+                                    <input type="text" id="new-contact-firm">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-contact-position">Position</label>
+                                    <input type="text" id="new-contact-position">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="new-contact-first-email">First Contact Date</label>
+                                    <input type="date" id="new-contact-first-email" max="">
+                                </div>
+                                <div class="form-group">
+                                    <label for="new-contact-priority">Priority</label>
+                                    <select id="new-contact-priority">
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-contact-call-date">Call Date (if adding notes)</label>
+                                <input type="date" id="new-contact-call-date" max="">
+                            </div>
+                            <div class="form-group">
+                                <label>Add Call Notes (Optional)</label>
+                                <div class="notes-input-toggle">
+                                    <button type="button" class="toggle-btn active" data-mode="text" onclick="toggleNewContactNotesMode('text')">Write Notes</button>
+                                    <button type="button" class="toggle-btn" data-mode="image" onclick="toggleNewContactNotesMode('image')">Upload Image</button>
+                                </div>
+                                
+                                <!-- Text Notes Input -->
+                                <div id="new-contact-text-notes-mode" class="notes-input-mode active">
+                                    <textarea id="new-contact-notes-text" rows="6" placeholder="Enter your call notes here..."></textarea>
+                                </div>
+                                
+                                <!-- Image Upload Mode -->
+                                <div id="new-contact-image-notes-mode" class="notes-input-mode">
+                                    <input type="file" id="new-contact-notes-input" accept="image/*" class="file-input">
+                                    <label for="new-contact-notes-input" class="btn btn-secondary btn-choose-image" style="margin-top: 0.5rem;">
+                                        Choose Image
+                                    </label>
+                                    <div id="new-contact-notes-preview" class="image-preview"></div>
+                                </div>
+                            </div>
+                            <div id="new-contact-status" class="upload-status"></div>
+                            <button type="submit" class="btn btn-primary btn-submit-large" style="margin-top: 2rem;">
+                                Add Contact
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- My Network Section -->
+    <section id="contacts" class="section">
+        <div class="container">
+            <div class="network-header">
+                <div>
+                    <h2 class="section-title">My <span class="underline-net">Net</span>work</h2>
+                    <p id="contact-count" class="contact-count" style="margin: 0.5rem 0 0 0; font-size: 1rem; color: var(--text-medium); font-weight: 500;">0 contacts</p>
+                </div>
+                <button id="see-my-net" class="btn btn-primary btn-see-net">See My Net</button>
+            </div>
+            <div class="contacts-controls">
+                <div class="search-filter-container">
+                    <div class="search-box">
+                        <input type="text" id="contact-search" placeholder="Search contacts by name, firm, or position...">
+                    </div>
+                    <div class="filter-box">
+                        <label for="firm-filter">Filter by Firm:</label>
+                        <select id="firm-filter">
+                            <option value="">All Firms</option>
+                        </select>
+                    </div>
+                    <div class="sort-box">
+                        <label for="sort-by-days">
+                            <input type="checkbox" id="sort-by-days">
+                            Sort by Days Since Last Contact
+                        </label>
+                    </div>
+                    <div class="filter-box">
+                        <label for="vip-filter">
+                            <input type="checkbox" id="vip-filter">
+                            Show VIP Only
+                        </label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button id="export-excel" class="btn btn-primary">Export to Excel</button>
+                    <button id="delete-all-contacts" class="btn btn-secondary" style="background: var(--error); color: white;">Delete All Contacts</button>
+                </div>
+            </div>
+            <div id="contacts-list" class="contacts-list">
+                <div class="empty-state">
+                    <p>No contacts yet. Upload your spreadsheet to get started!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Network Map View -->
+    <section id="network-map" class="section">
+        <div class="container">
+            <div class="network-map-header">
+                <button id="back-to-network-list" class="btn btn-secondary">← Back to List</button>
+                <h2 class="section-title">My Net Map</h2>
+            </div>
+            <div class="network-map-container">
+                <canvas id="network-canvas"></canvas>
+                <div class="network-map-legend">
+                    <h3>Priority Colors</h3>
+                    <div class="legend-item">
+                        <span class="legend-color priority-high"></span>
+                        <span>High Priority</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color priority-medium"></span>
+                        <span>Medium Priority</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color priority-low"></span>
+                        <span>Low Priority</span>
+                    </div>
+                    <div class="map-instructions">
+                        <p><strong>Instructions:</strong></p>
+                        <p>• Click and drag to pan</p>
+                        <p>• Scroll to zoom</p>
+                        <p>• Hover over names for details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Detail View -->
+    <section id="contact-detail" class="section">
+        <div class="container">
+            <button id="back-to-network" class="btn btn-secondary" style="margin-bottom: 2rem;" onclick="if(window.goToMyNetwork) { window.goToMyNetwork(); } else { const link = document.querySelector('a[href=&quot;#contacts&quot;]'); if(link) link.click(); } return false;">← Back to My Network</button>
+            <div id="contact-detail-content"></div>
+        </div>
+    </section>
+
+    <!-- Quick Add Modal -->
+    <div id="quick-add-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="if (window.closeQuickAddModal) window.closeQuickAddModal();">&times;</span>
+            <h2 id="quick-add-title">Add Interaction</h2>
+            <form id="quick-add-form">
+                <div class="form-group">
+                    <label for="quick-add-date">Date: *</label>
+                    <input type="date" id="quick-add-date" max="" required>
+                </div>
+                <div id="quick-add-email-type" class="form-group" style="display: none;">
+                    <label for="quick-email-type">Email Type: *</label>
+                    <select id="quick-email-type">
+                        <option value="sent">I Sent Email</option>
+                        <option value="received">I Received Email</option>
+                    </select>
+                </div>
+                <div id="quick-add-email-subject" class="form-group" style="display: none;">
+                    <label for="quick-email-subject">General Notes (Optional)</label>
+                    <textarea id="quick-email-subject" rows="3" placeholder="Notes from the email or what they said..."></textarea>
+                </div>
+                <div id="quick-add-notes-toggle" class="form-group" style="display: none;">
+                    <label>Add Call Notes:</label>
+                    <div class="notes-input-toggle">
+                        <button type="button" class="toggle-btn active" data-mode="text" onclick="toggleQuickAddNotesMode('text')">Write Notes</button>
+                        <button type="button" class="toggle-btn" data-mode="image" onclick="toggleQuickAddNotesMode('image')">Upload Image</button>
+                    </div>
+                </div>
+                <div id="quick-add-notes-text" class="form-group" style="display: none;">
+                    <label for="quick-notes-text">Call Notes: *</label>
+                    <textarea id="quick-notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea>
+                </div>
+                <div id="quick-add-notes-image" class="form-group" style="display: none;">
+                    <label>Upload Call Notes Photo: *</label>
+                    <input type="file" id="quick-notes-image" accept="image/*" class="file-input">
+                    <label for="quick-notes-image" class="btn btn-secondary btn-choose-image" style="margin-top: 0.5rem;">
+                        Choose Image
+                    </label>
+                    <div id="quick-notes-preview" class="image-preview"></div>
+                </div>
+                <div id="quick-add-status" class="upload-status"></div>
+                <button type="button" id="quick-add-submit-btn" class="btn btn-primary btn-submit-large" style="margin-top: 1rem;">
+                    Add Interaction
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Call Notes Summary Modal -->
+    <div id="call-notes-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Call Notes Summary</h2>
+            <div id="call-notes-content"></div>
+        </div>
+    </div>
+
+    <!-- Strengthening the Net Section -->
+    <section id="strengthening-net" class="section">
+        <div class="container">
+            <h2 class="section-title">Strengthening the <span class="underline-net">Net</span></h2>
+            
+            <div class="strengthening-net-blurb">
+                <h3>Follow-up Best Practices</h3>
+                <p><strong>For cold emails:</strong> We suggest following up 1-2 times before giving up, with 10+ days between each follow-up. This gives your contact time to respond while keeping you top-of-mind.</p>
+                <p>
+                    <strong>For strong, established contacts:</strong> We suggest checking in once a quarter (~90 days) to strengthen the relationship. Regular, meaningful touchpoints help maintain and deepen professional connections.
+                    <button class="expand-favor-tip" onclick="toggleFavorTip()" aria-expanded="false" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 1.2rem; margin-left: 0.5rem; padding: 0; vertical-align: middle;">+</button>
+                </p>
+                <div id="favor-tip-content" class="favor-tip-content" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(49, 130, 206, 0.05); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
+                    <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
+                        The best way to strengthen these relationships is to do them a favor and expect nothing in return. This reciprocity will help you down the line. A good, and easy favor, is to send them an article relevant to their job, interests, or call notes. Doing this a couple times a year helps you stay top of mind when they have the opportunity to help you in return.
+                    </p>
+                </div>
+            </div>
+            
+            <p class="section-description">Set your ideal follow-up interval and see which contacts need your attention.</p>
+            
+            <div class="strengthening-net-container">
+                <div class="days-input-container">
+                    <label for="follow-up-days" class="days-input-label">
+                        <strong>Ideal Days Between Follow-ups:</strong>
+                    </label>
+                    <div class="days-input-wrapper">
+                        <input 
+                            type="number" 
+                            id="follow-up-days" 
+                            class="days-input" 
+                            min="1" 
+                            value="90" 
+                            placeholder="Enter number of days"
+                        >
+                        <span class="days-label">days</span>
+                    </div>
+                    <p class="days-input-hint">
+                        Enter the number of days you'd like between follow-ups. Contacts that haven't been contacted in this many days will be shown below.
+                    </p>
+                    <div class="cold-email-filter-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--silver-gray);">
+                        <label for="cold-email-filter" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                            <input type="checkbox" id="cold-email-filter" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);">
+                            <span style="color: var(--text-dark); font-weight: 500;">Show only cold email contacts (0 calls, 0 emails received)</span>
+                        </label>
+                        <p style="font-size: 0.9rem; color: var(--text-medium); margin-top: 0.5rem; margin-left: 2rem;">
+                            Filter for contacts with no calls and no received emails - perfect for cold email follow-up reminders.
+                        </p>
+                    </div>
+                    <div class="vip-filter-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--silver-gray);">
+                        <label for="strengthening-vip-filter" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                            <input type="checkbox" id="strengthening-vip-filter" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);">
+                            <span style="color: var(--text-dark); font-weight: 500;">Show only VIP contacts</span>
+                        </label>
+                        <p style="font-size: 0.9rem; color: var(--text-medium); margin-top: 0.5rem; margin-left: 2rem;">
+                            Filter to show only contacts marked as VIP - your most important professional relationships.
+                        </p>
+                    </div>
+                </div>
+                
+                <div id="strengthening-net-results" class="strengthening-net-results">
+                    <div class="results-header">
+                        <h3 id="results-title">Contacts Needing Follow-up</h3>
+                        <p id="results-count" class="results-count"></p>
+                    </div>
+                    <div id="strengthening-contacts-list" class="contacts-list">
+                        <!-- Contacts will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tips & Tricks Section -->
+    <section id="tips-tricks" class="section">
+        <div class="container">
+            <h2 class="section-title">Networking Tips & Tricks</h2>
+            <p class="tips-intro">Master the art of networking with these proven strategies and best practices.</p>
+            
+            <div class="tips-accordion">
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Call Structure and Call Hygiene</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li><strong>Take paper notes on every call</strong> so you can reference specifics later and send sharper follow-ups.</li>
+                                <li><strong>Come prepared with questions, but prioritize follow-ups</strong> so the conversation feels natural and you demonstrate active listening.</li>
+                                <li><strong>Start light for 1–3 minutes</strong> (how they are, how they like their city, etc.).</li>
+                                <li><strong>Do not let them take over the entire call</strong>—proactively transition into your background early ("I can tell you a bit about myself, then I'd love to hear about you…").</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Outreach Email Timing and Execution</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li><strong>Do not send first-touch/outreach emails Friday–Sunday.</strong></li>
+                                <li><strong>Do not send emails before 9:00am or after 5:00pm.</strong></li>
+                                <li><strong>Schedule-send emails</strong> and use slightly "random" timestamps (e.g., 9:02 or 3:24).</li>
+                                <li>Only schedule-send when you can <strong>respond quickly</strong> (don't schedule for times you'll be unavailable).</li>
+                                <li><strong>Always attach a typo-free resume</strong>, titled clearly (e.g., "Last, First Resume").</li>
+                                <li>Put <strong>your name in the subject line</strong> so they can search and find your thread easily (e.g., "Boston College IB Chat | Connor Carey").</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Calendar Invite Best Practices</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li><strong>Send the calendar invite immediately</strong> once a time is agreed.</li>
+                                <li>Use <strong>Google Calendar</strong> (not Apple Calendar).</li>
+                                <li>Title format: <strong>"Their Name / Your Name Chat."</strong></li>
+                                <li>Set <strong>Location = their phone number</strong>, add them as a guest, and <strong>remove the Google Meet link</strong> so they don't receive a video link.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Post-Call Follow-Up and Staying Top-of-Mind</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li><strong>Send thank-you emails every time</strong>, ideally within a few hours (or schedule for next morning if it's a late call).</li>
+                                <li><strong>Always end the call by asking for a referral</strong> ("Is there anyone else at X you'd recommend I speak with?"), and <strong>reinforce that ask in the thank-you email</strong>.</li>
+                                <li>Maintain momentum with your <strong>top 2–3 contacts per firm</strong> by sending a brief update <strong>every 1–2 months</strong>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>No-Response and Rescheduling Etiquette</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li>If you call and they don't pick up, <strong>don't keep calling</strong>—wait 10–15 minutes and email asking if it's still a good time and offering to reschedule.</li>
+                                <li>If you don't get a response to an email, <strong>wait 7–10 days</strong> and follow up; after <strong>two follow-ups</strong>, pause for a few weeks and then try again.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Working Referral Introductions (Email-Thread Mechanics)</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li>When someone introduces you by email, <strong>reply-all</strong>, move the introducer to <strong>BCC</strong>, and keep the referral in <strong>CC</strong>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span>Optional: "Pipeline Expansion" Mindset</span>
+                        <span class="accordion-icon">+</span>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            <ul class="tips-list">
+                                <li>Don't limit yourself to one alumni channel—network outside your school pipeline and even across cities; unexpected conversations can lead to introductions at your top targets.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Weaver. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Login/Signup Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-modal" onclick="closeAuthModal()">&times;</span>
+            <h2 id="auth-title">Login to Weaver</h2>
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="auth-email">Email: *</label>
+                    <input type="email" id="auth-email" required placeholder="your.email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="auth-password">Password: *</label>
+                    <input type="password" id="auth-password" required placeholder="Enter your password">
+                </div>
+                <div id="auth-status" class="upload-status" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <span id="auth-submit-text">Login</span>
+                </button>
+                <p style="text-align: center; margin-top: 1rem; color: var(--text-medium);">
+                    <a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link" style="color: var(--accent-blue); text-decoration: none;">Don't have an account? Sign up</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Gmail Label Sync Review Modal -->
+    <div id="gmail-label-review-modal" class="modal" onclick="if(event.target === this) closeGmailLabelReviewModal();">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation();">
+            <span class="close-modal" onclick="closeGmailLabelReviewModal()">&times;</span>
+            <h2>Review Emails from Gmail Label</h2>
+            <div id="gmail-label-review-content">
+                <p>Loading emails...</p>
+            </div>
+            <div id="gmail-label-review-actions" style="margin-top: 2rem; display: none;">
+                <button type="button" class="btn btn-primary" onclick="processGmailLabelEmails()">Process All Emails</button>
+                <button type="button" class="btn btn-secondary" onclick="closeGmailLabelReviewModal()" style="margin-left: 1rem;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
