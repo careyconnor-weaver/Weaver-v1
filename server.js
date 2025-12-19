@@ -104,6 +104,10 @@ async function searchWeb(query) {
 // API endpoint for web search with OpenAI
 app.post('/api/search', async (req, res) => {
     try {
+        if (!openai) {
+            return res.status(503).json({ error: 'OpenAI API key not configured. AI search features are unavailable.' });
+        }
+        
         const { query, context } = req.body;
         
         if (!query) {
@@ -170,12 +174,12 @@ app.post('/api/process-call-notes', upload.single('image'), async (req, res) => 
     try {
         console.log('Received call notes image upload request');
         
-        // Check if OpenAI API key is configured
-        if (!process.env.OPENAI_API_KEY) {
-            console.error('OpenAI API key not configured');
-            return res.status(500).json({ 
+        // Check if OpenAI is available
+        if (!openai) {
+            console.error('OpenAI client not initialized');
+            return res.status(503).json({ 
                 success: false,
-                error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your .env file.' 
+                error: 'OpenAI API key not configured. AI image processing is unavailable.' 
             });
         }
         
@@ -1242,12 +1246,13 @@ app.listen(PORT, () => {
         console.log('✅ Database connection configured');
     }
     
-    // Check if API key is set
-    if (!process.env.OPENAI_API_KEY) {
-        console.warn('⚠️  WARNING: OPENAI_API_KEY not found in .env file!');
-        console.warn('   Image processing will not work without a valid API key.');
+    // Check if OpenAI is initialized
+    if (!openai) {
+        console.warn('⚠️  WARNING: OpenAI client not initialized!');
+        console.warn('   AI features (call notes processing, search) will not work.');
+        console.warn('   Set OPENAI_API_KEY environment variable to enable AI features.');
     } else {
-        console.log('✅ OpenAI API key loaded');
+        console.log('✅ OpenAI client initialized');
     }
     
     // Check if Gmail credentials are set
