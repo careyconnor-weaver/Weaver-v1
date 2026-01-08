@@ -2049,6 +2049,21 @@ body {
     .section-title {
         font-size: 2rem;
     }
+}
+
+/* Gmail Connection Instructions Dropdown */
+.gmail-dropdown-header:hover {
+    background: rgba(49, 130, 206, 0.05) !important;
+    border-color: var(--light-accent) !important;
+}
+
+.gmail-instruction-step {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gmail-instruction-step:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.15);
 
     .about-slogan {
         font-size: 2.5rem;
@@ -2124,6 +2139,117 @@ body {
     .network-map-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+/* Research Quotes Horizontal Scroll */
+.research-quotes-scroll {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    cursor: grab;
+    scroll-behavior: smooth;
+}
+
+.research-quotes-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.research-quotes-scroll:active {
+    cursor: grabbing;
+}
+
+.research-quotes-container {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    will-change: transform;
+}
+
+.research-quotes-container.auto-scrolling {
+    animation: scroll-horizontal 60s linear infinite;
+}
+
+@keyframes scroll-horizontal {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.research-quote-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    pointer-events: auto;
+}
+
+.research-quote-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(49, 130, 206, 0.2) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+.research-quote-card a:hover {
+    text-decoration: underline;
+}
+
+/* Networking Assistant Section */
+.networking-assistant-section {
+    width: 100%;
+    max-width: 100%;
+}
+
+.gmail-check-box {
+    transition: all 0.3s ease;
+}
+
+.assistant-settings-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .assistant-settings-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .assistant-settings-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.settings-group {
+    transition: box-shadow 0.2s;
+}
+
+.settings-group:hover {
+    box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);
+}
+
+#assistant-save-status {
+    transition: opacity 0.3s;
+}
+
+/* Assistant Success Popup */
+.assistant-success-popup {
+    animation: fadeInOut 0.3s ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
     }
 }
 

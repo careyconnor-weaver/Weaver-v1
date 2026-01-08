@@ -1,5 +1,5 @@
 const { db } = require('./index');
-const { users, contacts, emails, notes, gmailTokens } = require('./schema');
+const { users, contacts, emails, notes, gmailTokens, assistantSettings } = require('./schema');
 const { eq, and, desc } = require('drizzle-orm');
 
 // Check if db is available
@@ -211,6 +211,167 @@ async function deleteGmailToken(userId) {
     return true;
 }
 
+// Helper function to get emails by contact ID
+async function getEmailsByContactId(contactId) {
+    const result = await db.select()
+        .from(emails)
+        .where(eq(emails.contactId, contactId))
+        .orderBy(emails.date);
+    return result;
+}
+
+// Helper function to get last interaction date (email or note)
+async function getLastInteractionDate(contactId) {
+    // Get most recent email
+    const recentEmails = await db.select()
+        .from(emails)
+        .where(eq(emails.contactId, contactId))
+        .orderBy(desc(emails.date))
+        .limit(1);
+    
+    // Get most recent note
+    const recentNotes = await db.select()
+        .from(notes)
+        .where(eq(notes.contactId, contactId))
+        .orderBy(desc(notes.date))
+        .limit(1);
+    
+    const emailDate = recentEmails.length > 0 ? new Date(recentEmails[0].date) : null;
+    const noteDate = recentNotes.length > 0 ? new Date(recentNotes[0].date) : null;
+    
+    if (!emailDate && !noteDate) return null;
+    if (!emailDate) return noteDate;
+    if (!noteDate) return emailDate;
+    
+    return emailDate > noteDate ? emailDate : noteDate;
+}
+
+// ============ ASSISTANT SETTINGS ============
+async function getAssistantSettings(userId) {
+    if (!db) return null;
+    try {
+        const result = await db.select().from(assistantSettings).where(eq(assistantSettings.userId, userId)).limit(1);
+        return result[0] || null;
+    } catch (error) {
+        console.error('Error getting assistant settings:', error);
+        return null;
+    }
+}
+
+async function saveAssistantSettings(userId, settings) {
+    if (!db) {
+        console.error('Database not initialized in saveAssistantSettings');
+        throw new Error('Database not initialized');
+    }
+    try {
+        const existing = await getAssistantSettings(userId);
+        
+        if (existing) {
+            const result = await db
+                .update(assistantSettings)
+                .set({ ...settings, updatedAt: new Date() })
+                .where(eq(assistantSettings.userId, userId))
+                .returning();
+            return result[0] || null;
+        } else {
+            const result = await db
+                .insert(assistantSettings)
+                .values({ userId, ...settings })
+                .returning();
+            return result[0] || null;
+        }
+    } catch (error) {
+        console.error('Error saving assistant settings:', error);
+        // Re-throw the error so it can be handled by the API endpoint
+        throw error;
+    }
+}
+
+// Get all users with enabled assistant settings
+async function getAllUsersWithAssistantSettings() {
+    if (!db) return [];
+    try {
+        const result = await db.select()
+            .from(assistantSettings)
+            .innerJoin(users, eq(assistantSettings.userId, users.id))
+            .where(eq(assistantSettings.enabled, true));
+        
+        return result.map(row => row.users);
+    } catch (error) {
+        console.error('Error getting users with assistant settings:', error);
+        return [];
+    }
+}
+
+// Get contacts needing follow-up
+async function getContactsNeedingFollowup(userId, settings) {
+    if (!db) return [];
+    try {
+        const userContacts = await getContactsByUserId(userId);
+        const now = new Date();
+        const contactsNeedingFollowup = [];
+        
+        console.log(`[getContactsNeedingFollowup] Checking ${userContacts.length} contacts for user ${userId}`);
+        console.log(`[getContactsNeedingFollowup] Settings:`, {
+            coldContactDays: settings.coldContactDays,
+            establishedContactDays: settings.establishedContactDays,
+            reminderColdContacts: settings.reminderColdContacts,
+            reminderEstablishedContacts: settings.reminderEstablishedContacts,
+            vipOnly: settings.vipOnly
+        });
+        
+        for (const contact of userContacts) {
+            // Apply VIP filter if enabled
+            if (settings.vipOnly && !contact.vip) {
+                continue;
+            }
+            
+            // Get last interaction date
+            const lastInteraction = await getLastInteractionDate(contact.id);
+            if (!lastInteraction) {
+                console.log(`[getContactsNeedingFollowup] Contact ${contact.name} has no interactions, skipping`);
+                continue;
+            }
+            
+            const daysSinceLastContact = Math.floor((now - new Date(lastInteraction)) / (1000 * 60 * 60 * 24));
+            
+            // Determine contact type (cold vs established)
+            const sentEmails = contact.emails || await getEmailsByContactId(contact.id);
+            const hasReceivedReply = sentEmails.some(e => e.direction === 'received');
+            const isEstablished = hasReceivedReply || sentEmails.length > 1;
+            
+            // Check if needs follow-up based on type
+            // IMPORTANT: Include ALL contacts that are overdue (>= threshold), not just ones that become due today
+            let needsFollowup = false;
+            if (isEstablished && settings.reminderEstablishedContacts) {
+                needsFollowup = daysSinceLastContact >= settings.establishedContactDays;
+                if (needsFollowup) {
+                    console.log(`[getContactsNeedingFollowup] Contact ${contact.name} is established and overdue: ${daysSinceLastContact} days (threshold: ${settings.establishedContactDays})`);
+                }
+            } else if (!isEstablished && settings.reminderColdContacts) {
+                needsFollowup = daysSinceLastContact >= settings.coldContactDays;
+                if (needsFollowup) {
+                    console.log(`[getContactsNeedingFollowup] Contact ${contact.name} is cold and overdue: ${daysSinceLastContact} days (threshold: ${settings.coldContactDays})`);
+                }
+            }
+            
+            if (needsFollowup) {
+                contactsNeedingFollowup.push({
+                    ...contact,
+                    daysSinceLastContact,
+                    isEstablished
+                });
+            }
+        }
+        
+        console.log(`[getContactsNeedingFollowup] Found ${contactsNeedingFollowup.length} contacts needing follow-up`);
+        return contactsNeedingFollowup;
+    } catch (error) {
+        console.error('Error getting contacts needing followup:', error);
+        return [];
+    }
+}
+
 module.exports = {
     // Users
     createUser,
@@ -227,6 +388,7 @@ module.exports = {
     
     // Emails
     addEmail,
+    getEmailsByContactId,
     
     // Notes
     addNote,
@@ -235,5 +397,11 @@ module.exports = {
     saveGmailToken,
     getGmailToken,
     deleteGmailToken,
+    
+    // Assistant Settings
+    getAssistantSettings,
+    saveAssistantSettings,
+    getAllUsersWithAssistantSettings,
+    getContactsNeedingFollowup,
 };
 

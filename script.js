@@ -1,3 +1,123 @@
+// Email Time Modal Functions (defined globally BEFORE DOMContentLoaded)
+window.openEmailTimeModal = function() {
+    console.log('openEmailTimeModal called');
+    const modal = document.getElementById('email-time-modal');
+    console.log('Modal element:', modal);
+    if (modal) {
+        // Load current settings
+        try {
+            const user = getCurrentUser();
+            if (user) {
+                const saved = localStorage.getItem(`assistantSettings_${user.id}`);
+                if (saved) {
+                    try {
+                        const settings = JSON.parse(saved);
+                        const timeInput = document.getElementById('email-time');
+                        const timezoneSelect = document.getElementById('email-timezone');
+                        if (timeInput && settings.emailTime) {
+                            timeInput.value = settings.emailTime;
+                        }
+                        if (timezoneSelect && settings.emailTimezone) {
+                            timezoneSelect.value = settings.emailTimezone;
+                        }
+                    } catch (error) {
+                        console.error('Error loading email time settings:', error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('getCurrentUser not available yet, continuing...');
+        }
+        // Use the active class which sets display: flex
+        modal.classList.add('active');
+        console.log('Modal active class added');
+    } else {
+        console.error('Email time modal not found in DOM');
+    }
+};
+
+window.closeEmailTimeModal = function() {
+    const modal = document.getElementById('email-time-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+window.saveEmailTimeSettings = function() {
+    const timeInput = document.getElementById('email-time');
+    const timezoneSelect = document.getElementById('email-timezone');
+    
+    if (!timeInput || !timezoneSelect) {
+        console.error('Email time inputs not found');
+        return;
+    }
+    
+    const time = timeInput.value;
+    const timezone = timezoneSelect.value;
+    
+    // Update display immediately
+    updateEmailTimeDisplayGlobal(time, timezone);
+    
+    // Save to existing settings
+    try {
+        const user = getCurrentUser();
+        if (user) {
+            const saved = localStorage.getItem(`assistantSettings_${user.id}`);
+            let settings = saved ? JSON.parse(saved) : {};
+            settings.emailTime = time;
+            settings.emailTimezone = timezone;
+            localStorage.setItem(`assistantSettings_${user.id}`, JSON.stringify(settings));
+        }
+    } catch (error) {
+        console.log('getCurrentUser not available, saving anyway');
+    }
+    
+    closeEmailTimeModal();
+};
+
+// Global function to update email time display (can be called before DOMContentLoaded)
+function updateEmailTimeDisplayGlobal(time, timezone) {
+    // Format time (convert 24h to 12h)
+    const [hours, minutes] = time.split(':');
+    const hour24 = parseInt(hours);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    const timeDisplay = `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    
+    // Get timezone abbreviation
+    const timezoneMap = {
+        'America/New_York': 'ET',
+        'America/Chicago': 'CT',
+        'America/Denver': 'MT',
+        'America/Los_Angeles': 'PT',
+        'America/Phoenix': 'MST',
+        'America/Anchorage': 'AKT',
+        'Pacific/Honolulu': 'HST',
+        'UTC': 'UTC',
+        'Europe/London': 'GMT',
+        'Europe/Paris': 'CET',
+        'Asia/Tokyo': 'JST',
+        'Asia/Shanghai': 'CST',
+        'Australia/Sydney': 'AEST'
+    };
+    const tzAbbr = timezoneMap[timezone] || timezone;
+    
+    const displayText = `${timeDisplay} ${tzAbbr}`;
+    
+    // Update display elements
+    const displayTime = document.getElementById('display-email-time');
+    const displayTimeWeekly = document.getElementById('display-email-time-weekly');
+    if (displayTime) {
+        displayTime.textContent = displayText;
+    }
+    if (displayTimeWeekly) {
+        displayTimeWeekly.textContent = displayText;
+    }
+}
+
+// Make it globally accessible
+window.updateEmailTimeDisplayGlobal = updateEmailTimeDisplayGlobal;
+
 // Define handleQuickAddSubmit globally BEFORE DOMContentLoaded
 // This ensures it's always available
 window.handleQuickAddSubmit = function(e) {
@@ -930,7 +1050,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update Strengthening the Net if that section is being shown
                 if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
-                    setTimeout(() => updateStrengtheningNet(), 100);
+                    setTimeout(() => {
+                        updateStrengtheningNet();
+                        // Initialize Networking Assistant when section becomes active
+                        if (typeof initNetworkingAssistant === 'function') {
+                            initNetworkingAssistant();
+                        }
+                    }, 100);
                 }
                 
                 // Initialize Tips & Tricks accordion if that section is being shown
@@ -1508,8 +1634,429 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize on page load
-    initTipsAccordion();
+    // Research Quotes Horizontal Scroll with Manual Control
+    function initResearchQuotesScroll() {
+        const scrollContainer = document.querySelector('.research-quotes-scroll');
+        const quotesContainer = document.querySelector('.research-quotes-container');
+        
+        if (!scrollContainer || !quotesContainer) {
+            return;
+        }
+        
+        // Wait for cards to be rendered to get accurate measurements
+        setTimeout(() => {
+            const cards = quotesContainer.querySelectorAll('.research-quote-card');
+            if (cards.length === 0) return;
+            
+            // Get card width including gap (350px card + 1.5rem gap = 24px)
+            const cardWidth = 350;
+            const gap = 24; // 1.5rem = 24px
+            const singleSetWidth = (cardWidth + gap) * 7; // 7 cards in first set
+            const totalWidth = singleSetWidth * 2; // We have 2 sets (original + duplicate)
+            
+            let isAutoScrolling = true;
+            let scrollPosition = 0;
+            let scrollTimeout;
+            let animationFrame;
+            const scrollSpeed = 0.5; // pixels per frame (slower for smoother scroll)
+            
+            // Calculate initial position to show cards 2, 6, 7 first
+            // Card 2 starts at: (cardWidth + gap) * 1 = 374px
+            // To show cards 2, 6, 7, we want card 2 on the left, so start at card 2 position
+            // This will show: card 2, then 3, 4, 5, 6, 7 as user scrolls right
+            const initialPosition = (cardWidth + gap) * 1; // Start at card 2 position (374px)
+            scrollPosition = initialPosition;
+            quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+            
+            // Function to handle infinite scroll wrapping
+            function wrapScrollPosition(pos) {
+                if (pos < 0) {
+                    // Scrolled left past start, wrap to end
+                    return pos + singleSetWidth;
+                } else if (pos >= singleSetWidth) {
+                    // Scrolled right past end, wrap to start
+                    return pos - singleSetWidth;
+                }
+                return pos;
+            }
+            
+            // Function to update auto-scroll position
+            function updateAutoScroll() {
+                if (isAutoScrolling) {
+                    scrollPosition += scrollSpeed;
+                    scrollPosition = wrapScrollPosition(scrollPosition);
+                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+                }
+                animationFrame = requestAnimationFrame(updateAutoScroll);
+            }
+            updateAutoScroll();
+            
+            // Handle mouse wheel for manual scrolling
+            scrollContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                // Pause auto-scroll
+                isAutoScrolling = false;
+                quotesContainer.classList.remove('auto-scrolling');
+                
+                // Calculate scroll amount (horizontal scrolling)
+                const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+                scrollPosition += delta * 0.5; // Adjust scroll sensitivity
+                
+                // Wrap position for infinite scroll
+                scrollPosition = wrapScrollPosition(scrollPosition);
+                
+                // Apply manual scroll
+                quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+                
+                // Clear existing timeout
+                clearTimeout(scrollTimeout);
+                
+                // Resume auto-scroll after user stops scrolling
+                scrollTimeout = setTimeout(() => {
+                    isAutoScrolling = true;
+                    quotesContainer.classList.add('auto-scrolling');
+                }, 2000); // Resume after 2 seconds of no scrolling
+            }, { passive: false });
+            
+            // Handle touch/swipe for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartPosition = 0;
+            
+            scrollContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchStartPosition = scrollPosition;
+            }, { passive: true });
+            
+            scrollContainer.addEventListener('touchmove', (e) => {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = touchStartX - touchX;
+                const deltaY = touchStartY - touchY;
+                
+                // Only handle horizontal swipes
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    e.preventDefault();
+                    
+                    // Pause auto-scroll
+                    isAutoScrolling = false;
+                    quotesContainer.classList.remove('auto-scrolling');
+                    
+                    // Update scroll position
+                    scrollPosition = touchStartPosition + deltaX;
+                    scrollPosition = wrapScrollPosition(scrollPosition);
+                    
+                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+                    
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        isAutoScrolling = true;
+                        quotesContainer.classList.add('auto-scrolling');
+                    }, 2000);
+                }
+            }, { passive: false });
+        }, 100); // Small delay to ensure DOM is ready
+    }
+    
+    // updateEmailTimeDisplay function (defined inside DOMContentLoaded)
+    // Uses the global function for consistency
+    function updateEmailTimeDisplay(time, timezone) {
+        if (typeof updateEmailTimeDisplayGlobal === 'function') {
+            updateEmailTimeDisplayGlobal(time, timezone);
+        }
+    }
+    
+    // Make updateEmailTimeDisplay globally accessible
+    window.updateEmailTimeDisplay = updateEmailTimeDisplay;
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('email-time-modal');
+        if (event.target === modal) {
+            closeEmailTimeModal();
+        }
+    });
+    
+    // Networking Assistant Setup
+    function initNetworkingAssistant() {
+        const assistantSettings = document.getElementById('assistant-settings');
+        const saveButton = document.getElementById('save-assistant-settings');
+        const saveStatus = document.getElementById('assistant-save-status');
+        
+        if (!assistantSettings) {
+            return;
+        }
+        
+        // Show success popup for assistant settings
+        function showAssistantSuccessPopup() {
+            const popup = document.getElementById('assistant-success-popup');
+            
+            if (popup) {
+                // Remove any existing event listeners by cloning and replacing
+                const newPopup = popup.cloneNode(true);
+                popup.parentNode.replaceChild(newPopup, popup);
+                
+                // Get the new popup reference
+                const popupRef = document.getElementById('assistant-success-popup');
+                
+                // Hide any existing popup first
+                popupRef.style.display = 'none';
+                
+                // Show the popup
+                setTimeout(() => {
+                    popupRef.style.display = 'block';
+                }, 10);
+                
+                // Hide popup function
+                const hidePopup = () => {
+                    popupRef.style.display = 'none';
+                };
+                
+                // Hide after 3 seconds
+                setTimeout(hidePopup, 3000);
+                
+                // Hide when clicking anywhere (with a small delay to allow the save click to complete)
+                setTimeout(() => {
+                    const clickHandler = (e) => {
+                        // Don't hide if clicking inside the popup or the save button
+                        if (!popupRef.contains(e.target) && e.target.id !== 'save-assistant-settings') {
+                            hidePopup();
+                            document.removeEventListener('click', clickHandler);
+                        }
+                    };
+                    document.addEventListener('click', clickHandler);
+                }, 200);
+                
+                // Hide when any form input changes
+                const inputs = assistantSettings.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    const changeHandler = () => {
+                        hidePopup();
+                        input.removeEventListener('change', changeHandler);
+                    };
+                    input.addEventListener('change', changeHandler, { once: true });
+                });
+            }
+        }
+        
+        // Initialize email time display
+        function initEmailTimeDisplay() {
+            const user = getCurrentUser();
+            if (user) {
+                const saved = localStorage.getItem(`assistantSettings_${user.id}`);
+                if (saved) {
+                    try {
+                        const settings = JSON.parse(saved);
+                        const time = settings.emailTime || '09:00';
+                        const timezone = settings.emailTimezone || 'America/New_York';
+                        updateEmailTimeDisplay(time, timezone);
+                    } catch (error) {
+                        console.error('Error loading email time display:', error);
+                    }
+                } else {
+                    // Default values
+                    updateEmailTimeDisplay('09:00', 'America/New_York');
+                }
+            }
+        }
+        
+        initEmailTimeDisplay();
+        
+        // Save settings handler
+        if (saveButton) {
+            saveButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Save Settings button clicked');
+                
+                const settings = {
+                    coldContactDays: parseInt(document.getElementById('cold-contact-days').value) || 12,
+                    establishedContactDays: parseInt(document.getElementById('established-contact-days').value) || 90,
+                    reminderColdContacts: document.getElementById('reminder-cold-contacts').checked,
+                    reminderEstablishedContacts: document.getElementById('reminder-established-contacts').checked,
+                    vipOnly: document.getElementById('reminder-vip-only').checked,
+                    emailFrequency: document.querySelector('input[name="email-frequency"]:checked')?.value || 'realtime',
+                    emailTime: document.getElementById('email-time').value || '09:00',
+                    emailTimezone: document.getElementById('email-timezone').value || 'America/New_York'
+                };
+                
+                console.log('Settings collected:', settings);
+                
+                // Validate settings
+                if (!settings.reminderColdContacts && !settings.reminderEstablishedContacts) {
+                    if (saveStatus) {
+                        saveStatus.textContent = 'Please select at least one reminder type.';
+                        saveStatus.style.color = 'var(--error)';
+                        saveStatus.style.display = 'block';
+                    }
+                    return;
+                }
+                
+                // Save to database
+                const user = getCurrentUser();
+                if (!user) {
+                    if (saveStatus) {
+                        saveStatus.textContent = 'Please log in to save settings.';
+                        saveStatus.style.color = 'var(--error)';
+                        saveStatus.style.display = 'block';
+                    }
+                    return;
+                }
+                
+                // Save to database via API
+                try {
+                    const response = await fetch('/api/assistant/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id, ...settings })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    console.log('Save settings response:', data);
+                    
+                    if (data.success) {
+                        // Also save to localStorage as backup
+                        localStorage.setItem(`assistantSettings_${user.id}`, JSON.stringify(settings));
+                        showAssistantSuccessPopup();
+                    } else {
+                        console.error('Failed to save settings:', data);
+                        if (saveStatus) {
+                            saveStatus.textContent = data.message || data.error || 'Error saving settings. Please try again.';
+                            saveStatus.style.color = 'var(--error)';
+                            saveStatus.style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    if (saveStatus) {
+                        saveStatus.textContent = `Error saving settings: ${error.message}. Please try again.`;
+                        saveStatus.style.color = 'var(--error)';
+                        saveStatus.style.display = 'block';
+                    }
+                }
+            });
+        } else {
+            console.error('Save button not found!');
+        }
+        
+        // Load saved settings
+        async function loadSavedSettings() {
+            const user = getCurrentUser();
+            if (!user) return;
+            
+            // Try to load from database first
+            try {
+                const response = await fetch(`/api/assistant/settings/${user.id}`);
+                const data = await response.json();
+                
+                if (data.success && data.settings) {
+                    const settings = data.settings;
+                    if (settings.coldContactDays) {
+                        document.getElementById('cold-contact-days').value = settings.coldContactDays;
+                    }
+                    if (settings.establishedContactDays) {
+                        document.getElementById('established-contact-days').value = settings.establishedContactDays;
+                    }
+                    if (settings.reminderColdContacts !== undefined) {
+                        document.getElementById('reminder-cold-contacts').checked = settings.reminderColdContacts;
+                    }
+                    if (settings.reminderEstablishedContacts !== undefined) {
+                        document.getElementById('reminder-established-contacts').checked = settings.reminderEstablishedContacts;
+                    }
+                    if (settings.vipOnly !== undefined) {
+                        document.getElementById('reminder-vip-only').checked = settings.vipOnly;
+                    }
+                    if (settings.emailFrequency) {
+                        const frequencyRadio = document.getElementById(`frequency-${settings.emailFrequency}`);
+                        if (frequencyRadio) {
+                            frequencyRadio.checked = true;
+                        }
+                    }
+                    if (settings.emailTime && settings.emailTimezone) {
+                        document.getElementById('email-time').value = settings.emailTime;
+                        document.getElementById('email-timezone').value = settings.emailTimezone;
+                        if (typeof updateEmailTimeDisplayGlobal === 'function') {
+                            updateEmailTimeDisplayGlobal(settings.emailTime, settings.emailTimezone);
+                        } else if (typeof updateEmailTimeDisplay === 'function') {
+                            updateEmailTimeDisplay(settings.emailTime, settings.emailTimezone);
+                        }
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.error('Error loading settings from database:', error);
+            }
+            
+            // Fallback to localStorage
+            const saved = localStorage.getItem(`assistantSettings_${user.id}`);
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    if (settings.coldContactDays) {
+                        document.getElementById('cold-contact-days').value = settings.coldContactDays;
+                    }
+                    if (settings.establishedContactDays) {
+                        document.getElementById('established-contact-days').value = settings.establishedContactDays;
+                    }
+                    if (settings.reminderColdContacts !== undefined) {
+                        document.getElementById('reminder-cold-contacts').checked = settings.reminderColdContacts;
+                    }
+                    if (settings.reminderEstablishedContacts !== undefined) {
+                        document.getElementById('reminder-established-contacts').checked = settings.reminderEstablishedContacts;
+                    }
+                    if (settings.vipOnly !== undefined) {
+                        document.getElementById('reminder-vip-only').checked = settings.vipOnly;
+                    }
+                    if (settings.emailFrequency) {
+                        const frequencyRadio = document.getElementById(`frequency-${settings.emailFrequency}`);
+                        if (frequencyRadio) {
+                            frequencyRadio.checked = true;
+                        }
+                    }
+                    if (settings.emailTime && settings.emailTimezone) {
+                        document.getElementById('email-time').value = settings.emailTime;
+                        document.getElementById('email-timezone').value = settings.emailTimezone;
+                        if (typeof updateEmailTimeDisplayGlobal === 'function') {
+                            updateEmailTimeDisplayGlobal(settings.emailTime, settings.emailTimezone);
+                        } else if (typeof updateEmailTimeDisplay === 'function') {
+                            updateEmailTimeDisplay(settings.emailTime, settings.emailTimezone);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading saved settings:', error);
+                }
+            }
+        }
+        
+        // Load settings when section becomes visible
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const section = document.getElementById('strengthening-net');
+                    if (section && section.classList.contains('active')) {
+                        loadSavedSettings();
+                    }
+                }
+            });
+        });
+        
+        const strengtheningNetSection = document.getElementById('strengthening-net');
+        if (strengtheningNetSection) {
+            observer.observe(strengtheningNetSection, { attributes: true });
+        }
+        
+        // Initialize on page load if section is already active
+        if (strengtheningNetSection && strengtheningNetSection.classList.contains('active')) {
+            loadSavedSettings();
+        }
+    }
+    
+    // Call initNetworkingAssistant when DOM is ready
+    initNetworkingAssistant();
 
     // Back to network button - always go to My Network tab
     // Use event delegation with a more specific check
@@ -5410,3 +5957,29 @@ window.toggleQuickAddNotesMode = function(mode) {
         }
     }
 };
+
+// Toggle Gmail connection instructions dropdown
+function toggleGmailInstructions() {
+    const content = document.getElementById('gmail-instructions-content');
+    const icon = document.querySelector('.gmail-dropdown-icon');
+    const header = document.querySelector('.gmail-dropdown-header');
+    
+    if (content && icon && header) {
+        if (content.style.display === 'none' || !content.style.display) {
+            content.style.display = 'block';
+            icon.textContent = '−';
+            icon.style.transform = 'rotate(0deg)';
+            header.style.borderBottomLeftRadius = '0';
+            header.style.borderBottomRightRadius = '0';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '+';
+            icon.style.transform = 'rotate(0deg)';
+            header.style.borderBottomLeftRadius = '8px';
+            header.style.borderBottomRightRadius = '8px';
+        }
+    }
+}
+
+// Make it globally accessible
+window.toggleGmailInstructions = toggleGmailInstructions;

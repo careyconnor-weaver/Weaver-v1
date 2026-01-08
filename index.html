@@ -307,6 +307,76 @@
                 </div>
                 <button id="see-my-net" class="btn btn-primary btn-see-net">See My Net</button>
             </div>
+            
+            <!-- Gmail Connection Instructions Dropdown -->
+            <div class="gmail-connection-dropdown" style="margin: 1rem 0; max-width: 700px; margin-left: auto; margin-right: auto;">
+                <button class="gmail-dropdown-header" onclick="toggleGmailInstructions()" style="width: 100%; padding: 0.75rem 1rem; background: white; border: 2px solid var(--accent-blue); border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; font-weight: 600; color: var(--text-dark); transition: all 0.3s;">
+                    <span>📧 Want to connect your Gmail account?</span>
+                    <span class="gmail-dropdown-icon" style="font-size: 1.2rem; transition: transform 0.3s;">+</span>
+                </button>
+                <div class="gmail-dropdown-content" id="gmail-instructions-content" style="display: none; padding: 1rem; background: var(--eggshell-white); border: 2px solid var(--silver-gray); border-top: none; border-radius: 0 0 8px 8px; margin-top: -2px;">
+                    <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--accent-blue); font-size: 1.1rem;">Step-by-Step Gmail Connection Guide</h3>
+                    
+                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
+                        <div style="display: flex; align-items: start; gap: 0.75rem;">
+                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">1</span>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Connect Your Gmail Account</h4>
+                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
+                                    Click on the <strong>profile icon</strong> in the top right corner, then click <strong>"Connect Gmail"</strong>. Follow the prompts to authorize Weaver.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
+                        <div style="display: flex; align-items: start; gap: 0.75rem;">
+                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">2</span>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Create a "Weaver" Label in Gmail</h4>
+                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
+                                    In Gmail, create a new label called <strong>"Weaver"</strong>:
+                                </p>
+                                <ul style="margin: 0.25rem 0 0 1.25rem; padding: 0; color: var(--text-medium); line-height: 1.6; font-size: 0.9rem;">
+                                    <li>Right-click any email → "Label" → "Create new"</li>
+                                    <li>Name it exactly <strong>"Weaver"</strong> (case-sensitive)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
+                        <div style="display: flex; align-items: start; gap: 0.75rem;">
+                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">3</span>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Move Contacts to the "Weaver" Label</h4>
+                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
+                                    Select emails or chains you want to sync and apply the <strong>"Weaver"</strong> label to them.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="gmail-instruction-step" style="margin-bottom: 0; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--success);">
+                        <div style="display: flex; align-items: start; gap: 0.75rem;">
+                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--success); flex-shrink: 0;">4</span>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Sync from Weaver Label</h4>
+                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
+                                    Go to the <strong>profile icon</strong> and click <strong>"Sync from Weaver Label"</strong>. This will:
+                                </p>
+                                <ul style="margin: 0.25rem 0 0 1.25rem; padding: 0; color: var(--text-medium); line-height: 1.6; font-size: 0.9rem;">
+                                    <li>Update interaction timelines for existing contacts</li>
+                                    <li>Prompt you to add new contacts that aren't recognized</li>
+                                </ul>
+                                <p style="margin: 0.5rem 0 0 0; color: var(--text-medium); line-height: 1.5; font-size: 0.85rem; font-style: italic;">
+                                    💡 <strong>Note:</strong> You can hit the sync button as often as you want to keep your timelines up to date!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="contacts-controls">
                 <div class="search-filter-container">
                     <div class="search-box">
@@ -448,26 +518,307 @@
         <div class="container">
             <h2 class="section-title">Strengthening the <span class="underline-net">Net</span></h2>
             
-            <div class="strengthening-net-blurb">
-                <h3>Follow-up Best Practices</h3>
-                <p><strong>For cold emails:</strong> We suggest following up 1-2 times before giving up, with 10+ days between each follow-up. This gives your contact time to respond while keeping you top-of-mind.</p>
-                <p>
-                    <strong>For strong, established contacts:</strong> We suggest checking in once a quarter (~90 days) to strengthen the relationship. Regular, meaningful touchpoints help maintain and deepen professional connections.
-                    <button class="expand-favor-tip" onclick="toggleFavorTip()" aria-expanded="false" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 1.2rem; margin-left: 0.5rem; padding: 0; vertical-align: middle;">+</button>
-                </p>
-                <div id="favor-tip-content" class="favor-tip-content" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(49, 130, 206, 0.05); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
-                    <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
-                        The best way to strengthen these relationships is to do them a favor and expect nothing in return. This reciprocity will help you down the line. A good, and easy favor, is to send them an article relevant to their job, interests, or call notes. Doing this a couple times a year helps you stay top of mind when they have the opportunity to help you in return.
-                    </p>
+            <!-- Research Quotes Scrolling Section -->
+            <div class="research-quotes-scroll" style="margin: 2rem 0 3rem 0; position: relative;">
+                <div class="research-quotes-container" style="display: flex; gap: 1.5rem; padding: 1rem 0;">
+                    <!-- Quote 1 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Prioritize maintenance over acquisition</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Four of the six networking scales… were significantly related to salary… Maintaining Internal Contacts had a significant positive impact on salary growth and obtained the highest relative weight."
+                        </p>
+                        <a href="http://homepages.se.edu/cvonbergen/files/2013/01/Effects-of-Networking-on-Career-Success_A-Longitudinal-Study.pdf" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Research → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 2 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Implement systematic follow-up</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Campaigns with no follow-ups noted an average reply rate of 9%, while those with at least one follow-up received 13% replies on average, a 44% increase… a campaign with so many as one follow-up converts about 22% more prospects than the one without any."
+                        </p>
+                        <a href="https://woodpecker.co/blog/follow-up-statistics/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Article → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 3 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔗</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Cultivate weak ties strategically</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "When we look at the experimental data, weak ties are better, on average, for job mobility than strong ties… our results show that moderately weak ties increased job mobility the most."
+                        </p>
+                        <a href="https://news.mit.edu/2022/weak-ties-linkedin-employment-0915" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Article → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 4 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🤝</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Give before asking</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Data collected from 161 employees… suggest that perceived generosity is positively related to individual social status, and frequent favor exchange was positively related to both status and productivity."
+                        </p>
+                        <a href="https://journals.aom.org/doi/10.5465/30040648" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Research → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 5 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Share information and resources regularly</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Employees who engage in organizational citizenship behaviors (OCBs) tend to be more effective in their roles because these behaviors help them develop important skills, expand their networks, and build relationships across the organization."
+                        </p>
+                        <a href="https://www.aihr.com/blog/organizational-citizenship-behavior/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Article → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 6 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Track and measure networking activities</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Networking behaviors were significantly related to number of promotions, total compensation, and perceived career success… explained by enhanced information, resources, and opportunities that result from developing networks of contacts."
+                        </p>
+                        <a href="https://onlinelibrary.wiley.com/doi/10.1002/job.253" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Research → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 7 -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Maintain connections after transitions</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Former employees (alumni) offer organizations a unique mix of insider knowledge and outside-world information and contacts, which makes them high-value relationship partners, and keeping in touch with alumni can result in business partnerships, re-hiring, and knowledge transfer."
+                        </p>
+                        <a href="https://news.ubc.ca/2024/03/why-businesses-are-cultivating-relationships-with-former-employees/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Article → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Duplicate cards for seamless loop -->
+                    <!-- Quote 1 (duplicate) -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Prioritize maintenance over acquisition</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Four of the six networking scales… were significantly related to salary… Maintaining Internal Contacts had a significant positive impact on salary growth and obtained the highest relative weight."
+                        </p>
+                        <a href="http://homepages.se.edu/cvonbergen/files/2013/01/Effects-of-Networking-on-Career-Success_A-Longitudinal-Study.pdf" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Research → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Quote 2 (duplicate) -->
+                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
+                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Implement systematic follow-up</h4>
+                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
+                            "Campaigns with no follow-ups noted an average reply rate of 9%, while those with at least one follow-up received 13% replies on average, a 44% increase… a campaign with so many as one follow-up converts about 22% more prospects than the one without any."
+                        </p>
+                        <a href="https://woodpecker.co/blog/follow-up-statistics/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Read Article → <span style="font-size: 0.75rem;">↗</span>
+                        </a>
+                    </div>
                 </div>
             </div>
             
-            <p class="section-description">Set your ideal follow-up interval and see which contacts need your attention.</p>
+            <!-- Networking Assistant Setup -->
+            <div class="networking-assistant-section" style="margin: 3rem 0; padding: 2rem; background: var(--eggshell-white); border-radius: 12px; border: 2px solid var(--silver-gray); width: 100%; max-width: 100%;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-size: 1.5rem;">
+                        Set Up Your Networking Assistant
+                    </h3>
+                    <p style="margin: 0 0 0.75rem 0; color: var(--text-dark); font-size: 1.1rem; font-weight: 500;">
+                        Don't just expand the net, strengthen it!
+                    </p>
+                    <p style="margin: 0; color: var(--text-medium); font-size: 0.95rem; font-style: italic; max-width: 800px; margin-left: auto; margin-right: auto;">
+                        — Weaver simplifies networking by enabling automated email reminders tailored to your network and preferences.
+                    </p>
+                </div>
+                
+                <!-- Follow-up Best Practices -->
+                <div class="strengthening-net-blurb" style="margin-bottom: 2.5rem; padding: 1.5rem; background: white; border-radius: 8px; border: 1px solid var(--silver-gray);">
+                    <h3 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.2rem;">Follow-up Best Practices</h3>
+                    <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6;"><strong>For cold emails:</strong> We suggest following up 1-2 times before giving up, with 10+ days between each follow-up. This gives your contact time to respond while keeping you top-of-mind.</p>
+                    <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
+                        <strong>For strong, established contacts:</strong> We suggest checking in once a quarter (~90 days) to strengthen the relationship. Regular, meaningful touchpoints help maintain and deepen professional connections.
+                        <button class="expand-favor-tip" onclick="toggleFavorTip()" aria-expanded="false" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 1.2rem; margin-left: 0.5rem; padding: 0; vertical-align: middle;">+</button>
+                    </p>
+                    <div id="favor-tip-content" class="favor-tip-content" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(49, 130, 206, 0.05); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
+                        <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
+                            The best way to strengthen these relationships is to do them a favor and expect nothing in return. This reciprocity will help you down the line. A good, and easy favor, is to send them an article relevant to their job, interests, or call notes. Doing this a couple times a year helps you stay top of mind when they have the opportunity to help you in return.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Settings Form -->
+                <div id="assistant-settings">
+                    <div class="assistant-settings-grid" style="display: grid; gap: 2rem;">
+                        
+                        <!-- Follow-up Intervals -->
+                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.1rem;">Follow-up Intervals</h4>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
+                                    Cold Contacts (no reply or call yet)
+                                </label>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <input 
+                                        type="number" 
+                                        id="cold-contact-days" 
+                                        min="1" 
+                                        value="12" 
+                                        style="width: 80px; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
+                                    >
+                                    <span style="color: var(--text-medium);">days</span>
+                                    <span style="color: var(--text-medium); font-size: 0.9rem; font-style: italic;">(Suggested: 10-14 days)</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
+                                    Established Contacts (have replied or had a call)
+                                </label>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <input 
+                                        type="number" 
+                                        id="established-contact-days" 
+                                        min="1" 
+                                        value="90" 
+                                        style="width: 80px; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
+                                    >
+                                    <span style="color: var(--text-medium);">days</span>
+                                    <span style="color: var(--text-medium); font-size: 0.9rem; font-style: italic;">(Suggested: 90 days)</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Reminder Types -->
+                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
+                            <h4 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.1rem;">Reminder Types</h4>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                                    <input 
+                                        type="checkbox" 
+                                        id="reminder-cold-contacts" 
+                                        checked
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
+                                    >
+                                    <span style="color: var(--text-dark);">Cold contact follow-ups</span>
+                                </label>
+                                
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                                    <input 
+                                        type="checkbox" 
+                                        id="reminder-established-contacts" 
+                                        checked
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
+                                    >
+                                    <span style="color: var(--text-dark);">Established contact check-ins</span>
+                                </label>
+                                
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--silver-gray);">
+                                    <input 
+                                        type="checkbox" 
+                                        id="reminder-vip-only" 
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
+                                    >
+                                    <span style="color: var(--text-dark); font-weight: 500;">Only include VIP contacts</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Email Frequency -->
+                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: var(--text-dark); font-size: 1.1rem;">Email Frequency</h4>
+                                <button 
+                                    id="edit-email-time-btn" 
+                                    class="btn btn-secondary" 
+                                    style="padding: 0.4rem 0.75rem; font-size: 0.85rem;"
+                                    onclick="openEmailTimeModal()"
+                                >
+                                    Edit Time
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
+                                    <input 
+                                        type="radio" 
+                                        name="email-frequency" 
+                                        id="frequency-realtime" 
+                                        value="realtime"
+                                        checked
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); margin-top: 0.2rem;"
+                                    >
+                                    <div style="flex: 1;">
+                                        <span style="color: var(--text-dark); font-weight: 500; display: block; margin-bottom: 0.25rem;">Real-time reminders</span>
+                                        <span style="color: var(--text-medium); font-size: 0.9rem;">Email at <span id="display-email-time">9:00 AM ET</span> whenever contacts reach their follow-up time horizon</span>
+                                    </div>
+                                </label>
+                                
+                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
+                                    <input 
+                                        type="radio" 
+                                        name="email-frequency" 
+                                        id="frequency-weekly" 
+                                        value="weekly"
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); margin-top: 0.2rem;"
+                                    >
+                                    <div style="flex: 1;">
+                                        <span style="color: var(--text-dark); font-weight: 500; display: block; margin-bottom: 0.25rem;">Weekly digest</span>
+                                        <span style="color: var(--text-medium); font-size: 0.9rem;">One email per week (Monday <span id="display-email-time-weekly">9:00 AM ET</span>) with all contacts needing follow-up</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Save Button -->
+                    <div style="margin-top: 2rem; text-align: center; position: relative;">
+                        <button 
+                            id="save-assistant-settings" 
+                            class="btn btn-primary" 
+                            style="padding: 0.75rem 2rem; font-size: 1rem;"
+                        >
+                            Save Settings
+                        </button>
+                        <!-- Success Notification Popup -->
+                        <div id="assistant-success-popup" class="assistant-success-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #28a745; color: white; padding: 1.5rem 2rem; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); z-index: 3000; font-size: 1rem; font-weight: 500; text-align: center; min-width: 300px; max-width: 500px;">
+                            ✓ You have successfully updated your email preferences
+                        </div>
+                        <p id="assistant-save-status" style="margin: 1rem 0 0 0; color: var(--text-medium); font-size: 0.9rem; display: none;"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Page Break / Separator -->
+            <hr style="margin: 3rem 0; border: none; border-top: 3px solid var(--silver-gray); width: 100%; max-width: 100%;">
+            
+            <!-- Contacts Needing Follow-up Section -->
+            <div style="margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 1.5rem 0; color: var(--accent-blue); font-size: 1.5rem; text-align: center;">
+                    Preview Your Contacts That Need a Follow-up
+                </h3>
+            </div>
             
             <div class="strengthening-net-container">
                 <div class="days-input-container">
                     <label for="follow-up-days" class="days-input-label">
-                        <strong>Ideal Days Between Follow-ups:</strong>
+                        <strong>Days Since Last Contact:</strong>
                     </label>
                     <div class="days-input-wrapper">
                         <input 
@@ -481,7 +832,7 @@
                         <span class="days-label">days</span>
                     </div>
                     <p class="days-input-hint">
-                        Enter the number of days you'd like between follow-ups. Contacts that haven't been contacted in this many days will be shown below.
+                        Enter the number of days since last contact. Contacts that haven't been contacted in this many days will be shown below.
                     </p>
                     <div class="cold-email-filter-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--silver-gray);">
                         <label for="cold-email-filter" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
@@ -515,6 +866,73 @@
             </div>
         </div>
     </section>
+
+    <!-- Email Time Settings Modal -->
+    <div id="email-time-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeEmailTimeModal()">&times;</span>
+            <h2 style="margin: 0 0 1.5rem 0; color: var(--text-dark);">Email Delivery Time Settings</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
+                        Time
+                    </label>
+                    <input 
+                        type="time" 
+                        id="email-time" 
+                        value="09:00"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
+                    >
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
+                        Timezone
+                    </label>
+                    <select 
+                        id="email-timezone" 
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem; background: white; cursor: pointer;"
+                    >
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        <option value="America/Phoenix">Arizona Time (MST)</option>
+                        <option value="America/Anchorage">Alaska Time (AKT)</option>
+                        <option value="Pacific/Honolulu">Hawaii Time (HST)</option>
+                        <option value="UTC">UTC</option>
+                        <option value="Europe/London">London (GMT)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Asia/Shanghai">Shanghai (CST)</option>
+                        <option value="Australia/Sydney">Sydney (AEST)</option>
+                    </select>
+                </div>
+                
+                <p style="margin: 0; color: var(--text-medium); font-size: 0.9rem; line-height: 1.5;">
+                    Emails will be sent at this time based on your selected timezone.
+                </p>
+            </div>
+            
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <button 
+                    class="btn btn-secondary" 
+                    onclick="closeEmailTimeModal()"
+                    style="padding: 0.75rem 1.5rem;"
+                >
+                    Cancel
+                </button>
+                <button 
+                    class="btn btn-primary" 
+                    onclick="saveEmailTimeSettings()"
+                    style="padding: 0.75rem 1.5rem;"
+                >
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Tips & Tricks Section -->
     <section id="tips-tricks" class="section">

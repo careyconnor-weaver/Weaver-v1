@@ -7,7 +7,9 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
+const cron = require('node-cron');
 const dbAPI = require('./db/api');
+const { Resend } = require('resend');
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +50,20 @@ if (process.env.OPENAI_API_KEY) {
     }
 } else {
     console.warn('⚠️  OPENAI_API_KEY not set. AI features (call notes processing) will not work.');
+}
+
+// Initialize Resend email service
+let resend = null;
+if (process.env.RESEND_API_KEY) {
+    try {
+        resend = new Resend(process.env.RESEND_API_KEY);
+        console.log('✅ Resend email service initialized');
+    } catch (error) {
+        console.warn('⚠️  Failed to initialize Resend:', error.message);
+    }
+} else {
+    console.warn('⚠️  RESEND_API_KEY not set. Email reminders will not work.');
+    console.warn('   Get your API key at https://resend.com/api-keys');
 }
 
 // Web search function using DuckDuckGo Instant Answer API (free, no API key needed)
@@ -1234,6 +1250,16 @@ app.get('/api/gmail/test-labels', async (req, res) => {
     }
 });
 
+// Track last email sent time per user to avoid duplicates
+const lastEmailSent = new Map();
+
+// Schedule cron job - runs every 5 minutes (after routes are defined)
+cron.schedule('*/5 * * * *', () => {
+    processReminderEmails();
+});
+
+console.log('📅 Email reminder cron job scheduled (runs every 5 minutes)');
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Weaver server running on http://localhost:${PORT}`);
@@ -1264,6 +1290,18 @@ app.listen(PORT, () => {
         console.log('✅ Gmail API credentials loaded');
     }
     
+    // Check if Resend is configured
+    if (!process.env.RESEND_API_KEY) {
+        console.warn('⚠️  WARNING: RESEND_API_KEY not set!');
+        console.warn('   Email reminders will not work without Resend API key.');
+        console.warn('   Get your API key at https://resend.com/api-keys');
+        console.warn('   See RESEND_SETUP.md for setup instructions.');
+    } else {
+        console.log('✅ Resend email service configured');
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <noreply@weaver.app>';
+        console.log(`   Emails will be sent from: ${fromEmail}`);
+    }
+    
     console.log(`\nAPI Endpoints:`);
     console.log(`  - POST /api/process-call-notes - Process call notes images`);
     console.log(`  - POST /api/search - Web search with AI`);
@@ -1273,6 +1311,629 @@ app.listen(PORT, () => {
     console.log(`  - POST /api/gmail/disconnect - Disconnect Gmail`);
     console.log(`  - GET  /api/gmail/test-labels - Test Gmail label access (diagnostic)`);
     console.log(`  - GET  /api/gmail/sync-label - Fetch emails from Gmail label`);
-    console.log(`  - GET  /api/health - Health check\n`);
+    console.log(`  - GET  /api/health - Health check`);
+    console.log(`  - POST /api/assistant/settings - Save assistant settings`);
+    console.log(`  - GET  /api/assistant/settings/:userId - Get assistant settings`);
+    console.log(`  - GET  /api/test/send-reminder/:userId - Test send reminder email (uses Resend)\n`);
+});
+
+// Duplicate cron job removed - already scheduled above
+
+// Generate professional HTML email body with Weaver branding
+function generateEmailBody(contacts) {
+    const sortedContacts = contacts.sort((a, b) => b.daysSinceLastContact - a.daysSinceLastContact);
+    
+    // Get production URL from environment or use localhost
+    const weaverUrl = process.env.WEAVER_URL || 'http://localhost:3000';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@weaver.app';
+    
+    let html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Weaver Follow-up Reminder</title>
+        <style>
+            /* Reset styles for email clients */
+            body, table, td, p, a, li, blockquote {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+            }
+            table, td {
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+            }
+            img {
+                -ms-interpolation-mode: bicubic;
+                border: 0;
+                outline: none;
+                text-decoration: none;
+            }
+            
+            /* Main styles */
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                background-color: #f5f5f0;
+                color: #1a2332;
+                line-height: 1.6;
+            }
+            
+            .email-container {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #ffffff;
+            }
+            
+            /* Header with gradient */
+            .email-header {
+                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+                padding: 40px 30px;
+                text-align: center;
+            }
+            
+            .email-header h1 {
+                color: #ffffff;
+                font-size: 28px;
+                font-weight: 600;
+                margin: 0;
+                letter-spacing: -0.5px;
+            }
+            
+            .email-header .subtitle {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 16px;
+                margin-top: 8px;
+            }
+            
+            /* Content area */
+            .email-content {
+                padding: 40px 30px;
+            }
+            
+            .greeting {
+                font-size: 18px;
+                color: #1a2332;
+                margin-bottom: 20px;
+            }
+            
+            .intro-text {
+                font-size: 16px;
+                color: #4a5568;
+                margin-bottom: 30px;
+                line-height: 1.7;
+            }
+            
+            .contacts-count {
+                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                display: inline-block;
+                font-weight: 600;
+                font-size: 18px;
+                margin-bottom: 30px;
+            }
+            
+            /* Contact cards */
+            .contact-card {
+                background: #f5f5f0;
+                border-left: 4px solid #3182ce;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            
+            .contact-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            
+            .contact-name {
+                font-size: 20px;
+                font-weight: 600;
+                color: #1a2332;
+                margin: 0;
+            }
+            
+            .days-badge {
+                background: #f56565;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            
+            .contact-type {
+                display: inline-block;
+                background: #e2e8f0;
+                color: #3182ce;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 12px;
+            }
+            
+            .contact-details {
+                color: #4a5568;
+                font-size: 14px;
+                line-height: 1.8;
+            }
+            
+            .contact-details strong {
+                color: #1a2332;
+                font-weight: 600;
+            }
+            
+            /* CTA Button */
+            .cta-section {
+                text-align: center;
+                margin: 40px 0 30px;
+            }
+            
+            .cta-button {
+                display: inline-block;
+                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+                color: white !important;
+                padding: 16px 32px;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 16px;
+                box-shadow: 0 4px 6px rgba(49, 130, 206, 0.3);
+                transition: transform 0.2s;
+            }
+            
+            .cta-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(49, 130, 206, 0.4);
+            }
+            
+            /* Footer */
+            .email-footer {
+                background: #f5f5f0;
+                padding: 30px;
+                text-align: center;
+                border-top: 1px solid #e2e8f0;
+            }
+            
+            .footer-text {
+                color: #718096;
+                font-size: 14px;
+                line-height: 1.6;
+                margin: 8px 0;
+            }
+            
+            .footer-link {
+                color: #3182ce;
+                text-decoration: none;
+            }
+            
+            .footer-link:hover {
+                text-decoration: underline;
+            }
+            
+            /* Responsive */
+            @media only screen and (max-width: 600px) {
+                .email-content {
+                    padding: 30px 20px;
+                }
+                
+                .email-header {
+                    padding: 30px 20px;
+                }
+                
+                .email-header h1 {
+                    font-size: 24px;
+                }
+                
+                .contact-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .days-badge {
+                    margin-top: 8px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div style="background-color: #f5f5f0; padding: 20px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container">
+                            <!-- Header -->
+                            <tr>
+                                <td class="email-header">
+                                    <!-- Add your logo here (uncomment and update URL): -->
+                                    <!-- <img src="${weaverUrl}/logo.png" alt="Weaver" style="height: 40px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"> -->
+                                    <h1>Weaver</h1>
+                                    <div class="subtitle">Follow-up Reminder</div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td class="email-content">
+                                    <div class="greeting">Hi there!</div>
+                                    <div class="intro-text">
+                                        Don't just expand the net—strengthen it. Here are the contacts that need your attention:
+                                    </div>
+                                    
+                                    <div class="contacts-count">
+                                        ${contacts.length} Contact${contacts.length !== 1 ? 's' : ''} Need Follow-up
+                                    </div>
+    `;
+    
+    sortedContacts.forEach(contact => {
+        const typeLabel = contact.isEstablished ? 'Established Contact' : 'Cold Contact';
+        const typeClass = contact.isEstablished ? 'established' : 'cold';
+        
+        html += `
+                                    <div class="contact-card">
+                                        <div class="contact-header">
+                                            <h2 class="contact-name">${contact.name}</h2>
+                                            <span class="days-badge">${contact.daysSinceLastContact} days</span>
+                                        </div>
+                                        <div class="contact-type">${typeLabel}</div>
+                                        <div class="contact-details">
+                                            ${contact.email ? `<strong>Email:</strong> ${contact.email}<br>` : ''}
+                                            ${contact.firm ? `<strong>Firm:</strong> ${contact.firm}<br>` : ''}
+                                            ${contact.position ? `<strong>Position:</strong> ${contact.position}<br>` : ''}
+                                        </div>
+                                    </div>
+        `;
+    });
+    
+    html += `
+                                    <div class="cta-section">
+                                        <a href="${weaverUrl}/#contacts" class="cta-button">View in Weaver →</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td class="email-footer">
+                                    <p class="footer-text">
+                                        This email was sent by <strong>Weaver</strong> based on your networking preferences.
+                                    </p>
+                                    <p class="footer-text">
+                                        You can update your settings in the <a href="${weaverUrl}/#strengthening" class="footer-link">"Strengthening the Net"</a> tab.
+                                    </p>
+                                    <p class="footer-text" style="margin-top: 20px; font-size: 12px; color: #a0aec0;">
+                                        © ${new Date().getFullYear()} Weaver. All rights reserved.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </body>
+    </html>
+    `;
+    
+    return html;
+}
+
+// Send reminder email to user using Resend
+async function sendReminderEmail(userId, userEmail, contacts) {
+    try {
+        // Check if Resend is initialized
+        if (!resend) {
+            console.error('Resend not initialized. Please set RESEND_API_KEY environment variable.');
+            return false;
+        }
+        
+        // Validate email address
+        if (!userEmail || !userEmail.includes('@')) {
+            console.error(`Invalid email address: ${userEmail}`);
+            return false;
+        }
+        
+        // Generate email content
+        const emailSubject = `Weaver: ${contacts.length} Contact${contacts.length !== 1 ? 's' : ''} Need Your Follow-up`;
+        const emailBody = generateEmailBody(contacts);
+        
+        // Get from email (should be verified domain in Resend)
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <noreply@weaver.app>';
+        const fromName = process.env.RESEND_FROM_NAME || 'Weaver';
+        
+        // Send email via Resend
+        const { data, error } = await resend.emails.send({
+            from: fromEmail,
+            to: [userEmail],
+            subject: emailSubject,
+            html: emailBody,
+        });
+        
+        if (error) {
+            console.error(`Error sending reminder email to ${userEmail}:`, error);
+            return false;
+        }
+        
+        console.log(`✅ Sent reminder email to ${userEmail} with ${contacts.length} contacts (Resend ID: ${data?.id})`);
+        return true;
+    } catch (error) {
+        console.error(`Error sending reminder email to ${userEmail}:`, error);
+        return false;
+    }
+}
+
+// Check if email should be sent now based on user settings
+function shouldSendEmailNow(settings, userId) {
+    const now = new Date();
+    const userTimezone = settings.emailTimezone || 'America/New_York';
+    
+    // Get current time in user's timezone using Intl.DateTimeFormat
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimezone,
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+    });
+    
+    const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimezone,
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+        weekday: 'short'
+    });
+    
+    const timeParts = timeFormatter.formatToParts(now);
+    const dateParts = dateFormatter.formatToParts(now);
+    
+    const currentHour = parseInt(timeParts.find(p => p.type === 'hour').value);
+    const currentMinute = parseInt(timeParts.find(p => p.type === 'minute').value);
+    const dayOfWeek = dateParts.find(p => p.type === 'weekday').value;
+    const day = dateParts.find(p => p.type === 'day').value;
+    const month = dateParts.find(p => p.type === 'month').value;
+    const year = dateParts.find(p => p.type === 'year').value;
+    
+    // Create a date key for tracking (YYYY-MM-DD format)
+    const dateKey = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    
+    // Check if we already sent an email today for this user
+    const lastSentKey = `${userId}_${dateKey}`;
+    if (lastEmailSent.has(lastSentKey)) {
+        console.log(`[shouldSendEmailNow] Already sent email to user ${userId} today (${dateKey})`);
+        return false; // Already sent today
+    }
+    
+    const [hours, minutes] = settings.emailTime.split(':');
+    const targetHour = parseInt(hours);
+    const targetMinute = parseInt(minutes);
+    
+    if (settings.emailFrequency === 'weekly') {
+        // Send once per week (Monday at specified time)
+        // dayOfWeek will be 'Mon', 'Tue', etc.
+        const isMonday = dayOfWeek === 'Mon' || dayOfWeek === 'Monday';
+        const isTargetTime = currentHour === targetHour && 
+                            currentMinute >= targetMinute && 
+                            currentMinute < targetMinute + 5; // 5-minute window
+        
+        if (isMonday && isTargetTime) {
+            console.log(`[shouldSendEmailNow] Weekly email time matched for user ${userId}: ${currentHour}:${currentMinute.toString().padStart(2, '0')} (target: ${targetHour}:${targetMinute.toString().padStart(2, '0')})`);
+        }
+        
+        return isMonday && isTargetTime;
+    } else {
+        // Real-time: Send daily at specified time
+        // Check if we're within the 5-minute window
+        const isTargetTime = currentHour === targetHour && 
+                            currentMinute >= targetMinute && 
+                            currentMinute < targetMinute + 5;
+        
+        if (isTargetTime) {
+            console.log(`[shouldSendEmailNow] Daily email time matched for user ${userId}: ${currentHour}:${currentMinute.toString().padStart(2, '0')} (target: ${targetHour}:${targetMinute.toString().padStart(2, '0')})`);
+        } else {
+            console.log(`[shouldSendEmailNow] Daily email time NOT matched for user ${userId}: ${currentHour}:${currentMinute.toString().padStart(2, '0')} (target: ${targetHour}:${targetMinute.toString().padStart(2, '0')})`);
+        }
+        
+        return isTargetTime;
+    }
+}
+
+// Process reminder emails for all users
+async function processReminderEmails() {
+    console.log('🔄 Processing reminder emails...');
+    
+    try {
+        // Get all users with enabled assistant settings
+        const users = await dbAPI.getAllUsersWithAssistantSettings();
+        
+        for (const user of users) {
+            const settings = await dbAPI.getAssistantSettings(user.id);
+            if (!settings || !settings.enabled) continue;
+            
+            // Check if it's time to send email based on frequency
+            const shouldSend = shouldSendEmailNow(settings, user.id);
+            if (!shouldSend) continue;
+            
+            // Get contacts needing follow-up (includes ALL overdue contacts)
+            const contacts = await dbAPI.getContactsNeedingFollowup(user.id, settings);
+            
+            if (contacts.length > 0) {
+                const sent = await sendReminderEmail(user.id, user.email, contacts);
+                if (sent) {
+                    // Mark that we sent an email today for this user
+                    const now = new Date();
+                    const userTimezone = settings.emailTimezone || 'America/New_York';
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: userTimezone,
+                        day: 'numeric',
+                        month: 'numeric',
+                        year: 'numeric'
+                    });
+                    const parts = formatter.formatToParts(now);
+                    const day = parts.find(p => p.type === 'day').value;
+                    const month = parts.find(p => p.type === 'month').value;
+                    const year = parts.find(p => p.type === 'year').value;
+                    const dateKey = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    lastEmailSent.set(`${user.id}_${dateKey}`, true);
+                    
+                    // Clean up old entries (keep only last 7 days)
+                    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    for (const [key, value] of lastEmailSent.entries()) {
+                        // Extract date from key and check if it's older than 7 days
+                        const keyDate = key.split('_')[1];
+                        if (keyDate && new Date(keyDate) < sevenDaysAgo) {
+                            lastEmailSent.delete(key);
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log('✅ Finished processing reminder emails');
+    } catch (error) {
+        console.error('❌ Error processing reminder emails:', error);
+    }
+}
+
+// ============ ASSISTANT SETTINGS API ENDPOINTS ============
+
+// Save assistant settings
+app.post('/api/assistant/settings', async (req, res) => {
+    try {
+        const userId = req.body.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
+        
+        // Check if user exists, if not create a placeholder user
+        let user = await dbAPI.getUserById(userId);
+        if (!user) {
+            console.log(`User ${userId} not found, creating placeholder user`);
+            // Create a placeholder user so we can save settings
+            // Email will be set when Gmail is connected
+            try {
+                await dbAPI.createUser(userId, `user-${userId}@placeholder.weaver`, 'placeholder-password');
+                user = await dbAPI.getUserById(userId);
+                console.log('Placeholder user created');
+            } catch (createError) {
+                console.error('Error creating placeholder user:', createError);
+                // If user creation fails, still try to save settings (might work if FK constraint is relaxed)
+            }
+        }
+        
+        const settings = {
+            coldContactDays: req.body.coldContactDays || 12,
+            establishedContactDays: req.body.establishedContactDays || 90,
+            reminderColdContacts: req.body.reminderColdContacts !== undefined ? req.body.reminderColdContacts : true,
+            reminderEstablishedContacts: req.body.reminderEstablishedContacts !== undefined ? req.body.reminderEstablishedContacts : true,
+            vipOnly: req.body.vipOnly || false,
+            emailFrequency: req.body.emailFrequency || 'realtime',
+            emailTime: req.body.emailTime || '09:00',
+            emailTimezone: req.body.emailTimezone || 'America/New_York',
+            enabled: req.body.enabled !== undefined ? req.body.enabled : true
+        };
+        
+        const saved = await dbAPI.saveAssistantSettings(userId, settings);
+        
+        if (saved) {
+            res.json({ success: true, settings: saved });
+        } else {
+            console.error('Failed to save settings - saveAssistantSettings returned null');
+            res.status(500).json({ error: 'Failed to save settings', message: 'Database operation failed. Please try again.' });
+        }
+    } catch (error) {
+        console.error('Error saving assistant settings:', error);
+        
+        // Check for foreign key constraint violation
+        if (error.code === '23503' || error.message?.includes('violates foreign key constraint')) {
+            // Try to create user and retry
+            try {
+                const userId = req.body.userId;
+                await dbAPI.createUser(userId, `user-${userId}@placeholder.weaver`, 'placeholder-password');
+                // Retry saving settings
+                const settings = {
+                    coldContactDays: req.body.coldContactDays || 12,
+                    establishedContactDays: req.body.establishedContactDays || 90,
+                    reminderColdContacts: req.body.reminderColdContacts !== undefined ? req.body.reminderColdContacts : true,
+                    reminderEstablishedContacts: req.body.reminderEstablishedContacts !== undefined ? req.body.reminderEstablishedContacts : true,
+                    vipOnly: req.body.vipOnly || false,
+                    emailFrequency: req.body.emailFrequency || 'realtime',
+                    emailTime: req.body.emailTime || '09:00',
+                    emailTimezone: req.body.emailTimezone || 'America/New_York',
+                    enabled: req.body.enabled !== undefined ? req.body.enabled : true
+                };
+                const saved = await dbAPI.saveAssistantSettings(userId, settings);
+                if (saved) {
+                    return res.json({ success: true, settings: saved });
+                }
+            } catch (retryError) {
+                console.error('Error retrying after user creation:', retryError);
+            }
+            
+            return res.status(400).json({ 
+                error: 'Database error', 
+                message: 'Unable to save settings. Please try again.' 
+            });
+        }
+        
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// Get assistant settings
+app.get('/api/assistant/settings/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const settings = await dbAPI.getAssistantSettings(userId);
+        
+        if (settings) {
+            res.json({ success: true, settings });
+        } else {
+            res.json({ success: true, settings: null });
+        }
+    } catch (error) {
+        console.error('Error getting assistant settings:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Test endpoint to manually trigger reminder email
+app.get('/api/test/send-reminder/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const settings = await dbAPI.getAssistantSettings(userId);
+        
+        if (!settings) {
+            return res.status(404).json({ error: 'Assistant settings not found for user' });
+        }
+        
+        const user = await dbAPI.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const contacts = await dbAPI.getContactsNeedingFollowup(userId, settings);
+        const sent = await sendReminderEmail(userId, user.email, contacts);
+        
+        res.json({ 
+            success: sent, 
+            contactsCount: contacts.length,
+            message: sent ? `Email sent with ${contacts.length} contacts` : 'Failed to send email'
+        });
+    } catch (error) {
+        console.error('Error in test send reminder:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
 });
 

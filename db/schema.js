@@ -62,11 +62,28 @@ const gmailTokens = pgTable('gmail_tokens', {
     updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
+// Assistant settings table
+const assistantSettings = pgTable('assistant_settings', {
+    userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+    coldContactDays: integer('cold_contact_days').default(12),
+    establishedContactDays: integer('established_contact_days').default(90),
+    reminderColdContacts: boolean('reminder_cold_contacts').default(true),
+    reminderEstablishedContacts: boolean('reminder_established_contacts').default(true),
+    vipOnly: boolean('vip_only').default(false),
+    emailFrequency: varchar('email_frequency', { length: 20 }).default('realtime'), // 'realtime' or 'weekly'
+    emailTime: varchar('email_time', { length: 10 }).default('09:00'), // HH:MM format
+    emailTimezone: varchar('email_timezone', { length: 50 }).default('America/New_York'),
+    enabled: boolean('enabled').default(true),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
 module.exports = {
     users,
     contacts,
     emails,
     notes,
     gmailTokens,
+    assistantSettings,
 };
 
