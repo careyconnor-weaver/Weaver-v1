@@ -433,6 +433,8 @@ function handleAuth(e) {
         
         // Create new user
         const userId = Date.now().toString();
+        
+        // Save to localStorage first
         users[email] = {
             id: userId,
             email: email,
@@ -440,6 +442,26 @@ function handleAuth(e) {
             createdAt: new Date().toISOString()
         };
         localStorage.setItem('weaver_users', JSON.stringify(users));
+        
+        // Also create user in database
+        try {
+            const signupResponse = await fetch('/api/users/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, email, password })
+            });
+            
+            if (!signupResponse.ok) {
+                const errorData = await signupResponse.json();
+                // If user already exists in DB, that's okay - continue with login
+                if (errorData.error && !errorData.error.includes('already exists')) {
+                    console.warn('Failed to create user in database:', errorData);
+                }
+            }
+        } catch (dbError) {
+            console.warn('Failed to create user in database (continuing with localStorage):', dbError);
+            // Continue anyway - user is saved in localStorage
+        }
         
         // Log in the new user
         setCurrentUser({ id: userId, email: email });
@@ -462,6 +484,35 @@ function handleAuth(e) {
             status.className = 'upload-status error';
             status.style.display = 'block';
             return;
+        }
+        
+        // Verify user exists in database, create if missing
+        try {
+            const loginResponse = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (!loginResponse.ok) {
+                // If login fails, try to create user in database (might be missing)
+                const signupResponse = await fetch('/api/users/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, email, password })
+                });
+                
+                if (!signupResponse.ok) {
+                    const errorData = await signupResponse.json();
+                    // If user already exists, that's fine - continue
+                    if (errorData.error && !errorData.error.includes('already exists')) {
+                        console.warn('Failed to sync user to database:', errorData);
+                    }
+                }
+            }
+        } catch (dbError) {
+            console.warn('Failed to verify user in database (continuing with localStorage):', dbError);
+            // Continue anyway - user is in localStorage
         }
         
         // Log in the user

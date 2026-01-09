@@ -1817,18 +1817,37 @@ app.post('/api/assistant/settings', async (req, res) => {
         }
         
         // Check if user exists, if not create a placeholder user
-        let user = await dbAPI.getUserById(userId);
+        let user = null;
+        try {
+            user = await dbAPI.getUserById(userId);
+        } catch (getUserError) {
+            console.error('Error getting user:', getUserError);
+            // Continue to try creating user
+        }
+        
         if (!user) {
             console.log(`User ${userId} not found, creating placeholder user`);
             // Create a placeholder user so we can save settings
             // Email will be set when Gmail is connected
             try {
-                await dbAPI.createUser(userId, `user-${userId}@placeholder.weaver`, 'placeholder-password');
-                user = await dbAPI.getUserById(userId);
-                console.log('Placeholder user created');
+                // Ensure userId is a string
+                const userIdString = String(userId);
+                await dbAPI.createUser(userIdString, `user-${userIdString}@placeholder.weaver`, 'placeholder-password');
+                user = await dbAPI.getUserById(userIdString);
+                console.log('Placeholder user created successfully');
             } catch (createError) {
                 console.error('Error creating placeholder user:', createError);
-                // If user creation fails, still try to save settings (might work if FK constraint is relaxed)
+                console.error('Create error details:', {
+                    message: createError.message,
+                    code: createError.code,
+                    stack: createError.stack
+                });
+                // Return a more helpful error message
+                return res.status(500).json({ 
+                    error: 'Failed to create user account', 
+                    message: 'Unable to save settings. Please try logging out and logging back in, or contact support if the issue persists.',
+                    details: createError.message
+                });
             }
         }
         
@@ -1844,7 +1863,9 @@ app.post('/api/assistant/settings', async (req, res) => {
             enabled: req.body.enabled !== undefined ? req.body.enabled : true
         };
         
-        const saved = await dbAPI.saveAssistantSettings(userId, settings);
+        // Ensure userId is a string when saving settings
+        const userIdString = String(userId);
+        const saved = await dbAPI.saveAssistantSettings(userIdString, settings);
         
         if (saved) {
             res.json({ success: true, settings: saved });
@@ -1859,7 +1880,7 @@ app.post('/api/assistant/settings', async (req, res) => {
         if (error.code === '23503' || error.message?.includes('violates foreign key constraint')) {
             // Try to create user and retry
             try {
-                const userId = req.body.userId;
+                const userId = String(req.body.userId); // Ensure it's a string
                 await dbAPI.createUser(userId, `user-${userId}@placeholder.weaver`, 'placeholder-password');
                 // Retry saving settings
                 const settings = {
@@ -1879,11 +1900,16 @@ app.post('/api/assistant/settings', async (req, res) => {
                 }
             } catch (retryError) {
                 console.error('Error retrying after user creation:', retryError);
+                console.error('Retry error details:', {
+                    message: retryError.message,
+                    code: retryError.code,
+                    stack: retryError.stack
+                });
             }
             
             return res.status(400).json({ 
                 error: 'Database error', 
-                message: 'Unable to save settings. Please try again.' 
+                message: 'Unable to save settings. Please try logging out and logging back in, or contact support if the issue persists.' 
             });
         }
         
