@@ -495,7 +495,7 @@ function updateUserDisplay() {
 // Check Gmail connection status
 async function checkGmailStatus(userId) {
     try {
-        const response = await fetch(`http://localhost:3000/api/gmail/status?userId=${userId}`);
+        const response = await fetch(`/api/gmail/status?userId=${userId}`);
         const data = await response.json();
         
         if (data.connected) {
@@ -578,7 +578,7 @@ async function connectGmail() {
         console.log('Connecting to Gmail, userId:', currentUser.id);
         
         // Get auth URL from server
-        const response = await fetch(`http://localhost:3000/api/gmail/auth?userId=${currentUser.id}`, {
+        const response = await fetch(`/api/gmail/auth?userId=${currentUser.id}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -615,7 +615,7 @@ async function connectGmail() {
                     clearInterval(checkInterval);
                     // Check connection status
                     try {
-                        const statusResponse = await fetch(`http://localhost:3000/api/gmail/status?userId=${currentUser.id}`);
+                        const statusResponse = await fetch(`/api/gmail/status?userId=${currentUser.id}`);
                         const statusData = await statusResponse.json();
                         
                         if (statusData.connected) {
@@ -641,8 +641,8 @@ async function connectGmail() {
         console.error('Error details:', error.message, error.stack);
         
         // More specific error messages
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            alert('Cannot connect to server. Make sure:\n1. The server is running (npm start)\n2. You are accessing the site via http://localhost:3000 (not file://)\n3. No firewall is blocking the connection');
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Load failed')) {
+            alert('Cannot connect to server. Please check:\n1. Your internet connection\n2. The server is running\n3. No firewall is blocking the connection\n\nIf the problem persists, check the browser console (F12) for more details.');
         } else {
             alert(`Error connecting to Gmail: ${error.message}\n\nCheck the browser console (F12) for more details.`);
         }
@@ -660,7 +660,7 @@ async function disconnectGmail() {
     }
 
     try {
-        const response = await fetch('http://localhost:3000/api/gmail/disconnect', {
+        const response = await fetch('/api/gmail/disconnect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id })
@@ -725,7 +725,7 @@ async function syncGmailLabel() {
     }
     
     try {
-        const response = await fetch(`http://localhost:3000/api/gmail/sync-label?userId=${currentUser.id}&labelName=Weaver`);
+        const response = await fetch(`/api/gmail/sync-label?userId=${currentUser.id}&labelName=Weaver`);
         const data = await response.json();
         
         if (!data.success) {
@@ -5211,7 +5211,7 @@ async function processCallNotesForNewContact(file, contact, statusElement, callD
                 statusElement.className = 'upload-status';
                 statusElement.style.display = 'block';
                 
-                const response = await fetch('http://localhost:3000/api/process-call-notes', {
+                const response = await fetch('/api/process-call-notes', {
                     method: 'POST',
                     body: formData
                 });
@@ -5386,7 +5386,7 @@ async function processCallNotes(file, contactId, callDate, notesText) {
                 
                 status.textContent = 'Uploading image to server...';
                 
-                const response = await fetch('http://localhost:3000/api/process-call-notes', {
+                const response = await fetch('/api/process-call-notes', {
                     method: 'POST',
                     body: formData
                 });

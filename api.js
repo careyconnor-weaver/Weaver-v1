@@ -1,6 +1,7 @@
 // API functions for web search with OpenAI
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// Use relative URL to work in both development and production
+const API_BASE_URL = '/api';
 
 /**
  * Search the web using OpenAI
