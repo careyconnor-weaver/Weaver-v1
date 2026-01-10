@@ -1,3 +1,35 @@
+// Global error handler to catch any errors and prevent site from breaking
+window.addEventListener('error', function(e) {
+    console.error('Global error:', e.error, e.filename, e.lineno);
+    // Don't let errors break the site
+    return true;
+});
+
+// Ensure navigation always works - initialize immediately (before DOMContentLoaded)
+(function() {
+    try {
+        // Basic navigation fallback that works even if DOM isn't ready
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a.nav-link');
+            if (link && link.href && link.href.includes('#')) {
+                const targetId = link.getAttribute('href').replace('#', '');
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    targetSection.classList.add('active');
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        });
+    } catch (err) {
+        console.error('Error setting up basic navigation:', err);
+    }
+})();
+
 // Email Time Modal Functions (defined globally BEFORE DOMContentLoaded)
 window.openEmailTimeModal = function() {
     console.log('openEmailTimeModal called');
@@ -1057,76 +1089,173 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Navigation functionality
+// Navigation functionality - wrap in try-catch to ensure it always works
 document.addEventListener('DOMContentLoaded', function() {
-    // Check authentication on page load
-    checkAuth();
-    
-    // Set up auth form handler
-    const authForm = document.getElementById('auth-form');
-    if (authForm) {
-        authForm.addEventListener('submit', handleAuth);
+    try {
+        // Check authentication on page load
+        if (typeof checkAuth === 'function') {
+            checkAuth();
+        }
+    } catch (error) {
+        console.error('Error in checkAuth:', error);
     }
     
-    // Close auth modal when clicking outside
-    const authModal = document.getElementById('auth-modal');
-    if (authModal) {
-        authModal.addEventListener('click', (e) => {
-            if (e.target === authModal) {
-                closeAuthModal();
-            }
-        });
+    try {
+        // Set up auth form handler
+        const authForm = document.getElementById('auth-form');
+        if (authForm && typeof handleAuth === 'function') {
+            authForm.addEventListener('submit', handleAuth);
+        }
+    } catch (error) {
+        console.error('Error setting up auth form:', error);
     }
-    // Navigation
-    const navLinks = document.querySelectorAll('.nav-link');
-    const sections = document.querySelectorAll('.section');
-    const hamburger = document.querySelector('.hamburger');
-    const navMenu = document.querySelector('.nav-menu');
+    
+    try {
+        // Close auth modal when clicking outside
+        const authModal = document.getElementById('auth-modal');
+        if (authModal && typeof closeAuthModal === 'function') {
+            authModal.addEventListener('click', (e) => {
+                if (e.target === authModal) {
+                    closeAuthModal();
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error setting up auth modal:', error);
+    }
+    
+    // Navigation - This MUST work for the site to function
+    try {
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('.nav-menu');
 
-    // Smooth scroll and section switching
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = link.getAttribute('href').substring(1);
-            
-            // Update active nav link
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            
-            // Show target section (hide contact detail if showing)
-            sections.forEach(s => s.classList.remove('active'));
-            const targetSection = document.getElementById(targetId);
-            if (targetSection) {
-                targetSection.classList.add('active');
-                
-                // Update Strengthening the Net if that section is being shown
-                if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
-                    setTimeout(() => {
-                        updateStrengtheningNet();
-                        // Initialize Networking Assistant when section becomes active
-                        if (typeof initNetworkingAssistant === 'function') {
-                            initNetworkingAssistant();
+        // Ensure at least one section is visible on load
+        if (sections.length > 0) {
+            const homeSection = document.getElementById('home');
+            if (homeSection) {
+                homeSection.classList.add('active');
+            } else if (sections[0]) {
+                sections[0].classList.add('active');
+            }
+        }
+
+        // Smooth scroll and section switching
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const href = link.getAttribute('href');
+                    if (!href || !href.startsWith('#')) return;
+                    
+                    const targetId = href.substring(1);
+                    if (!targetId) return;
+                    
+                    // Update active nav link
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    
+                    // Show target section (hide contact detail if showing)
+                    sections.forEach(s => s.classList.remove('active'));
+                    const targetSection = document.getElementById(targetId);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                        
+                        // Scroll to top smoothly
+                        try {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        } catch (scrollError) {
+                            window.scrollTo(0, 0);
                         }
-                    }, 100);
+                        
+                        // Update Strengthening the Net if that section is being shown
+                        if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
+                            setTimeout(() => {
+                                try {
+                                    updateStrengtheningNet();
+                                    // Initialize Networking Assistant when section becomes active
+                                    if (typeof initNetworkingAssistant === 'function') {
+                                        initNetworkingAssistant();
+                                    }
+                                } catch (err) {
+                                    console.error('Error initializing strengthening net:', err);
+                                }
+                            }, 100);
+                        }
+                        
+                        // Initialize Tips & Tricks accordion if that section is being shown
+                        if (targetId === 'tips-tricks' && typeof initTipsAccordion === 'function') {
+                            setTimeout(() => {
+                                try {
+                                    initTipsAccordion();
+                                } catch (err) {
+                                    console.error('Error initializing tips accordion:', err);
+                                }
+                            }, 100);
+                        }
+                    } else {
+                        console.warn('Target section not found:', targetId);
+                    }
+                    
+                    // Close mobile menu
+                    if (navMenu) {
+                        navMenu.classList.remove('active');
+                    }
+                } catch (error) {
+                    console.error('Error handling navigation click:', error);
+                    // Still try to navigate even if there's an error
+                    const href = link.getAttribute('href');
+                    if (href && href.startsWith('#')) {
+                        const targetId = href.substring(1);
+                        const targetSection = document.getElementById(targetId);
+                        if (targetSection) {
+                            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                            targetSection.classList.add('active');
+                            navLinks.forEach(l => l.classList.remove('active'));
+                            link.classList.add('active');
+                        }
+                    }
                 }
-                
-                // Initialize Tips & Tricks accordion if that section is being shown
-                if (targetId === 'tips-tricks') {
-                    setTimeout(() => initTipsAccordion(), 100);
-                }
-            }
-            
-            // Close mobile menu
-            navMenu.classList.remove('active');
+            });
         });
-    });
 
-    // Handle hero button navigation
-    const heroButtons = document.querySelectorAll('.hero-buttons a');
-    heroButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = button.getAttribute('href').substring(1);
+        // Handle hero button navigation
+        const heroButtons = document.querySelectorAll('.hero-buttons a');
+        heroButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const href = button.getAttribute('href');
+                    if (!href || !href.startsWith('#')) return;
+                    
+                    const targetId = href.substring(1);
+                    if (!targetId) return;
+                    
+                    // Find and click the corresponding nav link
+                    const navLink = document.querySelector(`a[href="#${targetId}"]`);
+                    if (navLink) {
+                        navLink.click();
+                    } else {
+                        // Fallback: navigate directly
+                        sections.forEach(s => s.classList.remove('active'));
+                        const targetSection = document.getElementById(targetId);
+                        if (targetSection) {
+                            targetSection.classList.add('active');
+                            navLinks.forEach(l => l.classList.remove('active'));
+                            const matchingNavLink = document.querySelector(`a[href="#${targetId}"]`);
+                            if (matchingNavLink) {
+                                matchingNavLink.classList.add('active');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling hero button click:', error);
+                }
             
             // Update active nav link
             navLinks.forEach(l => {
