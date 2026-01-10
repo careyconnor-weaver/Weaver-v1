@@ -342,15 +342,23 @@ window.handleQuickAddSubmit = function(e) {
 
 // Check if user is logged in on page load
 function checkAuth() {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-        // Show login modal
-        showAuthModal();
-    } else {
-        // Update UI with user info
-        updateUserDisplay();
-        // Load user's contacts
-        filterContacts();
+    try {
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+            // Don't auto-show login modal - let user navigate first
+            // showAuthModal();
+        } else {
+            // Update UI with user info
+            if (typeof updateUserDisplay === 'function') {
+                updateUserDisplay();
+            }
+            // Load user's contacts
+            if (typeof filterContacts === 'function') {
+                filterContacts();
+            }
+        }
+    } catch (error) {
+        console.error('Error in checkAuth:', error);
     }
 }
 
