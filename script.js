@@ -1229,7 +1229,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show target section (hide all others)
                     document.querySelectorAll('.section').forEach(s => {
                         s.classList.remove('active');
-                        s.style.display = 'none';
                     });
                     
                     const targetSection = document.getElementById(targetId);
@@ -1237,7 +1236,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (targetSection) {
                         targetSection.classList.add('active');
-                        targetSection.style.display = 'block';
                         console.log('Activated section:', targetId);
                         
                         // Scroll to top smoothly
@@ -1307,10 +1305,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (targetSection) {
                             document.querySelectorAll('.section').forEach(s => {
                                 s.classList.remove('active');
-                                s.style.display = 'none';
                             });
                             targetSection.classList.add('active');
-                            targetSection.style.display = 'block';
                             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                             newLink.classList.add('active');
                             window.scrollTo(0, 0);
