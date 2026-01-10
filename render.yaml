@@ -17,7 +17,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: https://weaver.onrender.com/api/gmail/callback
+        value: https://weaver-kuwd.onrender.com/api/gmail/callback
       - key: OPENAI_API_KEY
         sync: false
 
