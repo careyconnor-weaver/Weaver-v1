@@ -1,4 +1,3 @@
-
 // Email Time Modal Functions (defined globally BEFORE DOMContentLoaded)
 window.openEmailTimeModal = function() {
     console.log('openEmailTimeModal called');
@@ -342,23 +341,15 @@ window.handleQuickAddSubmit = function(e) {
 
 // Check if user is logged in on page load
 function checkAuth() {
-    try {
-        const currentUser = getCurrentUser();
-        if (!currentUser) {
-            // Don't auto-show login modal - let user navigate first
-            // showAuthModal();
-        } else {
-            // Update UI with user info
-            if (typeof updateUserDisplay === 'function') {
-                updateUserDisplay();
-            }
-            // Load user's contacts
-            if (typeof filterContacts === 'function') {
-                filterContacts();
-            }
-        }
-    } catch (error) {
-        console.error('Error in checkAuth:', error);
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        // Don't auto-show login modal - let users navigate first
+        // They can click profile icon to login when ready
+    } else {
+        // Update UI with user info
+        updateUserDisplay();
+        // Load user's contacts
+        filterContacts();
     }
 }
 
@@ -442,8 +433,6 @@ function handleAuth(e) {
         
         // Create new user
         const userId = Date.now().toString();
-        
-        // Save to localStorage first
         users[email] = {
             id: userId,
             email: email,
@@ -451,26 +440,6 @@ function handleAuth(e) {
             createdAt: new Date().toISOString()
         };
         localStorage.setItem('weaver_users', JSON.stringify(users));
-        
-        // Also create user in database
-        try {
-            const signupResponse = await fetch('/api/users/signup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, email, password })
-            });
-            
-            if (!signupResponse.ok) {
-                const errorData = await signupResponse.json();
-                // If user already exists in DB, that's okay - continue with login
-                if (errorData.error && !errorData.error.includes('already exists')) {
-                    console.warn('Failed to create user in database:', errorData);
-                }
-            }
-        } catch (dbError) {
-            console.warn('Failed to create user in database (continuing with localStorage):', dbError);
-            // Continue anyway - user is saved in localStorage
-        }
         
         // Log in the new user
         setCurrentUser({ id: userId, email: email });
@@ -493,35 +462,6 @@ function handleAuth(e) {
             status.className = 'upload-status error';
             status.style.display = 'block';
             return;
-        }
-        
-        // Verify user exists in database, create if missing
-        try {
-            const loginResponse = await fetch('/api/users/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            
-            if (!loginResponse.ok) {
-                // If login fails, try to create user in database (might be missing)
-                const signupResponse = await fetch('/api/users/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id, email, password })
-                });
-                
-                if (!signupResponse.ok) {
-                    const errorData = await signupResponse.json();
-                    // If user already exists, that's fine - continue
-                    if (errorData.error && !errorData.error.includes('already exists')) {
-                        console.warn('Failed to sync user to database:', errorData);
-                    }
-                }
-            }
-        } catch (dbError) {
-            console.warn('Failed to verify user in database (continuing with localStorage):', dbError);
-            // Continue anyway - user is in localStorage
         }
         
         // Log in the user
@@ -1066,175 +1006,102 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Navigation functionality - MUST run even if other code fails
+// Navigation functionality
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded fired');
-    
-    // Check authentication on page load (but don't let it break navigation)
-    try {
-        if (typeof checkAuth === 'function') {
-            checkAuth();
-        }
-    } catch (error) {
-        console.error('Error in checkAuth:', error);
-    }
+    // Check authentication on page load
+    checkAuth();
     
     // Set up auth form handler
-    try {
-        const authForm = document.getElementById('auth-form');
-        if (authForm && typeof handleAuth === 'function') {
-            authForm.addEventListener('submit', handleAuth);
-        }
-    } catch (error) {
-        console.error('Error setting up auth form:', error);
+    const authForm = document.getElementById('auth-form');
+    if (authForm) {
+        authForm.addEventListener('submit', handleAuth);
     }
     
     // Close auth modal when clicking outside
-    try {
-        const authModal = document.getElementById('auth-modal');
-        if (authModal && typeof closeAuthModal === 'function') {
-            authModal.addEventListener('click', (e) => {
-                if (e.target === authModal) {
-                    closeAuthModal();
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Error setting up auth modal:', error);
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) {
+        authModal.addEventListener('click', (e) => {
+            if (e.target === authModal) {
+                closeAuthModal();
+            }
+        });
     }
-    
-    // NAVIGATION - This must work no matter what
-    console.log('Setting up navigation...');
+    // Navigation
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('.section');
     const hamburger = document.querySelector('.hamburger');
     const navMenu = document.querySelector('.nav-menu');
-    
-    console.log('Found', navLinks.length, 'nav links');
-    console.log('Found', sections.length, 'sections');
 
     // Smooth scroll and section switching
-    if (navLinks.length > 0) {
-        navLinks.forEach((link, index) => {
-            console.log('Setting up link', index, link.getAttribute('href'));
-            link.addEventListener('click', function(e) {
-                console.log('Nav link clicked:', link.getAttribute('href'));
-                e.preventDefault();
-                e.stopPropagation();
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            
+            // Update active nav link
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            
+            // Show target section (hide contact detail if showing)
+            sections.forEach(s => s.classList.remove('active'));
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.classList.add('active');
                 
-                const href = link.getAttribute('href');
-                if (!href || !href.startsWith('#')) {
-                    console.warn('Invalid href:', href);
-                    return;
+                // Update Strengthening the Net if that section is being shown
+                if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
+                    setTimeout(() => {
+                        updateStrengtheningNet();
+                        // Initialize Networking Assistant when section becomes active
+                        if (typeof initNetworkingAssistant === 'function') {
+                            initNetworkingAssistant();
+                        }
+                    }, 100);
                 }
                 
-                const targetId = href.substring(1);
-                console.log('Navigating to:', targetId);
-                
-                // Update active nav link
-                navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                
-                // Show target section (hide all others)
-                sections.forEach(s => s.classList.remove('active'));
-                const targetSection = document.getElementById(targetId);
-                
-                if (targetSection) {
-                    targetSection.classList.add('active');
-                    console.log('Activated section:', targetId);
-                    
-                    // Scroll to top
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    
-                    // Update Strengthening the Net if that section is being shown
-                    if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
-                        setTimeout(() => {
-                            try {
-                                updateStrengtheningNet();
-                                if (typeof initNetworkingAssistant === 'function') {
-                                    initNetworkingAssistant();
-                                }
-                            } catch (err) {
-                                console.error('Error initializing strengthening net:', err);
-                            }
-                        }, 100);
-                    }
-                    
-                    // Initialize Tips & Tricks accordion if that section is being shown
-                    if (targetId === 'tips-tricks' && typeof initTipsAccordion === 'function') {
-                        setTimeout(() => {
-                            try {
-                                initTipsAccordion();
-                            } catch (err) {
-                                console.error('Error initializing tips accordion:', err);
-                            }
-                        }, 100);
-                    }
-                } else {
-                    console.error('Target section not found:', targetId);
+                // Initialize Tips & Tricks accordion if that section is being shown
+                if (targetId === 'tips-tricks') {
+                    setTimeout(() => initTipsAccordion(), 100);
                 }
-                
-                // Close mobile menu
-                if (navMenu) {
-                    navMenu.classList.remove('active');
-                }
-            });
+            }
+            
+            // Close mobile menu
+            navMenu.classList.remove('active');
         });
-    } else {
-        console.error('No nav links found!');
-    }
+    });
 
     // Handle hero button navigation
     const heroButtons = document.querySelectorAll('.hero-buttons a');
-    if (heroButtons.length > 0) {
-        heroButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                console.log('Hero button clicked:', button.getAttribute('href'));
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const href = button.getAttribute('href');
-                if (!href || !href.startsWith('#')) {
-                    return;
-                }
-                
-                const targetId = href.substring(1);
-                console.log('Navigating to:', targetId);
-                
-                // Update active nav link
-                navLinks.forEach(l => {
-                    if (l.getAttribute('href') === href) {
-                        navLinks.forEach(nl => nl.classList.remove('active'));
-                        l.classList.add('active');
-                    }
-                });
-                
-                // Show target section
-                sections.forEach(s => s.classList.remove('active'));
-                const targetSection = document.getElementById(targetId);
-                if (targetSection) {
-                    targetSection.classList.add('active');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+    heroButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = button.getAttribute('href').substring(1);
+            
+            // Update active nav link
+            navLinks.forEach(l => {
+                if (l.getAttribute('href') === button.getAttribute('href')) {
+                    navLinks.forEach(nl => nl.classList.remove('active'));
+                    l.classList.add('active');
                 }
             });
+            
+            // Show target section
+            sections.forEach(s => s.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
         });
-    }
+    });
 
     // Hamburger menu toggle
-    if (hamburger && navMenu) {
-        hamburger.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
-        });
-    }
+    hamburger.addEventListener('click', () => {
+        navMenu.classList.toggle('active');
+    });
 
     // Close mobile menu when clicking outside
     document.addEventListener('click', (e) => {
-        if (hamburger && navMenu && !hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+        if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
             navMenu.classList.remove('active');
         }
     });
-    
-    console.log('Navigation setup complete');
 
     // Initialize contacts from localStorage
     loadContacts();
