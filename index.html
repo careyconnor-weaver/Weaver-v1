@@ -98,11 +98,18 @@
                             <p>Upload photos of your call notes and let our AI summarize and log them directly 
                             into each contact's profile for easy reference.</p>
                         </div>
-                        <div class="feature-card">
+                        <div class="feature-card" style="position: relative; filter: blur(3px); opacity: 0.6; pointer-events: none;">
                             <div class="feature-icon">📧</div>
                             <h4>Smart Follow-ups</h4>
                             <p>Never miss a follow-up opportunity. Weaver analyzes priority levels, last email 
                             dates, and interaction frequency to send timely reminders.</p>
+                            <!-- Coming Soon Overlay -->
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(245, 245, 240, 0.9); border-radius: 8px; z-index: 10;">
+                                <div style="text-align: center; padding: 1rem;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🚧</div>
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--accent-blue);">Coming Soon</div>
+                                </div>
+                            </div>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">📰</div>
@@ -661,8 +668,9 @@
                     </div>
                 </div>
                 
-                <!-- Settings Form -->
-                <div id="assistant-settings">
+                <!-- TEMPORARILY HIDDEN: Networking Assistant Settings -->
+                <!-- To restore: Remove this comment and the closing comment below, then change style="display: none;" to display: block; -->
+                <div id="assistant-settings" style="display: none;">
                     <div class="assistant-settings-grid" style="display: grid; gap: 2rem;">
                         
                         <!-- Follow-up Intervals -->
@@ -803,6 +811,13 @@
                         <p id="assistant-save-status" style="margin: 1rem 0 0 0; color: var(--text-medium); font-size: 0.9rem; display: none;"></p>
                     </div>
                 </div>
+                <!-- END TEMPORARILY HIDDEN: Networking Assistant Settings -->
+                <!-- 
+                CODE PRESERVED FOR LATER RESTORATION:
+                The entire assistant settings section (Follow-up Intervals, Reminder Types, Email Frequency, Save Button)
+                is preserved above but hidden with style="display: none;"
+                To restore: Remove the comment tags and change display: none to display: block
+                -->
             </div>
             
             <!-- Page Break / Separator -->
