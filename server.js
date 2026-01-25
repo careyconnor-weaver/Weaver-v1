@@ -1065,6 +1065,8 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
         
+        console.log(`Login attempt for email: ${email}`);
+        
         const user = await dbAPI.getUserByEmail(email);
         
         if (!user) {
@@ -1072,14 +1074,22 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
         
+        console.log(`User found: ${user.id}, checking password...`);
+        
         // Compare passwords (trim whitespace for safety)
         const storedPassword = (user.password || '').trim();
         const providedPassword = (password || '').trim();
         
+        console.log(`Password comparison: stored length=${storedPassword.length}, provided length=${providedPassword.length}`);
+        
         if (storedPassword !== providedPassword) {
             console.log(`Login attempt: Password mismatch for email: ${email}`);
+            console.log(`Stored password (first 3 chars): ${storedPassword.substring(0, 3)}...`);
+            console.log(`Provided password (first 3 chars): ${providedPassword.substring(0, 3)}...`);
             return res.status(401).json({ error: 'Invalid email or password' });
         }
+        
+        console.log(`Login successful for user: ${user.id}`);
         
         // Return full user data (excluding password)
         const { password: _, ...userWithoutPassword } = user;
