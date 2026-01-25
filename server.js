@@ -10,6 +10,7 @@ const { google } = require('googleapis');
 const cron = require('node-cron');
 const dbAPI = require('./db/api');
 const { Resend } = require('resend');
+const stripeRoutes = require('./routes/stripe');
 
 // Load environment variables
 dotenv.config();
@@ -35,8 +36,14 @@ try {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 app.use(express.static('.')); // Serve static files
+
+// Stripe routes (must be before express.json() to handle webhooks properly)
+// The webhook endpoint uses express.raw() for body parsing
+app.use('/api/stripe', stripeRoutes);
+
+// JSON parsing middleware (after Stripe routes to avoid interfering with webhooks)
+app.use(express.json());
 
 // Initialize OpenAI (optional - only if API key is provided)
 let openai = null;

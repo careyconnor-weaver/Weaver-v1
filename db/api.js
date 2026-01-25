@@ -372,6 +372,73 @@ async function getContactsNeedingFollowup(userId, settings) {
     }
 }
 
+// ============ STRIPE SUBSCRIPTIONS ============
+// Update user's Stripe customer ID
+async function updateUserStripeCustomerId(userId, customerId) {
+    const result = await db.update(users)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(users.id, userId))
+        .returning();
+    return result[0] || null;
+}
+
+// Update user subscription
+async function updateUserSubscription(customerId, subscriptionData) {
+    // First get user by Stripe customer ID
+    const userResult = await db.select()
+        .from(users)
+        .where(eq(users.stripeCustomerId, customerId))
+        .limit(1);
+    
+    if (userResult.length === 0) {
+        throw new Error('User not found for customer ID: ' + customerId);
+    }
+    
+    const userId = userResult[0].id;
+    const planName = subscriptionData.items?.data?.[0]?.price?.nickname || 
+                    subscriptionData.items?.data?.[0]?.price?.recurring?.interval || 
+                    'monthly';
+    
+    const result = await db.update(users)
+        .set({
+            stripeSubscriptionId: subscriptionData.id,
+            subscriptionStatus: subscriptionData.status,
+            subscriptionPlan: planName,
+            subscriptionCurrentPeriodEnd: subscriptionData.current_period_end 
+                ? new Date(subscriptionData.current_period_end * 1000)
+                : null
+        })
+        .where(eq(users.id, userId))
+        .returning();
+    
+    return result[0] || null;
+}
+
+// Cancel user subscription
+async function cancelUserSubscription(customerId) {
+    // First get user by Stripe customer ID
+    const userResult = await db.select()
+        .from(users)
+        .where(eq(users.stripeCustomerId, customerId))
+        .limit(1);
+    
+    if (userResult.length === 0) {
+        throw new Error('User not found for customer ID: ' + customerId);
+    }
+    
+    const userId = userResult[0].id;
+    
+    const result = await db.update(users)
+        .set({
+            subscriptionStatus: 'canceled',
+            stripeSubscriptionId: null
+        })
+        .where(eq(users.id, userId))
+        .returning();
+    
+    return result[0] || null;
+}
+
 module.exports = {
     // Users
     createUser,
@@ -403,5 +470,10 @@ module.exports = {
     saveAssistantSettings,
     getAllUsersWithAssistantSettings,
     getContactsNeedingFollowup,
+    
+    // Stripe Subscriptions
+    updateUserStripeCustomerId,
+    updateUserSubscription,
+    cancelUserSubscription,
 };
 

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Successful - Weaver</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--eggshell-white); padding: 2rem;">
+        <div style="max-width: 600px; text-align: center; background: white; padding: 3rem; border-radius: 12px; border: 2px solid var(--silver-gray); box-shadow: 0 4px 16px rgba(26, 35, 50, 0.1);">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+            <h1 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 2rem;">Subscription Successful!</h1>
+            <p style="margin: 0 0 2rem 0; color: var(--text-medium); font-size: 1.1rem;">
+                Thank you for subscribing to Weaver Pro! Your subscription is now active and you have access to all premium features.
+            </p>
+            <div style="margin: 2rem 0; padding: 1.5rem; background: rgba(49, 130, 206, 0.05); border-radius: 8px; border-left: 4px solid var(--accent-blue);">
+                <h3 style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-size: 1.2rem;">What's Next?</h3>
+                <ul style="list-style: none; padding: 0; margin: 0; text-align: left; color: var(--text-dark);">
+                    <li style="padding: 0.5rem 0;">✓ Unlimited contacts</li>
+                    <li style="padding: 0.5rem 0;">✓ AI call notes summarization</li>
+                    <li style="padding: 0.5rem 0;">✓ Email reminders & follow-ups</li>
+                    <li style="padding: 0.5rem 0;">✓ Personalized article recommendations</li>
+                </ul>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/" class="btn btn-primary" style="text-decoration: none;">Go to Dashboard</a>
+                <button onclick="openCustomerPortal()" class="btn btn-secondary">Manage Subscription</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        // Get session ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        
+        // Store session ID for portal access
+        if (sessionId) {
+            sessionStorage.setItem('stripe_session_id', sessionId);
+        }
+        
+        // Customer portal function
+        async function openCustomerPortal() {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) {
+                alert('Please log in to manage your subscription');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/stripe/create-portal-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create portal session');
+                }
+                
+                const { url } = await response.json();
+                window.location.href = url;
+            } catch (error) {
+                console.error('Portal error:', error);
+                alert('Error opening customer portal. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

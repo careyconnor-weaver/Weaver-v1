@@ -529,10 +529,31 @@ function toggleProfileMenu() {
             // Check if Gmail is connected
             const gmailConnected = localStorage.getItem(`weaver_gmail_connected_${currentUser.id}`) === 'true';
             
+            // Check subscription status
+            const subscriptionStatus = getSubscriptionStatus(currentUser);
+            const isPro = hasActiveSubscription(currentUser);
+            
             menuContent.innerHTML = `
                 <div style="padding: 0.5rem;">
                     <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--text-dark);">${currentUser.email}</p>
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.75rem; color: var(--text-medium);">User ID: <code style="background: var(--bg-light); padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.7rem;">${currentUser.id}</code></p>
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.75rem; color: var(--text-medium);">User ID: <code style="background: var(--eggshell-white); padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.7rem;">${currentUser.id}</code></p>
+                    
+                    <!-- Subscription Section -->
+                    <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Subscription</p>
+                        ${isPro ? 
+                            `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
+                                <span class="subscription-badge pro">PRO</span>
+                            </p>
+                            <button onclick="openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
+                            `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
+                                <span class="subscription-badge free">FREE</span>
+                            </p>
+                            <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
+                        }
+                    </div>
+                    
+                    <!-- Gmail Integration Section -->
                     <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
                         <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Gmail Integration</p>
                         ${gmailConnected ? 
@@ -684,6 +705,243 @@ async function disconnectGmail() {
 
 // Make functions globally accessible for onclick handlers
 window.toggleProfileMenu = toggleProfileMenu;
+
+// ============ STRIPE SUBSCRIPTION FUNCTIONS ============
+
+// Initialize Stripe (will be set from environment variable or hardcoded for testing)
+let stripe = null;
+if (typeof Stripe !== 'undefined') {
+    // Get publishable key from server or use test key
+    // In production, you'd fetch this from your server
+    stripe = Stripe('pk_test_51Sq1GgHpAukE92igJ30s4CIfBWq2kziQiU9DQAxgidopCEZVjSa6U0cUlWwREHef2Y1DaQj6zW02JOzWe5vfeWHe00LftcUEKn');
+}
+
+// Check if user has active subscription
+function hasActiveSubscription(user) {
+    if (!user) return false;
+    // Check subscription status from user object
+    // This would typically come from the database
+    const subscriptionStatus = user.subscriptionStatus || 'free';
+    return subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+}
+
+// Get subscription status from user
+function getSubscriptionStatus(user) {
+    if (!user) return 'free';
+    return user.subscriptionStatus || 'free';
+}
+
+// Open subscription modal
+function openSubscriptionModal() {
+    const modal = document.getElementById('subscription-modal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+// Close subscription modal
+function closeSubscriptionModal() {
+    const modal = document.getElementById('subscription-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Handle subscription checkout
+async function handleSubscription(priceId) {
+    const user = getCurrentUser();
+    if (!user) {
+        alert('Please log in to subscribe');
+        closeSubscriptionModal();
+        showAuthModal();
+        return;
+    }
+
+    try {
+        // Disable button during processing
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.setAttribute('data-original-text', originalText);
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        // Create checkout session
+        console.log('Creating checkout session for:', { userId: user.id, priceId });
+        
+        const response = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: user.id,
+                priceId: priceId
+            })
+        });
+
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Checkout session error:', errorData);
+            throw new Error(errorData.error || 'Failed to create checkout session');
+        }
+
+        const data = await response.json();
+        console.log('Checkout session created:', data);
+        
+        if (!data.url) {
+            throw new Error('No checkout URL returned from server');
+        }
+        
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+    } catch (error) {
+        console.error('Payment error:', error);
+        console.error('Error details:', error.message, error.stack);
+        
+        // Get error message from response if available
+        let errorMessage = 'Error processing payment. Please try again.';
+        try {
+            // If we have a response, try to get the error message
+            if (response && !response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
+                console.error('Server error response:', errorData);
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+        } catch (e) {
+            console.error('Error parsing error response:', e);
+            if (error.message) {
+                errorMessage = error.message;
+            }
+        }
+        
+        alert(`Payment Error: ${errorMessage}\n\nCheck the browser console (F12) for more details.`);
+        
+        // Re-enable button
+        const btn = event.target;
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = btn.getAttribute('data-original-text') || 'Subscribe Now';
+        }
+    }
+}
+
+// Handle customer portal (manage subscription)
+async function openCustomerPortal() {
+    const user = getCurrentUser();
+    if (!user) {
+        alert('Please log in');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/stripe/create-portal-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to create portal session');
+        }
+
+        const { url } = await response.json();
+        window.location.href = url;
+    } catch (error) {
+        console.error('Portal error:', error);
+        alert('Error opening customer portal. Please try again.');
+    }
+}
+
+// Update profile menu with subscription info
+function updateProfileMenuWithSubscription() {
+    const menuContent = document.getElementById('profile-menu-content');
+    const currentUser = getCurrentUser();
+    
+    if (!menuContent || !currentUser) return;
+    
+    // This will be updated when we fetch user data from server
+    // For now, check localStorage or make API call
+    const subscriptionStatus = getSubscriptionStatus(currentUser);
+    const isPro = hasActiveSubscription(currentUser);
+    
+    // Get existing menu HTML
+    const existingHTML = menuContent.innerHTML;
+    
+    // Add subscription section
+    const subscriptionHTML = `
+        <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Subscription</p>
+            ${isPro ? 
+                `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
+                    <span class="subscription-badge pro">PRO</span>
+                </p>
+                <button onclick="openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
+                `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
+                    <span class="subscription-badge free">FREE</span>
+                </p>
+                <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
+            }
+        </div>
+    `;
+    
+    // Insert subscription section before Gmail section
+    const gmailSectionIndex = existingHTML.indexOf('Gmail Integration');
+    if (gmailSectionIndex > -1) {
+        menuContent.innerHTML = 
+            existingHTML.substring(0, existingHTML.indexOf('<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">')) +
+            subscriptionHTML +
+            existingHTML.substring(existingHTML.indexOf('<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">'));
+    } else {
+        // If Gmail section not found, prepend subscription section
+        menuContent.innerHTML = subscriptionHTML + existingHTML;
+    }
+}
+
+// Show upgrade prompt for premium features
+function showUpgradePrompt(featureName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+            <h2 style="color: var(--accent-blue);">Upgrade to Pro</h2>
+            <p style="color: var(--text-medium); margin: 1rem 0;">
+                <strong>${featureName}</strong> is a Pro feature. Upgrade now to unlock:
+            </p>
+            <ul style="list-style: none; padding: 0; margin: 1rem 0;">
+                <li style="padding: 0.5rem 0; color: var(--text-dark);">
+                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
+                    ${featureName}
+                </li>
+                <li style="padding: 0.5rem 0; color: var(--text-dark);">
+                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
+                    Unlimited contacts
+                </li>
+                <li style="padding: 0.5rem 0; color: var(--text-dark);">
+                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
+                    All premium features
+                </li>
+            </ul>
+            <button onclick="openSubscriptionModal(); this.closest('.modal').remove();" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Upgrade to Pro - $9.99/month
+            </button>
+            <button onclick="this.closest('.modal').remove();" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
+                Maybe Later
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+window.openSubscriptionModal = openSubscriptionModal;
+window.closeSubscriptionModal = closeSubscriptionModal;
+window.handleSubscription = handleSubscription;
+window.openCustomerPortal = openCustomerPortal;
+window.showUpgradePrompt = showUpgradePrompt;
+window.hasActiveSubscription = hasActiveSubscription;
+window.getSubscriptionStatus = getSubscriptionStatus;
 window.logout = logout;
 window.closeAuthModal = closeAuthModal;
 window.toggleAuthMode = toggleAuthMode;
@@ -5165,6 +5423,27 @@ function resetUploadState(clearFile = false, hideButton = false) {
 
 // Process call notes for new contact with AI OCR and summarization
 async function processCallNotesForNewContact(file, contact, statusElement, callDate, notesText) {
+    // Check if user has active subscription for AI features
+    const user = getCurrentUser();
+    if (file && !hasActiveSubscription(user)) {
+        // AI image processing is a premium feature
+        showUpgradePrompt('AI Call Notes Summarization');
+        return;
+    }
+    
+    // For text notes, allow free users but limit them
+    if (!file && notesText) {
+        const user = getCurrentUser();
+        if (!hasActiveSubscription(user)) {
+            // Check if user has exceeded free tier limit (5 call notes per month)
+            const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+            const freeNotesCount = parseInt(localStorage.getItem(`free_notes_count_${user.id}_${monthKey}`) || '0');
+            if (freeNotesCount >= 5) {
+                showUpgradePrompt('Unlimited Call Notes');
+                return;
+            }
+        }
+    }
     // Validate call date is not in the future
     if (callDate) {
         const dateValidation = validateDateNotFuture(callDate, 'Call date');
@@ -5342,6 +5621,27 @@ async function processCallNotesForNewContact(file, contact, statusElement, callD
 
 // Process call notes with AI OCR and summarization
 async function processCallNotes(file, contactId, callDate, notesText) {
+    // Check if user has active subscription for AI features
+    const user = getCurrentUser();
+    if (file && !hasActiveSubscription(user)) {
+        // AI image processing is a premium feature
+        showUpgradePrompt('AI Call Notes Summarization');
+        return;
+    }
+    
+    // For text notes, allow free users but limit them
+    if (!file && notesText) {
+        const user = getCurrentUser();
+        if (!hasActiveSubscription(user)) {
+            // Check if user has exceeded free tier limit (5 call notes per month)
+            const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+            const freeNotesCount = parseInt(localStorage.getItem(`free_notes_count_${user.id}_${monthKey}`) || '0');
+            if (freeNotesCount >= 5) {
+                showUpgradePrompt('Unlimited Call Notes');
+                return;
+            }
+        }
+    }
     // Check for status element in both "Add Contact" tab and quick add modal
     let status = document.getElementById('notes-status');
     if (!status) {

@@ -778,6 +778,90 @@ body {
     color: var(--light-accent);
 }
 
+/* Pricing Cards */
+.pricing-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.pricing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(26, 35, 50, 0.15);
+}
+
+.pricing-card-featured {
+    box-shadow: 0 8px 24px rgba(49, 130, 206, 0.3);
+}
+
+/* Subscription Badge */
+.subscription-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.subscription-badge.free {
+    background: rgba(113, 128, 150, 0.1);
+    color: var(--text-medium);
+}
+
+.subscription-badge.pro {
+    background: rgba(49, 130, 206, 0.1);
+    color: var(--accent-blue);
+}
+
+.subscription-badge.past_due {
+    background: rgba(245, 101, 101, 0.1);
+    color: var(--error);
+}
+
+/* Upgrade Prompt */
+.upgrade-prompt {
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(49, 130, 206, 0.1) 0%, rgba(66, 153, 225, 0.1) 100%);
+    border: 2px solid var(--accent-blue);
+    border-radius: 8px;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.upgrade-prompt h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent-blue);
+}
+
+.upgrade-prompt p {
+    margin: 0 0 1rem 0;
+    color: var(--text-medium);
+    font-size: 0.9rem;
+}
+
+.feature-locked {
+    position: relative;
+    filter: blur(2px);
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.feature-locked-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 245, 240, 0.9);
+    border-radius: 8px;
+    z-index: 10;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 #call-notes-content {
     max-height: 60vh;
     overflow-y: auto;

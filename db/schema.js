@@ -6,6 +6,12 @@ const users = pgTable('users', {
     email: varchar('email', { length: 255 }).notNull().unique(),
     password: text('password').notNull(), // In production, should be hashed
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    // Stripe subscription fields
+    stripeCustomerId: text('stripe_customer_id'), // Stripe customer ID
+    stripeSubscriptionId: text('stripe_subscription_id'), // Stripe subscription ID
+    subscriptionStatus: text('subscription_status').default('free'), // free, active, canceled, past_due
+    subscriptionPlan: text('subscription_plan'), // monthly, yearly, etc.
+    subscriptionCurrentPeriodEnd: timestamp('subscription_current_period_end'),
 });
 
 // Contacts table
