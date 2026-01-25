@@ -441,6 +441,20 @@ function handleAuth(e) {
         };
         localStorage.setItem('weaver_users', JSON.stringify(users));
         
+        // Also create user in database
+        try {
+            const signupResponse = await fetch('/api/users/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, email, password })
+            });
+            if (!signupResponse.ok) {
+                console.warn('Failed to create user in database, but continuing with localStorage:', await signupResponse.text());
+            }
+        } catch (error) {
+            console.warn('Could not create user in database, but continuing with localStorage:', error);
+        }
+        
         // Log in the new user
         setCurrentUser({ id: userId, email: email });
         status.textContent = 'Account created successfully!';
@@ -462,6 +476,28 @@ function handleAuth(e) {
             status.className = 'upload-status error';
             status.style.display = 'block';
             return;
+        }
+        
+        // Also verify/login in database
+        try {
+            const loginResponse = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            if (!loginResponse.ok) {
+                // If user doesn't exist in database, create them
+                const signupResponse = await fetch('/api/users/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, email, password })
+                });
+                if (!signupResponse.ok) {
+                    console.warn('Failed to sync user with database:', await signupResponse.text());
+                }
+            }
+        } catch (error) {
+            console.warn('Could not sync user with database:', error);
         }
         
         // Log in the user
