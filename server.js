@@ -1026,14 +1026,35 @@ app.post('/api/users/signup', async (req, res) => {
         if (!userId || !email || !password) {
             return res.status(400).json({ error: 'userId, email, and password are required' });
         }
+        
+        console.log('Signup attempt:', { userId, email, passwordLength: password.length });
+        
         const user = await dbAPI.createUser(userId, email, password);
+        console.log('User created successfully:', user.id);
         res.json({ success: true, user: { id: user.id, email: user.email } });
     } catch (error) {
         console.error('Signup error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
+        
         if (error.code === '23505') { // Unique constraint violation
-            return res.status(400).json({ error: 'An account with this email already exists' });
+            return res.status(400).json({ 
+                error: 'An account with this email already exists',
+                details: error.detail || 'Email is already registered'
+            });
         }
-        res.status(500).json({ error: 'Failed to create user' });
+        
+        // Return more detailed error message
+        const errorMessage = error.message || 'Failed to create user';
+        res.status(500).json({ 
+            error: 'Failed to create user',
+            details: errorMessage,
+            code: error.code
+        });
     }
 });
 

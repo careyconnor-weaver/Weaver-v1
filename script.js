@@ -446,7 +446,16 @@ async function handleAuth(e) {
             const data = await response.json();
             
             if (!response.ok) {
-                status.textContent = data.error || 'Failed to create account';
+                console.error('Signup failed:', data);
+                // Show more detailed error message
+                let errorMsg = data.details || data.error || 'Failed to create account';
+                
+                // If email already exists, suggest logging in instead
+                if (data.error?.includes('already exists') || data.details?.includes('already exists')) {
+                    errorMsg = 'An account with this email already exists. Please try logging in instead.';
+                }
+                
+                status.textContent = errorMsg;
                 status.className = 'upload-status error';
                 status.style.display = 'block';
                 if (submitBtn) {
@@ -545,7 +554,15 @@ async function handleAuth(e) {
             
             // If still not successful, show error
             if (!response.ok) {
-                status.textContent = data.error || 'Invalid email or password';
+                console.error('Login failed:', data);
+                let errorMsg = data.error || 'Invalid email or password';
+                
+                // If user exists but password is wrong, provide helpful message
+                if (data.error?.includes('Invalid email or password')) {
+                    errorMsg = 'Invalid email or password. If you forgot your password, please contact support.';
+                }
+                
+                status.textContent = errorMsg;
                 status.className = 'upload-status error';
                 status.style.display = 'block';
                 if (submitBtn) {
