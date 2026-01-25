@@ -1191,28 +1191,15 @@ app.get('/api/migrate', async (req, res) => {
         return res.status(500).json({ error: 'Database not configured', details: 'DATABASE_URL not set' });
     }
 
-    // Create a new pool with proper SSL settings for this migration
-    const { Pool } = require('pg');
+    // Use the existing pool from db/index.js which is already configured correctly
+    const { pool } = require('./db/index');
     
-    // Determine SSL settings based on database URL
-    let sslConfig = false;
-    const dbUrl = process.env.DATABASE_URL;
-    
-    // Render databases and other cloud providers need SSL with rejectUnauthorized: false
-    if (dbUrl.includes('render.com') || dbUrl.includes('dpg-') || dbUrl.includes('sslmode=require')) {
-        sslConfig = { 
-            rejectUnauthorized: false,
-            require: true
-        };
+    if (!pool) {
+        return res.status(500).json({ error: 'Database pool not initialized', details: 'Database connection failed' });
     }
-    
-    const migrationPool = new Pool({
-        connectionString: dbUrl,
-        ssl: sslConfig,
-    });
 
     try {
-        const client = await migrationPool.connect();
+        const client = await pool.connect();
         try {
             // Check if Stripe columns exist
             const checkColumns = await client.query(`
@@ -1264,14 +1251,17 @@ app.get('/api/migrate', async (req, res) => {
         }
     } catch (error) {
         console.error('Migration error:', error);
+        console.error('Full error:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         return res.status(500).json({ 
             error: 'Migration failed', 
             message: error.message,
             details: error.code || 'Unknown error',
-            hint: error.message.includes('certificate') ? 'SSL certificate issue - checking connection settings...' : ''
+            hint: error.message.includes('certificate') ? 'SSL certificate issue - ensure DATABASE_URL is correct' : ''
         });
-    } finally {
-        await migrationPool.end();
     }
 });
 

@@ -38,27 +38,14 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
             )) {
                 console.log('🔄 Detected schema error, attempting automatic migration...');
                 try {
-                    // Try to run migration automatically
-                    const { Pool } = require('pg');
+                    // Try to run migration automatically using existing pool
+                    const { pool } = require('../db/index');
                     
-                    // Determine SSL settings based on database URL
-                    let sslConfig = false;
-                    const dbUrl = process.env.DATABASE_URL;
-                    
-                    // Render databases and other cloud providers need SSL with rejectUnauthorized: false
-                    if (dbUrl && (dbUrl.includes('render.com') || dbUrl.includes('dpg-') || dbUrl.includes('sslmode=require'))) {
-                        sslConfig = { 
-                            rejectUnauthorized: false,
-                            require: true
-                        };
+                    if (!pool) {
+                        throw new Error('Database pool not available');
                     }
                     
-                    const migrationPool = new Pool({
-                        connectionString: dbUrl,
-                        ssl: sslConfig,
-                    });
-                    
-                    const client = await migrationPool.connect();
+                    const client = await pool.connect();
                     try {
                         const columnsToAdd = [
                             { name: 'stripe_customer_id', type: 'text' },
@@ -78,7 +65,6 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
                         user = await dbAPI.getUserById(userId);
                     } finally {
                         client.release();
-                        await migrationPool.end();
                     }
                 } catch (migrationError) {
                     console.error('Auto-migration failed:', migrationError);
