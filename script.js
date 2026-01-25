@@ -711,9 +711,9 @@ window.toggleProfileMenu = toggleProfileMenu;
 // Initialize Stripe (will be set from environment variable or hardcoded for testing)
 let stripe = null;
 if (typeof Stripe !== 'undefined') {
-    // Get publishable key from server or use test key
-    // In production, you'd fetch this from your server
-    stripe = Stripe('pk_test_51Sq1GgHpAukE92igJ30s4CIfBWq2kziQiU9DQAxgidopCEZVjSa6U0cUlWwREHef2Y1DaQj6zW02JOzWe5vfeWHe00LftcUEKn');
+    // Live publishable key (for client-side Stripe.js if needed)
+    // Note: Server-side checkout doesn't require this, but keeping it for potential future use
+    stripe = Stripe('pk_live_51Sq1GVQZZ2GMzWg9tNwQomBd6JsmVfsM0t8J1MGncL4mb8s0pVpzTUyR3aFssJYobqpvPs5ZNsfYOvBA0sTQPJKn002kPqAdm7');
 }
 
 // Check if user has active subscription
