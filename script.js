@@ -477,15 +477,73 @@ async function handleAuth(e) {
                 filterContacts();
             }, 1000);
         } else {
-            // Login - check database
-            const response = await fetch('/api/users/login', {
+            // Login - check database first
+            let response = await fetch('/api/users/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
             
-            const data = await response.json();
+            let data = await response.json();
             
+            // If database login fails, check localStorage (for users created before database sync)
+            if (!response.ok) {
+                const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
+                const localUser = users[email];
+                
+                // If user exists in localStorage with matching password, migrate to database
+                if (localUser && localUser.password === password) {
+                    console.log('User found in localStorage, migrating to database...');
+                    
+                    // Migrate user to database
+                    const migrateResponse = await fetch('/api/users/signup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            userId: localUser.id, 
+                            email: email, 
+                            password: password 
+                        })
+                    });
+                    
+                    const migrateData = await migrateResponse.json();
+                    
+                    if (migrateResponse.ok) {
+                        // Migration successful, now login via database
+                        response = await fetch('/api/users/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        data = await response.json();
+                    } else if (migrateResponse.status === 400 && migrateData.error?.includes('already exists')) {
+                        // User already exists in database but password might be different
+                        // Try login again - maybe password was updated
+                        response = await fetch('/api/users/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        data = await response.json();
+                    } else {
+                        // Migration failed, use local user
+                        console.log('Migration failed, using local user:', migrateData);
+                        setCurrentUser({ id: localUser.id, email: email });
+                        status.textContent = 'Login successful!';
+                        status.className = 'upload-status success';
+                        status.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            closeAuthModal();
+                            updateUserDisplay();
+                            filterContacts();
+                        }, 1000);
+                        return;
+                    }
+                }
+            }
+            
+            // If still not successful, show error
             if (!response.ok) {
                 status.textContent = data.error || 'Invalid email or password';
                 status.className = 'upload-status error';

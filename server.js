@@ -1043,10 +1043,23 @@ app.post('/api/users/login', async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
+        
         const user = await dbAPI.getUserByEmail(email);
-        if (!user || user.password !== password) {
+        
+        if (!user) {
+            console.log(`Login attempt: User not found for email: ${email}`);
             return res.status(401).json({ error: 'Invalid email or password' });
         }
+        
+        // Compare passwords (trim whitespace for safety)
+        const storedPassword = (user.password || '').trim();
+        const providedPassword = (password || '').trim();
+        
+        if (storedPassword !== providedPassword) {
+            console.log(`Login attempt: Password mismatch for email: ${email}`);
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
         // Return full user data (excluding password)
         const { password: _, ...userWithoutPassword } = user;
         res.json({ success: true, user: userWithoutPassword });
