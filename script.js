@@ -757,13 +757,16 @@ async function handleSubscription(priceId) {
         return;
     }
 
+    let btn = null;
     try {
         // Disable button during processing
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.setAttribute('data-original-text', originalText);
-        btn.disabled = true;
-        btn.textContent = 'Processing...';
+        btn = event?.target || document.querySelector(`button[onclick*="${priceId}"]`);
+        if (btn) {
+            const originalText = btn.textContent;
+            btn.setAttribute('data-original-text', originalText);
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+        }
 
         // Create checkout session
         console.log('Creating checkout session for:', { userId: user.id, priceId, email: user.email });
@@ -792,35 +795,22 @@ async function handleSubscription(priceId) {
         if (!data.url) {
             throw new Error('No checkout URL returned from server');
         }
-        
+
         // Redirect to Stripe Checkout
         window.location.href = data.url;
     } catch (error) {
         console.error('Payment error:', error);
         console.error('Error details:', error.message, error.stack);
         
-        // Get error message from response if available
-        let errorMessage = 'Error processing payment. Please try again.';
-        try {
-            // If we have a response, try to get the error message
-            if (response && !response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
-                console.error('Server error response:', errorData);
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-        } catch (e) {
-            console.error('Error parsing error response:', e);
-            if (error.message) {
-                errorMessage = error.message;
-            }
-        }
+        // Get error message
+        const errorMessage = error.message || 'Error processing payment. Please try again.';
         
         alert(`Payment Error: ${errorMessage}\n\nCheck the browser console (F12) for more details.`);
         
         // Re-enable button
-        const btn = event.target;
+        if (!btn) {
+            btn = event?.target || document.querySelector(`button[onclick*="${priceId}"]`);
+        }
         if (btn) {
             btn.disabled = false;
             btn.textContent = btn.getAttribute('data-original-text') || 'Subscribe Now';
