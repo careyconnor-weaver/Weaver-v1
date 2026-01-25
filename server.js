@@ -11,6 +11,7 @@ const cron = require('node-cron');
 const dbAPI = require('./db/api');
 const { Resend } = require('resend');
 const stripeRoutes = require('./routes/stripe');
+const { pool } = require('./db/index');
 
 // Load environment variables
 dotenv.config();
@@ -1267,8 +1268,60 @@ cron.schedule('*/5 * * * *', () => {
 
 console.log('📅 Email reminder cron job scheduled (runs every 5 minutes)');
 
+// Check and migrate database schema on startup
+async function checkAndMigrateDatabase() {
+    if (!process.env.DATABASE_URL || !pool) {
+        return;
+    }
+
+    try {
+        const client = await pool.connect();
+        try {
+            // Check if Stripe columns exist
+            const checkColumns = await client.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'users' 
+                AND column_name IN ('stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'subscription_plan', 'subscription_current_period_end')
+            `);
+            
+            const existingColumns = checkColumns.rows.map(row => row.column_name);
+            const neededColumns = ['stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'subscription_plan', 'subscription_current_period_end'];
+            const missingColumns = neededColumns.filter(col => !existingColumns.includes(col));
+
+            if (missingColumns.length > 0) {
+                console.log('🔄 Adding missing Stripe columns to users table...');
+                
+                const columnsToAdd = [
+                    { name: 'stripe_customer_id', type: 'text' },
+                    { name: 'stripe_subscription_id', type: 'text' },
+                    { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
+                    { name: 'subscription_plan', type: 'text' },
+                    { name: 'subscription_current_period_end', type: 'timestamp' }
+                ];
+
+                for (const column of columnsToAdd) {
+                    if (missingColumns.includes(column.name)) {
+                        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+                        console.log(`  ✅ Added column: ${column.name}`);
+                    }
+                }
+                
+                console.log('✅ Database migration completed!');
+            } else {
+                console.log('✅ Database schema is up to date');
+            }
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.warn('⚠️  Could not check/migrate database schema:', error.message);
+        console.warn('   This is okay if migrations run during build. If you see Stripe errors, check migrations.');
+    }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Weaver server running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     
@@ -1277,6 +1330,8 @@ app.listen(PORT, () => {
         console.warn('⚠️  WARNING: DATABASE_URL not set. Database features will not work.');
     } else {
         console.log('✅ Database connection configured');
+        // Check and migrate database schema
+        await checkAndMigrateDatabase();
     }
     
     // Check if OpenAI is initialized
