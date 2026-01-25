@@ -67,9 +67,16 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
                     }
                 } catch (migrationError) {
                     console.error('Auto-migration failed:', migrationError);
+                    console.error('Migration error details:', {
+                        message: migrationError.message,
+                        stack: migrationError.stack,
+                        code: migrationError.code
+                    });
                     return res.status(500).json({ 
                         error: 'Database schema error. Please visit /api/migrate to fix this.',
-                        details: 'The Stripe columns may not exist in the database. Visit: https://weaver-kuwd.onrender.com/api/migrate'
+                        details: 'The Stripe columns may not exist in the database.',
+                        fixUrl: `${process.env.WEAVER_URL || 'https://weaver-kuwd.onrender.com'}/api/migrate`,
+                        instructions: 'Visit the URL above in your browser to automatically add the missing columns.'
                     });
                 }
             } else {
