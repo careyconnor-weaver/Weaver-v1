@@ -31,14 +31,50 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
             user = await dbAPI.getUserById(userId);
         } catch (dbError) {
             console.error('Database error fetching user:', dbError);
-            // Check if it's a schema/column error
-            if (dbError.message && dbError.message.includes('column') && dbError.message.includes('does not exist')) {
-                return res.status(500).json({ 
-                    error: 'Database schema error. Please run database migrations on the production server.',
-                    details: 'The Stripe columns may not exist in the database. Run: npm run db:push'
-                });
+            // Check if it's a schema/column error - try to auto-migrate
+            if (dbError.message && (
+                dbError.message.includes('column') && dbError.message.includes('does not exist') ||
+                dbError.message.includes('Database schema error')
+            )) {
+                console.log('🔄 Detected schema error, attempting automatic migration...');
+                try {
+                    // Try to run migration automatically
+                    const { pool } = require('../db/index');
+                    if (pool) {
+                        const client = await pool.connect();
+                        try {
+                            const columnsToAdd = [
+                                { name: 'stripe_customer_id', type: 'text' },
+                                { name: 'stripe_subscription_id', type: 'text' },
+                                { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
+                                { name: 'subscription_plan', type: 'text' },
+                                { name: 'subscription_current_period_end', type: 'timestamp' }
+                            ];
+
+                            for (const column of columnsToAdd) {
+                                await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+                                console.log(`  ✅ Added column: ${column.name}`);
+                            }
+                            console.log('✅ Auto-migration completed, retrying user fetch...');
+                            
+                            // Retry fetching user
+                            user = await dbAPI.getUserById(userId);
+                        } finally {
+                            client.release();
+                        }
+                    } else {
+                        throw new Error('Database pool not available');
+                    }
+                } catch (migrationError) {
+                    console.error('Auto-migration failed:', migrationError);
+                    return res.status(500).json({ 
+                        error: 'Database schema error. Please visit /api/migrate to fix this.',
+                        details: 'The Stripe columns may not exist in the database. Visit: https://weaver-kuwd.onrender.com/api/migrate'
+                    });
+                }
+            } else {
+                throw dbError; // Re-throw other errors
             }
-            throw dbError; // Re-throw other errors
         }
         
         if (!user) {
