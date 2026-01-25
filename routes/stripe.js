@@ -8,7 +8,7 @@ const dbAPI = require('../db/api');
 router.post('/create-checkout-session', express.json(), async (req, res) => {
     try {
         console.log('Received checkout request:', req.body);
-        let { userId, priceId } = req.body;
+        let { userId, priceId, email } = req.body;
         
         if (!userId || !priceId) {
             console.error('Missing required fields:', { userId: !!userId, priceId: !!priceId });
@@ -85,9 +85,33 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
             }
         }
         
+        // If user doesn't exist in database but we have email, create them
+        if (!user && email) {
+            console.log('User not found in database, creating user with email:', email);
+            try {
+                // Create user in database with placeholder password (they'll need to set it properly later)
+                user = await dbAPI.createUser(userId, email, 'placeholder-password-needs-update');
+                console.log('✅ Created user in database:', user.id);
+            } catch (createError) {
+                console.error('Failed to create user in database:', createError);
+                // If it's a duplicate, try to fetch again
+                if (createError.code === '23505') {
+                    user = await dbAPI.getUserById(userId);
+                } else {
+                    return res.status(500).json({ 
+                        error: 'Failed to create user account. Please log out and log back in.',
+                        details: createError.message
+                    });
+                }
+            }
+        }
+        
         if (!user) {
-            console.error('User not found:', userId);
-            return res.status(404).json({ error: 'User not found. Please log in and try again.' });
+            console.error('User not found and no email provided:', userId);
+            return res.status(404).json({ 
+                error: 'User not found. Please log out and log back in to sync your account with the database.',
+                details: 'Your account needs to be synced with the database. Please log out and log back in.'
+            });
         }
         
         console.log('User found:', user.email);

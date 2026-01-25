@@ -766,14 +766,15 @@ async function handleSubscription(priceId) {
         btn.textContent = 'Processing...';
 
         // Create checkout session
-        console.log('Creating checkout session for:', { userId: user.id, priceId });
+        console.log('Creating checkout session for:', { userId: user.id, priceId, email: user.email });
         
         const response = await fetch('/api/stripe/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 userId: user.id,
-                priceId: priceId
+                priceId: priceId,
+                email: user.email // Include email so user can be created in database if needed
             })
         });
 
