@@ -1187,12 +1187,21 @@ app.get('/api/health', (req, res) => {
 
 // Manual database migration endpoint (for immediate fixes)
 app.get('/api/migrate', async (req, res) => {
-    if (!process.env.DATABASE_URL || !pool) {
-        return res.status(500).json({ error: 'Database not configured' });
+    if (!process.env.DATABASE_URL) {
+        return res.status(500).json({ error: 'Database not configured', details: 'DATABASE_URL not set' });
     }
 
+    // Create a new pool with proper SSL settings for this migration
+    const { Pool } = require('pg');
+    const migrationPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('dpg-') 
+            ? { rejectUnauthorized: false } 
+            : false,
+    });
+
     try {
-        const client = await pool.connect();
+        const client = await migrationPool.connect();
         try {
             // Check if Stripe columns exist
             const checkColumns = await client.query(`
@@ -1246,8 +1255,12 @@ app.get('/api/migrate', async (req, res) => {
         console.error('Migration error:', error);
         return res.status(500).json({ 
             error: 'Migration failed', 
-            message: error.message 
+            message: error.message,
+            details: error.code || 'Unknown error',
+            hint: error.message.includes('certificate') ? 'SSL certificate issue - checking connection settings...' : ''
         });
+    } finally {
+        await migrationPool.end();
     }
 });
 

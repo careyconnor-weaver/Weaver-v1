@@ -39,31 +39,35 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
                 console.log('🔄 Detected schema error, attempting automatic migration...');
                 try {
                     // Try to run migration automatically
-                    const { pool } = require('../db/index');
-                    if (pool) {
-                        const client = await pool.connect();
-                        try {
-                            const columnsToAdd = [
-                                { name: 'stripe_customer_id', type: 'text' },
-                                { name: 'stripe_subscription_id', type: 'text' },
-                                { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
-                                { name: 'subscription_plan', type: 'text' },
-                                { name: 'subscription_current_period_end', type: 'timestamp' }
-                            ];
+                    const { Pool } = require('pg');
+                    const migrationPool = new Pool({
+                        connectionString: process.env.DATABASE_URL,
+                        ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('dpg-') 
+                            ? { rejectUnauthorized: false } 
+                            : false,
+                    });
+                    
+                    const client = await migrationPool.connect();
+                    try {
+                        const columnsToAdd = [
+                            { name: 'stripe_customer_id', type: 'text' },
+                            { name: 'stripe_subscription_id', type: 'text' },
+                            { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
+                            { name: 'subscription_plan', type: 'text' },
+                            { name: 'subscription_current_period_end', type: 'timestamp' }
+                        ];
 
-                            for (const column of columnsToAdd) {
-                                await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
-                                console.log(`  ✅ Added column: ${column.name}`);
-                            }
-                            console.log('✅ Auto-migration completed, retrying user fetch...');
-                            
-                            // Retry fetching user
-                            user = await dbAPI.getUserById(userId);
-                        } finally {
-                            client.release();
+                        for (const column of columnsToAdd) {
+                            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+                            console.log(`  ✅ Added column: ${column.name}`);
                         }
-                    } else {
-                        throw new Error('Database pool not available');
+                        console.log('✅ Auto-migration completed, retrying user fetch...');
+                        
+                        // Retry fetching user
+                        user = await dbAPI.getUserById(userId);
+                    } finally {
+                        client.release();
+                        await migrationPool.end();
                     }
                 } catch (migrationError) {
                     console.error('Auto-migration failed:', migrationError);
