@@ -1047,7 +1047,9 @@ app.post('/api/users/login', async (req, res) => {
         if (!user || user.password !== password) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
-        res.json({ success: true, user: { id: user.id, email: user.email } });
+        // Return full user data (excluding password)
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ success: true, user: userWithoutPassword });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Failed to login' });

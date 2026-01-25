@@ -400,7 +400,7 @@ function toggleAuthMode() {
 }
 
 // Handle auth form submission
-function handleAuth(e) {
+async function handleAuth(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
@@ -413,68 +413,127 @@ function handleAuth(e) {
         return;
     }
     
-    if (isSignupMode) {
-        // Sign up
-        if (password.length < 6) {
-            status.textContent = 'Password must be at least 6 characters';
-            status.className = 'upload-status error';
+    // Disable form during processing
+    const submitBtn = document.getElementById('auth-submit');
+    const originalBtnText = submitBtn?.textContent;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = isSignupMode ? 'Creating Account...' : 'Logging In...';
+    }
+    
+    try {
+        if (isSignupMode) {
+            // Sign up
+            if (password.length < 6) {
+                status.textContent = 'Password must be at least 6 characters';
+                status.className = 'upload-status error';
+                status.style.display = 'block';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                return;
+            }
+            
+            // Create new user in database
+            const userId = Date.now().toString();
+            const response = await fetch('/api/users/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                status.textContent = data.error || 'Failed to create account';
+                status.className = 'upload-status error';
+                status.style.display = 'block';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                return;
+            }
+            
+            // Save user to localStorage for local access
+            const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
+            users[email] = {
+                id: userId,
+                email: email,
+                createdAt: new Date().toISOString()
+            };
+            localStorage.setItem('weaver_users', JSON.stringify(users));
+            
+            // Log in the new user
+            setCurrentUser({ id: userId, email: email });
+            status.textContent = 'Account created successfully!';
+            status.className = 'upload-status success';
             status.style.display = 'block';
-            return;
-        }
-        
-        // Check if user already exists
-        const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-        if (users[email]) {
-            status.textContent = 'An account with this email already exists';
-            status.className = 'upload-status error';
+            
+            setTimeout(() => {
+                closeAuthModal();
+                updateUserDisplay();
+                filterContacts();
+            }, 1000);
+        } else {
+            // Login - check database
+            const response = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                status.textContent = data.error || 'Invalid email or password';
+                status.className = 'upload-status error';
+                status.style.display = 'block';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                return;
+            }
+            
+            // Save user to localStorage for local access
+            const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
+            users[email] = {
+                id: data.user.id,
+                email: data.user.email,
+                createdAt: data.user.createdAt || new Date().toISOString()
+            };
+            localStorage.setItem('weaver_users', JSON.stringify(users));
+            
+            // Log in the user with full data from database (including subscription info)
+            setCurrentUser({
+                id: data.user.id,
+                email: data.user.email,
+                subscriptionStatus: data.user.subscriptionStatus || 'free',
+                subscriptionPlan: data.user.subscriptionPlan || null,
+                stripeCustomerId: data.user.stripeCustomerId || null,
+                stripeSubscriptionId: data.user.stripeSubscriptionId || null
+            });
+            status.textContent = 'Login successful!';
+            status.className = 'upload-status success';
             status.style.display = 'block';
-            return;
+            
+            setTimeout(() => {
+                closeAuthModal();
+                updateUserDisplay();
+                filterContacts();
+            }, 1000);
         }
-        
-        // Create new user
-        const userId = Date.now().toString();
-        users[email] = {
-            id: userId,
-            email: email,
-            password: password, // In production, this should be hashed
-            createdAt: new Date().toISOString()
-        };
-        localStorage.setItem('weaver_users', JSON.stringify(users));
-        
-        // Log in the new user
-        setCurrentUser({ id: userId, email: email });
-        status.textContent = 'Account created successfully!';
-        status.className = 'upload-status success';
+    } catch (error) {
+        console.error('Auth error:', error);
+        status.textContent = 'An error occurred. Please try again.';
+        status.className = 'upload-status error';
         status.style.display = 'block';
-        
-        setTimeout(() => {
-            closeAuthModal();
-            updateUserDisplay();
-            filterContacts();
-        }, 1000);
-    } else {
-        // Login
-        const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-        const user = users[email];
-        
-        if (!user || user.password !== password) {
-            status.textContent = 'Invalid email or password';
-            status.className = 'upload-status error';
-            status.style.display = 'block';
-            return;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
         }
-        
-        // Log in the user
-        setCurrentUser({ id: user.id, email: email });
-        status.textContent = 'Login successful!';
-        status.className = 'upload-status success';
-        status.style.display = 'block';
-        
-        setTimeout(() => {
-            closeAuthModal();
-            updateUserDisplay();
-            filterContacts();
-        }, 1000);
     }
 }
 
