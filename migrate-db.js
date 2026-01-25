@@ -1,36 +1,76 @@
 #!/usr/bin/env node
 
 /**
- * Database Migration Script
- * This script runs database migrations using drizzle-kit push
- * Run this on Render after deployment or as part of the build process
+ * Database Migration Script - Adds Stripe columns to existing users table
+ * This script safely adds columns if they don't exist
  */
 
-const { execSync } = require('child_process');
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-console.log('🔄 Starting database migration...');
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-
-if (!process.env.DATABASE_URL) {
-    console.error('❌ ERROR: DATABASE_URL environment variable is not set!');
-    console.error('   Database migrations cannot run without a database connection.');
-    process.exit(1);
-}
-
-try {
-    // Run drizzle-kit push to sync schema with database
-    console.log('📦 Running drizzle-kit push to sync database schema...');
-    execSync('npm run db:push', {
-        stdio: 'inherit',
-        cwd: path.resolve(__dirname),
-        env: process.env
-    });
+async function migrate() {
+    console.log('🔄 Starting database migration...');
     
-    console.log('✅ Database migration completed successfully!');
-    process.exit(0);
-} catch (error) {
-    console.error('❌ Database migration failed:', error.message);
-    console.error('   Please check your DATABASE_URL and ensure the database is accessible.');
-    process.exit(1);
+    if (!process.env.DATABASE_URL) {
+        console.error('❌ ERROR: DATABASE_URL environment variable is not set!');
+        process.exit(1);
+    }
+
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('dpg-') 
+            ? { rejectUnauthorized: false } 
+            : false,
+    });
+
+    const client = await pool.connect();
+
+    try {
+        console.log('📦 Checking users table structure...');
+        
+        // Check if columns exist
+        const checkColumns = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' 
+            AND column_name IN ('stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'subscription_plan', 'subscription_current_period_end')
+        `);
+
+        const existingColumns = checkColumns.rows.map(row => row.column_name);
+        console.log('Existing Stripe columns:', existingColumns.length > 0 ? existingColumns.join(', ') : 'None');
+
+        // Add columns that don't exist
+        const columnsToAdd = [
+            { name: 'stripe_customer_id', type: 'text' },
+            { name: 'stripe_subscription_id', type: 'text' },
+            { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
+            { name: 'subscription_plan', type: 'text' },
+            { name: 'subscription_current_period_end', type: 'timestamp' }
+        ];
+
+        for (const column of columnsToAdd) {
+            if (!existingColumns.includes(column.name)) {
+                console.log(`  ➕ Adding column: ${column.name}`);
+                await client.query(`
+                    ALTER TABLE users 
+                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
+                `);
+                console.log(`  ✅ Added column: ${column.name}`);
+            } else {
+                console.log(`  ✓ Column already exists: ${column.name}`);
+            }
+        }
+
+        console.log('✅ Database migration completed successfully!');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Database migration failed:', error.message);
+        console.error('Error details:', error);
+        process.exit(1);
+    } finally {
+        client.release();
+        await pool.end();
+    }
 }
+
+migrate();
