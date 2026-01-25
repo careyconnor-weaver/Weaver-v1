@@ -40,11 +40,22 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
                 try {
                     // Try to run migration automatically
                     const { Pool } = require('pg');
+                    
+                    // Determine SSL settings based on database URL
+                    let sslConfig = false;
+                    const dbUrl = process.env.DATABASE_URL;
+                    
+                    // Render databases and other cloud providers need SSL with rejectUnauthorized: false
+                    if (dbUrl && (dbUrl.includes('render.com') || dbUrl.includes('dpg-') || dbUrl.includes('sslmode=require'))) {
+                        sslConfig = { 
+                            rejectUnauthorized: false,
+                            require: true
+                        };
+                    }
+                    
                     const migrationPool = new Pool({
-                        connectionString: process.env.DATABASE_URL,
-                        ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('dpg-') 
-                            ? { rejectUnauthorized: false } 
-                            : false,
+                        connectionString: dbUrl,
+                        ssl: sslConfig,
                     });
                     
                     const client = await migrationPool.connect();
