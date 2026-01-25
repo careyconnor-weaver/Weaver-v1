@@ -85,16 +85,9 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
             }
         }
         
-        // If user doesn't exist in database, try to create them from localStorage data
-        // This handles the case where users were created before database integration
         if (!user) {
-            console.log('User not found in database, attempting to create from request...');
-            // We need email from the request - but we don't have it yet
-            // For now, return error asking user to log out and log back in
-            return res.status(404).json({ 
-                error: 'User not found in database. Please log out and log back in to sync your account.',
-                details: 'Your account needs to be synced with the database. Please log out and log back in.'
-            });
+            console.error('User not found:', userId);
+            return res.status(404).json({ error: 'User not found. Please log in and try again.' });
         }
         
         console.log('User found:', user.email);
