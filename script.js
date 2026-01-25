@@ -1741,6 +1741,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     newContactForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        
+        // Check if user is logged in
+        const user = getCurrentUser();
+        if (!user) {
+            alert('Please create a free account to add contacts. It only takes a moment!');
+            showAuthModal();
+            // Switch to signup mode
+            if (typeof toggleAuthMode === 'function') {
+                const isSignup = document.getElementById('auth-mode-toggle')?.textContent.includes('Sign up');
+                if (!isSignup) {
+                    toggleAuthMode();
+                }
+            }
+            return;
+        }
+        
         const name = document.getElementById('new-contact-name').value;
         const firm = document.getElementById('new-contact-firm').value;
         const position = document.getElementById('new-contact-position').value;
@@ -4743,6 +4759,21 @@ function parseDate(dateString, defaultYear = null) {
 function processSpreadsheet(file) {
     console.log('processSpreadsheet called with file:', file ? file.name : 'null');
     
+    // Check if user is logged in
+    const user = getCurrentUser();
+    if (!user) {
+        alert('Please create a free account to upload contacts. It only takes a moment!');
+        showAuthModal();
+        // Switch to signup mode
+        if (typeof toggleAuthMode === 'function') {
+            const isSignup = document.getElementById('auth-mode-toggle')?.textContent.includes('Sign up');
+            if (!isSignup) {
+                toggleAuthMode();
+            }
+        }
+        return;
+    }
+    
     if (!file) {
         console.error('No file provided to processSpreadsheet');
         return;
@@ -5414,8 +5445,22 @@ function resetUploadState(clearFile = false, hideButton = false) {
 
 // Process call notes for new contact with AI OCR and summarization
 async function processCallNotesForNewContact(file, contact, statusElement, callDate, notesText) {
-    // Check if user has active subscription for AI features
+    // Check if user is logged in
     const user = getCurrentUser();
+    if (!user) {
+        alert('Please create a free account to add call notes. It only takes a moment!');
+        showAuthModal();
+        // Switch to signup mode
+        if (typeof toggleAuthMode === 'function') {
+            const isSignup = document.getElementById('auth-mode-toggle')?.textContent.includes('Sign up');
+            if (!isSignup) {
+                toggleAuthMode();
+            }
+        }
+        return;
+    }
+    
+    // Check if user has active subscription for AI features
     if (file && !hasActiveSubscription(user)) {
         // AI image processing is a premium feature
         showUpgradePrompt('AI Call Notes Summarization');
@@ -5612,8 +5657,22 @@ async function processCallNotesForNewContact(file, contact, statusElement, callD
 
 // Process call notes with AI OCR and summarization
 async function processCallNotes(file, contactId, callDate, notesText) {
-    // Check if user has active subscription for AI features
+    // Check if user is logged in
     const user = getCurrentUser();
+    if (!user) {
+        alert('Please create a free account to add call notes. It only takes a moment!');
+        showAuthModal();
+        // Switch to signup mode
+        if (typeof toggleAuthMode === 'function') {
+            const isSignup = document.getElementById('auth-mode-toggle')?.textContent.includes('Sign up');
+            if (!isSignup) {
+                toggleAuthMode();
+            }
+        }
+        return;
+    }
+    
+    // Check if user has active subscription for AI features
     if (file && !hasActiveSubscription(user)) {
         // AI image processing is a premium feature
         showUpgradePrompt('AI Call Notes Summarization');
