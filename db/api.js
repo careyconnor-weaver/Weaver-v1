@@ -23,8 +23,22 @@ async function getUserByEmail(email) {
 }
 
 async function getUserById(userId) {
-    const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    return result[0] || null;
+    try {
+        // Ensure userId is a string
+        const userIdString = String(userId);
+        const result = await db.select().from(users).where(eq(users.id, userIdString)).limit(1);
+        return result[0] || null;
+    } catch (error) {
+        console.error('Error in getUserById:', error);
+        // Check if it's a column error (schema mismatch)
+        if (error.message && (
+            error.message.includes('column') && error.message.includes('does not exist') ||
+            error.message.includes('Failed query')
+        )) {
+            throw new Error('Database schema error: Stripe columns may not exist. Please run database migrations: npm run migrate');
+        }
+        throw error;
+    }
 }
 
 // ============ CONTACTS ============

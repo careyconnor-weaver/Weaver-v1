@@ -8,12 +8,15 @@ const dbAPI = require('../db/api');
 router.post('/create-checkout-session', express.json(), async (req, res) => {
     try {
         console.log('Received checkout request:', req.body);
-        const { userId, priceId } = req.body;
+        let { userId, priceId } = req.body;
         
         if (!userId || !priceId) {
             console.error('Missing required fields:', { userId: !!userId, priceId: !!priceId });
             return res.status(400).json({ error: 'userId and priceId are required' });
         }
+        
+        // Ensure userId is a string (important for database queries)
+        userId = String(userId);
         
         // Check if Stripe is configured
         if (!process.env.STRIPE_SECRET_KEY) {
@@ -22,8 +25,22 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
         }
         
         // Get user email
-        console.log('Fetching user:', userId);
-        const user = await dbAPI.getUserById(userId);
+        console.log('Fetching user:', userId, '(type:', typeof userId, ')');
+        let user;
+        try {
+            user = await dbAPI.getUserById(userId);
+        } catch (dbError) {
+            console.error('Database error fetching user:', dbError);
+            // Check if it's a schema/column error
+            if (dbError.message && dbError.message.includes('column') && dbError.message.includes('does not exist')) {
+                return res.status(500).json({ 
+                    error: 'Database schema error. Please run database migrations on the production server.',
+                    details: 'The Stripe columns may not exist in the database. Run: npm run db:push'
+                });
+            }
+            throw dbError; // Re-throw other errors
+        }
+        
         if (!user) {
             console.error('User not found:', userId);
             return res.status(404).json({ error: 'User not found. Please log in and try again.' });
@@ -95,11 +112,14 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
 // This endpoint needs JSON parsing
 router.post('/create-portal-session', express.json(), async (req, res) => {
     try {
-        const { userId } = req.body;
+        let { userId } = req.body;
         
         if (!userId) {
             return res.status(400).json({ error: 'userId is required' });
         }
+        
+        // Ensure userId is a string
+        userId = String(userId);
         
         const user = await dbAPI.getUserById(userId);
         if (!user || !user.stripeCustomerId) {
