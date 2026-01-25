@@ -13,12 +13,25 @@ let pool;
 let db;
 
 try {
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('dpg-') 
-            ? { rejectUnauthorized: false } 
-            : false,
-    });
+    // Parse DATABASE_URL and configure SSL properly
+    const dbUrl = process.env.DATABASE_URL;
+    let connectionConfig = {
+        connectionString: dbUrl,
+    };
+    
+    // For Render databases and other cloud providers, configure SSL
+    if (dbUrl && (dbUrl.includes('render.com') || dbUrl.includes('dpg-') || dbUrl.includes('sslmode=require'))) {
+        // Remove sslmode from URL if present to avoid conflicts
+        const cleanUrl = dbUrl.replace(/[?&]sslmode=[^&]*/, '');
+        connectionConfig.connectionString = cleanUrl;
+        // Set SSL config explicitly
+        connectionConfig.ssl = {
+            rejectUnauthorized: false,
+            require: true
+        };
+    }
+    
+    pool = new Pool(connectionConfig);
 
     // Handle pool errors gracefully
     pool.on('error', (err) => {
