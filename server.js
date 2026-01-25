@@ -1185,6 +1185,72 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Weaver API is running' });
 });
 
+// Manual database migration endpoint (for immediate fixes)
+app.get('/api/migrate', async (req, res) => {
+    if (!process.env.DATABASE_URL || !pool) {
+        return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    try {
+        const client = await pool.connect();
+        try {
+            // Check if Stripe columns exist
+            const checkColumns = await client.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'users' 
+                AND column_name IN ('stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'subscription_plan', 'subscription_current_period_end')
+            `);
+            
+            const existingColumns = checkColumns.rows.map(row => row.column_name);
+            const neededColumns = ['stripe_customer_id', 'stripe_subscription_id', 'subscription_status', 'subscription_plan', 'subscription_current_period_end'];
+            const missingColumns = neededColumns.filter(col => !existingColumns.includes(col));
+
+            if (missingColumns.length === 0) {
+                return res.json({ 
+                    success: true, 
+                    message: 'All Stripe columns already exist',
+                    existingColumns: existingColumns
+                });
+            }
+
+            console.log('🔄 Adding missing Stripe columns:', missingColumns);
+            
+            const columnsToAdd = [
+                { name: 'stripe_customer_id', type: 'text' },
+                { name: 'stripe_subscription_id', type: 'text' },
+                { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
+                { name: 'subscription_plan', type: 'text' },
+                { name: 'subscription_current_period_end', type: 'timestamp' }
+            ];
+
+            const addedColumns = [];
+            for (const column of columnsToAdd) {
+                if (missingColumns.includes(column.name)) {
+                    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+                    addedColumns.push(column.name);
+                    console.log(`  ✅ Added column: ${column.name}`);
+                }
+            }
+            
+            return res.json({ 
+                success: true, 
+                message: 'Migration completed successfully',
+                addedColumns: addedColumns,
+                existingColumns: existingColumns
+            });
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error('Migration error:', error);
+        return res.status(500).json({ 
+            error: 'Migration failed', 
+            message: error.message 
+        });
+    }
+});
+
 // Diagnostic endpoint to test Gmail label access
 app.get('/api/gmail/test-labels', async (req, res) => {
     try {
