@@ -12,6 +12,7 @@ const dbAPI = require('./db/api');
 const { Resend } = require('resend');
 const stripeRoutes = require('./routes/stripe');
 const { pool } = require('./db/index');
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 // Load environment variables
 dotenv.config();
@@ -1091,8 +1092,29 @@ app.post('/api/users/login', async (req, res) => {
         
         console.log(`Login successful for user: ${user.id}`);
         
+        // Refresh subscription from Stripe by email (fixes "paid but still free" when webhook missed or user logged in on different device)
+        let userToReturn = user;
+        if (stripe && user.email) {
+            try {
+                const customers = await stripe.customers.list({ email: user.email.trim(), limit: 10 });
+                for (const customer of customers.data || []) {
+                    const subs = await stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 10 });
+                    const active = (subs.data || []).find(s => s.status === 'active' || s.status === 'trialing');
+                    if (active) {
+                        await dbAPI.updateUserStripeCustomerId(user.id, customer.id);
+                        await dbAPI.updateUserSubscription(customer.id, active);
+                        const updated = await dbAPI.getUserById(user.id);
+                        if (updated) userToReturn = updated;
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error('Login: refresh subscription by email failed:', err.message);
+            }
+        }
+        
         // Return full user data (excluding password)
-        const { password: _, ...userWithoutPassword } = user;
+        const { password: _, ...userWithoutPassword } = userToReturn;
         res.json({ success: true, user: userWithoutPassword });
     } catch (error) {
         console.error('Login error:', error);
@@ -1191,6 +1213,41 @@ app.delete('/api/contacts', async (req, res) => {
     } catch (error) {
         console.error('Delete all contacts error:', error);
         res.status(500).json({ error: 'Failed to delete contacts' });
+    }
+});
+
+// Sync full contact list (replace all contacts for user – used so data persists across devices)
+app.post('/api/contacts/sync', async (req, res) => {
+    try {
+        const { userId, contacts } = req.body;
+        if (!userId || !Array.isArray(contacts)) {
+            return res.status(400).json({ error: 'userId and contacts array are required' });
+        }
+        await dbAPI.deleteAllContacts(userId);
+        for (const c of contacts) {
+            if (!c || !c.id || !c.name) continue;
+            const { emails = [], notes = [] } = c;
+            await dbAPI.createContact({
+                id: c.id, userId, name: c.name, email: c.email || null, firm: c.firm || null,
+                company: c.company || null, position: c.position || null, phone: c.phone || null,
+                location: c.location || null, priority: c.priority || null, vip: !!c.vip,
+                firstEmailDate: c.firstEmailDate || null, generalNotes: c.generalNotes || null
+            });
+            for (const e of emails) {
+                if (e && e.id != null && e.date && e.direction) {
+                    try { await dbAPI.addEmail(c.id, e); } catch (err) { console.warn('Sync addEmail skip:', err.message); }
+                }
+            }
+            for (const n of notes) {
+                if (n && n.id != null && n.date && n.summary != null) {
+                    try { await dbAPI.addNote(c.id, n); } catch (err) { console.warn('Sync addNote skip:', err.message); }
+                }
+            }
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Sync contacts error:', error);
+        res.status(500).json({ error: 'Failed to sync contacts' });
     }
 });
 

@@ -590,6 +590,7 @@ async function handleAuth(e) {
                 stripeCustomerId: data.user.stripeCustomerId || null,
                 stripeSubscriptionId: data.user.stripeSubscriptionId || null
             });
+            await loadContactsFromAPI();
             status.textContent = 'Login successful!';
             status.className = 'upload-status success';
             status.style.display = 'block';
@@ -1390,7 +1391,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Navigation functionality
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication on page load
     checkAuth();
     
@@ -1486,6 +1487,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Load contacts from backend when user is logged in (so data persists across devices)
+    if (getCurrentUser()) await loadContactsFromAPI();
     // Initialize contacts from localStorage
     loadContacts();
     updateContactDropdown();
@@ -2685,6 +2688,39 @@ function saveContacts(contacts) {
         return;
     }
     localStorage.setItem(getUserKey(currentUser.id), JSON.stringify(contacts));
+    syncContactsToBackend(contacts).catch(err => console.error('Sync contacts to backend failed:', err));
+}
+
+// Load contacts from backend (used on login and page load so data persists across devices)
+async function loadContactsFromAPI() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`/api/contacts?userId=${encodeURIComponent(currentUser.id)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.contacts && Array.isArray(data.contacts)) {
+            localStorage.setItem(getUserKey(currentUser.id), JSON.stringify(data.contacts));
+        }
+    } catch (err) {
+        console.error('Load contacts from API failed:', err);
+    }
+}
+
+// Persist current contact list to backend (called from saveContacts)
+async function syncContactsToBackend(contacts) {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !contacts) return;
+    try {
+        const res = await fetch('/api/contacts/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser.id, contacts })
+        });
+        if (!res.ok) throw new Error(await res.text());
+    } catch (err) {
+        throw err;
+    }
 }
 
 // Check if a contact is a duplicate (same name or email)
