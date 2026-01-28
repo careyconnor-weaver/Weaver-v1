@@ -1395,6 +1395,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Check authentication on page load
     checkAuth();
     
+    // Refresh subscription status if user is logged in (helps catch cases where webhook hasn't fired yet)
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.id) {
+        // Only refresh if status is 'free' or if we have a Stripe customer ID (indicates they might have subscribed)
+        if (currentUser.subscriptionStatus === 'free' || currentUser.stripeCustomerId) {
+            try {
+                const response = await fetch('/api/users/refresh-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.user) {
+                        // Update user in localStorage with refreshed subscription data
+                        const updatedUser = {
+                            id: data.user.id,
+                            email: data.user.email,
+                            subscriptionStatus: data.user.subscriptionStatus || 'free',
+                            subscriptionPlan: data.user.subscriptionPlan || null,
+                            stripeCustomerId: data.user.stripeCustomerId || null,
+                            stripeSubscriptionId: data.user.stripeSubscriptionId || null
+                        };
+                        setCurrentUser(updatedUser);
+                        console.log('Subscription status refreshed on page load:', updatedUser.subscriptionStatus);
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing subscription on page load:', error);
+                // Non-critical error, continue
+            }
+        }
+    }
+    
     // Set up auth form handler
     const authForm = document.getElementById('auth-form');
     if (authForm) {

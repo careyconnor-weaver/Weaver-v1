@@ -2208,3 +2208,72 @@ app.get('/api/test/send-reminder/:userId', async (req, res) => {
     }
 });
 
+// Refresh user subscription status from Stripe (called after payment or on demand)
+app.post('/api/users/refresh-subscription', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        
+        const user = await dbAPI.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Refresh subscription from Stripe by customer ID or email
+        if (stripe) {
+            try {
+                // Try by customer ID first
+                if (user.stripeCustomerId) {
+                    const subs = await stripe.subscriptions.list({ 
+                        customer: user.stripeCustomerId, 
+                        status: 'all', 
+                        limit: 10 
+                    });
+                    const active = (subs.data || []).find(s => s.status === 'active' || s.status === 'trialing');
+                    if (active) {
+                        await dbAPI.updateUserSubscription(user.stripeCustomerId, active);
+                        const updated = await dbAPI.getUserById(userId);
+                        const { password: _, ...userWithoutPassword } = updated;
+                        return res.json({ success: true, user: userWithoutPassword });
+                    }
+                }
+                
+                // If no active subscription found by customer ID, try by email
+                if (user.email) {
+                    const customers = await stripe.customers.list({ 
+                        email: user.email.trim(), 
+                        limit: 10 
+                    });
+                    for (const customer of customers.data || []) {
+                        const subs = await stripe.subscriptions.list({ 
+                            customer: customer.id, 
+                            status: 'all', 
+                            limit: 10 
+                        });
+                        const active = (subs.data || []).find(s => s.status === 'active' || s.status === 'trialing');
+                        if (active) {
+                            await dbAPI.updateUserStripeCustomerId(user.id, customer.id);
+                            await dbAPI.updateUserSubscription(customer.id, active);
+                            const updated = await dbAPI.getUserById(userId);
+                            const { password: _, ...userWithoutPassword } = updated;
+                            return res.json({ success: true, user: userWithoutPassword });
+                        }
+                    }
+                }
+            } catch (stripeError) {
+                console.error('Error refreshing subscription from Stripe:', stripeError);
+                // Continue to return current user data even if Stripe refresh fails
+            }
+        }
+        
+        // Return current user data (subscription may not be updated yet if webhook hasn't fired)
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+        console.error('Error refreshing subscription:', error);
+        res.status(500).json({ error: 'Failed to refresh subscription', message: error.message });
+    }
+});
+

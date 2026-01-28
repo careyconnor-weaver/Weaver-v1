@@ -40,14 +40,89 @@
             sessionStorage.setItem('stripe_session_id', sessionId);
         }
         
+        // Refresh user subscription status after successful payment
+        async function refreshUserSubscription() {
+            try {
+                // Get current user from localStorage
+                const currentUserStr = localStorage.getItem('weaver_current_user');
+                if (!currentUserStr) {
+                    console.log('No user found in localStorage, skipping subscription refresh');
+                    return;
+                }
+                
+                const currentUser = JSON.parse(currentUserStr);
+                if (!currentUser || !currentUser.id) {
+                    console.log('Invalid user data, skipping subscription refresh');
+                    return;
+                }
+                
+                console.log('Refreshing subscription status for user:', currentUser.id);
+                
+                // Call API to refresh subscription status from Stripe
+                const response = await fetch('/api/users/refresh-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Failed to refresh subscription:', errorData);
+                    // Don't show error to user, just log it - webhook will update it eventually
+                    return;
+                }
+                
+                const data = await response.json();
+                if (data.success && data.user) {
+                    // Update user in localStorage with refreshed subscription data
+                    const updatedUser = {
+                        id: data.user.id,
+                        email: data.user.email,
+                        subscriptionStatus: data.user.subscriptionStatus || 'free',
+                        subscriptionPlan: data.user.subscriptionPlan || null,
+                        stripeCustomerId: data.user.stripeCustomerId || null,
+                        stripeSubscriptionId: data.user.stripeSubscriptionId || null
+                    };
+                    
+                    localStorage.setItem('weaver_current_user', JSON.stringify(updatedUser));
+                    console.log('Subscription status refreshed:', updatedUser.subscriptionStatus);
+                    
+                    // Also reload contacts from API to ensure data persistence
+                    if (updatedUser.id) {
+                        try {
+                            const contactsResponse = await fetch(`/api/contacts?userId=${encodeURIComponent(updatedUser.id)}`);
+                            if (contactsResponse.ok) {
+                                const contactsData = await contactsResponse.json();
+                                if (contactsData.contacts && Array.isArray(contactsData.contacts)) {
+                                    localStorage.setItem(`weaver_contacts_${updatedUser.id}`, JSON.stringify(contactsData.contacts));
+                                    console.log('Contacts reloaded from API:', contactsData.contacts.length);
+                                }
+                            }
+                        } catch (contactsError) {
+                            console.error('Error reloading contacts:', contactsError);
+                            // Non-critical error, continue
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing subscription:', error);
+                // Don't show error to user - webhook will update it eventually
+            }
+        }
+        
+        // Refresh subscription status when page loads
+        refreshUserSubscription();
+        
         // Customer portal function
         async function openCustomerPortal() {
-            const user = JSON.parse(localStorage.getItem('currentUser'));
-            if (!user) {
+            const userStr = localStorage.getItem('weaver_current_user');
+            if (!userStr) {
                 alert('Please log in to manage your subscription');
                 window.location.href = '/';
                 return;
             }
+            
+            const user = JSON.parse(userStr);
             
             try {
                 const response = await fetch('/api/stripe/create-portal-session', {
