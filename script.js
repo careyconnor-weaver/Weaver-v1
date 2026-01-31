@@ -2829,7 +2829,15 @@ async function loadContactsFromAPI() {
         if (!res.ok) return;
         const data = await res.json();
         if (data.contacts && Array.isArray(data.contacts)) {
-            localStorage.setItem(getUserKey(currentUser.id), JSON.stringify(data.contacts));
+            const key = getUserKey(currentUser.id);
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            // Don't overwrite local list with a much smaller server list (prevents losing data after a bad sync)
+            const LOAD_REPLACE_THRESHOLD = 20;
+            if (existing.length > LOAD_REPLACE_THRESHOLD && data.contacts.length < existing.length - LOAD_REPLACE_THRESHOLD) {
+                console.warn('Load contacts: server has fewer contacts than this device. Keeping local list to prevent data loss.', { server: data.contacts.length, local: existing.length });
+                return;
+            }
+            localStorage.setItem(key, JSON.stringify(data.contacts));
         }
     } catch (err) {
         console.error('Load contacts from API failed:', err);
@@ -2846,7 +2854,13 @@ async function syncContactsToBackend(contacts) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id, contacts })
         });
-        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409 && data.code === 'LARGE_REPLACE') {
+            const msg = data.error || 'Sync would remove many contacts.';
+            alert(msg + '\n\nReload the page to load your full contact list from the server.');
+            throw new Error('LARGE_REPLACE');
+        }
+        if (!res.ok) throw new Error(data.error || res.statusText);
     } catch (err) {
         throw err;
     }

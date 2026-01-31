@@ -1226,10 +1226,14 @@ app.delete('/api/contacts', async (req, res) => {
     }
 });
 
+// Safeguard: reject sync that would remove many contacts (prevents accidental data loss from partial sync)
+const SYNC_LARGE_REPLACE_THRESHOLD = 20;
+
 // Sync full contact list (replace all contacts for user – used so data persists across devices)
 app.post('/api/contacts/sync', async (req, res) => {
     try {
         const { userId, contacts } = req.body;
+        const confirmLargeReplace = req.headers['x-confirm-replace-large'] === 'true';
         if (!userId || !Array.isArray(contacts)) {
             return res.status(400).json({ error: 'userId and contacts array are required' });
         }
@@ -1237,6 +1241,21 @@ app.post('/api/contacts/sync', async (req, res) => {
         const isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
         if (!isPaid && contacts.length > FREE_PLAN_CONTACT_LIMIT) {
             return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to sync more.` });
+        }
+        // Prevent accidental wipe: if server has many more contacts than incoming (and not a full delete), require confirmation
+        const existing = await dbAPI.getContactsByUserId(userId);
+        const currentCount = existing.length;
+        if (
+            contacts.length > 0 &&
+            currentCount - contacts.length > SYNC_LARGE_REPLACE_THRESHOLD &&
+            !confirmLargeReplace
+        ) {
+            return res.status(409).json({
+                error: 'Sync would remove many contacts. This usually means a partial list was sent. Sync cancelled to prevent data loss.',
+                code: 'LARGE_REPLACE',
+                currentCount,
+                incomingCount: contacts.length
+            });
         }
         await dbAPI.deleteAllContacts(userId);
         for (const c of contacts) {
