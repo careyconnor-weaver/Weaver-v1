@@ -883,6 +883,38 @@ function openSubscriptionModal() {
     const modal = document.getElementById('subscription-modal');
     if (modal) {
         modal.classList.add('active');
+        updateSubscriptionModalButtons();
+    }
+}
+
+// Update pricing modal buttons: show "Current plan" (disabled) on Pro when user is already subscribed
+function updateSubscriptionModalButtons() {
+    const proBtn = document.getElementById('subscribe-pro-btn');
+    const yearlyBtn = document.getElementById('subscribe-yearly-btn');
+    if (!proBtn || !yearlyBtn) return;
+
+    const currentUser = getCurrentUser();
+    const isPro = currentUser && hasActiveSubscription(currentUser);
+
+    const monthlyPriceId = 'price_1StXttQZZ2GMzWg9cj6s4DXD';
+    const yearlyPriceId = 'price_1StXtnQZZ2GMzWg9YeTAGbIq';
+
+    if (isPro) {
+        proBtn.textContent = 'Current plan';
+        proBtn.disabled = true;
+        proBtn.removeAttribute('onclick');
+        proBtn.onclick = null;
+        yearlyBtn.textContent = 'Current plan';
+        yearlyBtn.disabled = true;
+        yearlyBtn.removeAttribute('onclick');
+        yearlyBtn.onclick = null;
+    } else {
+        proBtn.textContent = 'Subscribe Now';
+        proBtn.disabled = false;
+        proBtn.setAttribute('onclick', `handleSubscription('${monthlyPriceId}')`);
+        yearlyBtn.textContent = 'Subscribe Yearly';
+        yearlyBtn.disabled = false;
+        yearlyBtn.setAttribute('onclick', `handleSubscription('${yearlyPriceId}')`);
     }
 }
 
@@ -901,6 +933,10 @@ async function handleSubscription(priceId) {
         alert('Please log in to subscribe');
         closeSubscriptionModal();
         showAuthModal();
+        return;
+    }
+    if (hasActiveSubscription(user)) {
+        alert('You already have an active Pro subscription. Use "Manage Subscription" in your profile to change or cancel it.');
         return;
     }
 
