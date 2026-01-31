@@ -1121,10 +1121,13 @@
     <div id="subscription-modal" class="modal" onclick="if(event.target === this) closeSubscriptionModal();">
         <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation();">
             <span class="close-modal" onclick="closeSubscriptionModal()">&times;</span>
+            <!-- Sync-my-plan note: first thing visible at top of pricing popup -->
+            <div id="pricing-sync-note" style="margin-bottom: 1.25rem; padding: 0.6rem 1rem; background: rgba(49, 130, 206, 0.12); border: 1px solid rgba(49, 130, 206, 0.3); border-radius: 8px; color: var(--text-dark); font-size: 0.9rem; text-align: center;">
+                If your plan still says <strong>Free</strong> under your profile, click <strong>Sync my plan</strong> in the profile menu to access Pro features.
+            </div>
             <div style="text-align: center; margin-bottom: 2rem;">
                 <h2 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-size: 2rem;">Choose Your Plan</h2>
                 <p style="margin: 0; color: var(--text-medium); font-size: 1rem;">Unlock premium features to maximize your networking success</p>
-                <p style="margin: 0.75rem 0 0; padding: 0.5rem 0.75rem; background: rgba(49, 130, 206, 0.08); border-radius: 6px; color: var(--text-medium); font-size: 0.85rem; max-width: 480px; margin-left: auto; margin-right: auto;">If your plan still says Free under your profile, click <strong>Sync my plan</strong> in the profile menu to access Pro features.</p>
             </div>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
