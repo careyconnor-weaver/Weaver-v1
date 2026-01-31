@@ -680,7 +680,7 @@ function toggleProfileMenu() {
                             `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
                                 <span class="subscription-badge pro">PRO</span>
                             </p>
-                            <button onclick="openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
+                            <button type="button" onclick="window.openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
                             `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
                                 <span class="subscription-badge free">FREE</span>
                             </p>
@@ -1097,11 +1097,11 @@ function updateProfileMenuWithSubscription() {
                 `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
                     <span class="subscription-badge pro">PRO</span>
                 </p>
-                <button onclick="openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
+                <button type="button" onclick="window.openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
                 `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
                     <span class="subscription-badge free">FREE</span>
                 </p>
-                <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
+                <button type="button" onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
             }
         </div>
     `;
@@ -1158,6 +1158,7 @@ function showUpgradePrompt(featureName) {
 window.openSubscriptionModal = openSubscriptionModal;
 window.closeSubscriptionModal = closeSubscriptionModal;
 window.handleSubscription = handleSubscription;
+window.handleAuth = handleAuth;
 window.openCustomerPortal = openCustomerPortal;
 window.syncMyPlan = syncMyPlan;
 window.showUpgradePrompt = showUpgradePrompt;
@@ -1525,12 +1526,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
     
-    // Set up auth form handler
-    const authForm = document.getElementById('auth-form');
-    if (authForm) {
-        authForm.addEventListener('submit', handleAuth);
-    }
-    
+    // Auth form uses onsubmit in HTML (window.handleAuth) so it works even if DOMContentLoaded hasn't finished
     // Close auth modal when clicking outside
     const authModal = document.getElementById('auth-modal');
     if (authModal) {
@@ -2785,8 +2781,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Contact management functions
 // User management functions
 function getCurrentUser() {
-    const user = localStorage.getItem('weaver_current_user');
-    return user ? JSON.parse(user) : null;
+    try {
+        const user = localStorage.getItem('weaver_current_user');
+        return user ? JSON.parse(user) : null;
+    } catch (e) {
+        console.warn('getCurrentUser: invalid stored user', e);
+        return null;
+    }
 }
 
 function setCurrentUser(user) {
@@ -2806,8 +2807,13 @@ function getContacts() {
     if (!currentUser) {
         return [];
     }
-    const contacts = localStorage.getItem(getUserKey(currentUser.id));
-    return contacts ? JSON.parse(contacts) : [];
+    try {
+        const contacts = localStorage.getItem(getUserKey(currentUser.id));
+        return contacts ? JSON.parse(contacts) : [];
+    } catch (e) {
+        console.warn('getContacts: invalid stored contacts', e);
+        return [];
+    }
 }
 
 function saveContacts(contacts) {
