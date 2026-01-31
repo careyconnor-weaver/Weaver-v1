@@ -1062,7 +1062,7 @@ function showUpgradePrompt(featureName) {
                 </li>
             </ul>
             <button onclick="openSubscriptionModal(); this.closest('.modal').remove();" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                Upgrade to Pro - $9.99/month
+                Upgrade to Pro - $4.99/month
             </button>
             <button onclick="this.closest('.modal').remove();" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
                 Maybe Later
