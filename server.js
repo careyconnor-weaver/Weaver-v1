@@ -14,6 +14,8 @@ const stripeRoutes = require('./routes/stripe');
 const { pool } = require('./db/index');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
+const FREE_PLAN_CONTACT_LIMIT = 20;
+
 // Load environment variables
 dotenv.config();
 
@@ -1161,6 +1163,14 @@ app.post('/api/contacts', async (req, res) => {
         if (!contactData.userId || !contactData.id || !contactData.name) {
             return res.status(400).json({ error: 'userId, id, and name are required' });
         }
+        const user = await dbAPI.getUserById(contactData.userId);
+        const isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
+        if (!isPaid) {
+            const existing = await dbAPI.getContactsByUserId(contactData.userId);
+            if (existing.length >= FREE_PLAN_CONTACT_LIMIT) {
+                return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to add more.` });
+            }
+        }
         const contact = await dbAPI.createContact(contactData);
         res.json({ success: true, contact });
     } catch (error) {
@@ -1222,6 +1232,11 @@ app.post('/api/contacts/sync', async (req, res) => {
         const { userId, contacts } = req.body;
         if (!userId || !Array.isArray(contacts)) {
             return res.status(400).json({ error: 'userId and contacts array are required' });
+        }
+        const user = await dbAPI.getUserById(userId);
+        const isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
+        if (!isPaid && contacts.length > FREE_PLAN_CONTACT_LIMIT) {
+            return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to sync more.` });
         }
         await dbAPI.deleteAllContacts(userId);
         for (const c of contacts) {

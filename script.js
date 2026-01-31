@@ -866,6 +866,17 @@ function getSubscriptionStatus(user) {
     return user.subscriptionStatus || 'free';
 }
 
+// Free plan contact limit
+const FREE_PLAN_CONTACT_LIMIT = 20;
+
+// Check if user can add more contacts (free = 20 max, paid = unlimited)
+function canAddMoreContacts() {
+    const user = getCurrentUser();
+    if (!user) return false;
+    if (hasActiveSubscription(user)) return true;
+    return getContacts().length < FREE_PLAN_CONTACT_LIMIT;
+}
+
 // Open subscription modal
 function openSubscriptionModal() {
     const modal = document.getElementById('subscription-modal');
@@ -1992,17 +2003,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else if (newContactNotesMode === 'image' && newContactNotesFile) {
             processCallNotesForNewContact(newContactNotesFile, contact, status, callDate, null);
         } else {
-            // No notes, just add contact
-            addContact(contact);
-            // Don't show success message - just reset form and switch to contacts view
-            newContactForm.reset();
-            newContactNotesPreview.style.display = 'none';
-            newContactNotesFile = null;
-            
-            // Switch to contacts view
-            setTimeout(() => {
-                document.querySelector('a[href="#contacts"]').click();
-            }, 500);
+            // No notes, just add contact (may return null if free limit reached)
+            const result = addContact(contact);
+            if (result !== null) {
+                newContactForm.reset();
+                newContactNotesPreview.style.display = 'none';
+                newContactNotesFile = null;
+                setTimeout(() => {
+                    document.querySelector('a[href="#contacts"]').click();
+                }, 500);
+            }
         }
     });
 
@@ -2916,6 +2926,12 @@ function addContact(contact, skipDuplicateCheck = false) {
                 console.log('User chose not to merge, adding as separate contact');
             }
         }
+    }
+    
+    // Free plan: max 20 contacts (check before adding new contact, not when merging)
+    if (!canAddMoreContacts()) {
+        showUpgradePrompt(`More contacts (Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts)`);
+        return null;
     }
     
     // Add the contact (either new or user chose not to merge)
@@ -5420,33 +5436,39 @@ function processExcelData(excelData, status) {
         let addedCount = 0;
         let mergedCount = 0;
         
-        contacts.forEach(contact => {
+        let hitFreeLimit = false;
+        for (const contact of contacts) {
+            if (!canAddMoreContacts()) {
+                showUpgradePrompt(`More contacts (Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts)`);
+                hitFreeLimit = true;
+                break;
+            }
             const contactsBefore = getContacts().length;
             const result = addContact(contact);
             const contactsAfter = getContacts().length;
             
             // Check if contact was merged (no new contact added) or added (new contact added)
             if (contactsAfter === contactsBefore) {
-                // Contact was merged (length didn't change)
                 mergedCount++;
             } else {
-                // Contact was added (length increased)
                 addedCount++;
             }
-        });
+        }
         
-        let message = `Successfully processed ${addedCount + mergedCount} contact${addedCount + mergedCount !== 1 ? 's' : ''} from spreadsheet!`;
-        if (addedCount > 0 && mergedCount > 0) {
+        let message = hitFreeLimit
+            ? `Added ${addedCount + mergedCount} contact(s) from spreadsheet. Free plan limit (${FREE_PLAN_CONTACT_LIMIT} contacts) reached. Upgrade to add more.`
+            : `Successfully processed ${addedCount + mergedCount} contact${addedCount + mergedCount !== 1 ? 's' : ''} from spreadsheet!`;
+        if (!hitFreeLimit && addedCount > 0 && mergedCount > 0) {
             message += ` (${addedCount} added, ${mergedCount} merged with existing contacts)`;
-        } else if (mergedCount > 0) {
+        } else if (!hitFreeLimit && mergedCount > 0) {
             message += ` (${mergedCount} merged with existing contacts)`;
         }
         
         status.textContent = message;
-        status.className = 'upload-status success';
+        status.className = hitFreeLimit ? 'upload-status error' : 'upload-status success';
         status.style.display = 'block';
         
-        console.log(`Successfully processed ${addedCount + mergedCount} contacts (${addedCount} added, ${mergedCount} merged)`);
+        console.log(`Processed ${addedCount + mergedCount} contacts from spreadsheet` + (hitFreeLimit ? '; free limit reached' : ''));
         
         // Refresh the contacts view
         updateContactDropdown();
@@ -5532,29 +5554,34 @@ function processParsedData(csvText, status) {
         let addedCount = 0;
         let mergedCount = 0;
         let skippedCount = 0;
+        let hitFreeLimit = false;
         
-        contacts.forEach(contact => {
+        for (const contact of contacts) {
             if (!contact.name) {
                 skippedCount++;
-                return;
+                continue;
+            }
+            if (!canAddMoreContacts()) {
+                showUpgradePrompt(`More contacts (Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts)`);
+                hitFreeLimit = true;
+                break;
             }
             
             const contactsBefore = getContacts().length;
             const result = addContact(contact);
             const contactsAfter = getContacts().length;
             
-            // Check if contact was merged (no new contact added) or added (new contact added)
             if (contactsAfter === contactsBefore) {
-                // Contact was merged (length didn't change)
                 mergedCount++;
             } else {
-                // Contact was added (length increased)
                 addedCount++;
             }
-        });
+        }
         
-        let message = `Successfully processed ${addedCount + mergedCount} contact${addedCount + mergedCount !== 1 ? 's' : ''} from spreadsheet!`;
-        if (addedCount > 0 && mergedCount > 0) {
+        let message = hitFreeLimit
+            ? `Added ${addedCount + mergedCount} contact(s) from spreadsheet. Free plan limit (${FREE_PLAN_CONTACT_LIMIT} contacts) reached. Upgrade to add more.`
+            : `Successfully processed ${addedCount + mergedCount} contact${addedCount + mergedCount !== 1 ? 's' : ''} from spreadsheet!`;
+        if (!hitFreeLimit && addedCount > 0 && mergedCount > 0) {
             message += ` (${addedCount} added, ${mergedCount} merged with existing contacts)`;
         } else if (mergedCount > 0) {
             message += ` (${mergedCount} merged with existing contacts)`;
@@ -5564,10 +5591,10 @@ function processParsedData(csvText, status) {
         }
         
         status.textContent = message;
-        status.className = 'upload-status success';
+        status.className = hitFreeLimit ? 'upload-status error' : 'upload-status success';
         status.style.display = 'block';
         
-        console.log(`Successfully processed ${addedCount + mergedCount} contacts (${addedCount} added, ${mergedCount} merged)`);
+        console.log(`Processed ${addedCount + mergedCount} contacts from spreadsheet` + (hitFreeLimit ? '; free limit reached' : ''));
         
         // Refresh the contacts view
         updateContactDropdown();
