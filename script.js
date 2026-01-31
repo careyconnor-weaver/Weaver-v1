@@ -686,6 +686,7 @@ function toggleProfileMenu() {
                             </p>
                             <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
                         }
+                        <button onclick="window.syncMyPlan()" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem; padding: 0.35rem; margin-top: 0.35rem;">Sync my plan</button>
                     </div>
                     
                     <!-- Gmail Integration Section -->
@@ -991,6 +992,43 @@ async function openCustomerPortal() {
     }
 }
 
+// Sync subscription status from Stripe (for users who paid but still see Free)
+async function syncMyPlan() {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.id) {
+        alert('Please log in first.');
+        return;
+    }
+    try {
+        const response = await fetch('/api/users/refresh-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser.id })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || data.message || 'Failed to refresh');
+        }
+        if (data.success && data.user) {
+            const updatedUser = {
+                id: data.user.id,
+                email: data.user.email,
+                subscriptionStatus: data.user.subscriptionStatus || 'free',
+                subscriptionPlan: data.user.subscriptionPlan || null,
+                stripeCustomerId: data.user.stripeCustomerId || null,
+                stripeSubscriptionId: data.user.stripeSubscriptionId || null
+            };
+            setCurrentUser(updatedUser);
+            window.location.reload();
+            return;
+        }
+        alert('Could not update plan. Please try again or contact support.');
+    } catch (error) {
+        console.error('Sync plan error:', error);
+        alert('Error syncing plan: ' + (error.message || 'Please try again.'));
+    }
+}
+
 // Update profile menu with subscription info
 function updateProfileMenuWithSubscription() {
     const menuContent = document.getElementById('profile-menu-content');
@@ -1076,6 +1114,7 @@ window.openSubscriptionModal = openSubscriptionModal;
 window.closeSubscriptionModal = closeSubscriptionModal;
 window.handleSubscription = handleSubscription;
 window.openCustomerPortal = openCustomerPortal;
+window.syncMyPlan = syncMyPlan;
 window.showUpgradePrompt = showUpgradePrompt;
 window.hasActiveSubscription = hasActiveSubscription;
 window.getSubscriptionStatus = getSubscriptionStatus;
