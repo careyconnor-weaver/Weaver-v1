@@ -1226,14 +1226,11 @@ app.delete('/api/contacts', async (req, res) => {
     }
 });
 
-// Safeguard: reject sync that would remove many contacts (prevents accidental data loss from partial sync)
-const SYNC_LARGE_REPLACE_THRESHOLD = 20;
-
-// Sync full contact list (replace all contacts for user – used so data persists across devices)
+// Sync contact list: MERGE only – add/update contacts, never delete contacts not in the payload.
+// Contacts are permanent per user; they are only removed by explicit Delete Contact or Delete All.
 app.post('/api/contacts/sync', async (req, res) => {
     try {
         const { userId, contacts } = req.body;
-        const confirmLargeReplace = req.headers['x-confirm-replace-large'] === 'true';
         if (!userId || !Array.isArray(contacts)) {
             return res.status(400).json({ error: 'userId and contacts array are required' });
         }
@@ -1242,31 +1239,32 @@ app.post('/api/contacts/sync', async (req, res) => {
         if (!isPaid && contacts.length > FREE_PLAN_CONTACT_LIMIT) {
             return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to sync more.` });
         }
-        // Prevent accidental wipe: if server has many more contacts than incoming (and not a full delete), require confirmation
-        const existing = await dbAPI.getContactsByUserId(userId);
-        const currentCount = existing.length;
-        if (
-            contacts.length > 0 &&
-            currentCount - contacts.length > SYNC_LARGE_REPLACE_THRESHOLD &&
-            !confirmLargeReplace
-        ) {
-            return res.status(409).json({
-                error: 'Sync would remove many contacts. This usually means a partial list was sent. Sync cancelled to prevent data loss.',
-                code: 'LARGE_REPLACE',
-                currentCount,
-                incomingCount: contacts.length
-            });
-        }
-        await dbAPI.deleteAllContacts(userId);
         for (const c of contacts) {
             if (!c || !c.id || !c.name) continue;
             const { emails = [], notes = [] } = c;
-            await dbAPI.createContact({
-                id: c.id, userId, name: c.name, email: c.email || null, firm: c.firm || null,
-                company: c.company || null, position: c.position || null, phone: c.phone || null,
-                location: c.location || null, priority: c.priority || null, vip: !!c.vip,
-                firstEmailDate: c.firstEmailDate || null, generalNotes: c.generalNotes || null
-            });
+            const existing = await dbAPI.getContactById(c.id, userId);
+            const contactPayload = {
+                name: c.name,
+                email: c.email || null,
+                firm: c.firm || null,
+                company: c.company || null,
+                position: c.position || null,
+                phone: c.phone || null,
+                location: c.location || null,
+                priority: c.priority || null,
+                vip: !!c.vip,
+                firstEmailDate: c.firstEmailDate || null,
+                generalNotes: c.generalNotes || null
+            };
+            if (existing) {
+                await dbAPI.updateContact(c.id, userId, contactPayload);
+                await dbAPI.deleteEmailsByContactId(c.id);
+                await dbAPI.deleteNotesByContactId(c.id);
+            } else {
+                await dbAPI.createContact({
+                    id: c.id, userId, ...contactPayload
+                });
+            }
             for (const e of emails) {
                 if (e && e.id != null && e.date && e.direction) {
                     try { await dbAPI.addEmail(c.id, e); } catch (err) { console.warn('Sync addEmail skip:', err.message); }

@@ -174,6 +174,14 @@ async function addNote(contactId, noteData) {
     return result[0];
 }
 
+async function deleteEmailsByContactId(contactId) {
+    await db.delete(emails).where(eq(emails.contactId, contactId));
+}
+
+async function deleteNotesByContactId(contactId) {
+    await db.delete(notes).where(eq(notes.contactId, contactId));
+}
+
 // ============ GMAIL TOKENS ============
 async function saveGmailToken(userId, tokenData) {
     const { accessToken, refreshToken, expiryDate, tokenType, scope } = tokenData;
@@ -470,9 +478,11 @@ module.exports = {
     // Emails
     addEmail,
     getEmailsByContactId,
-    
+    deleteEmailsByContactId,
+
     // Notes
     addNote,
+    deleteNotesByContactId,
     
     // Gmail Tokens
     saveGmailToken,

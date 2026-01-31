@@ -2844,22 +2844,28 @@ async function loadContactsFromAPI() {
     }
 }
 
-// Persist current contact list to backend (called from saveContacts)
+// Persist current contact list to backend (called from saveContacts).
+// Sync is merge-only: adds/updates contacts, never deletes contacts not in the list.
+// Empty list = explicit "Delete all" – call DELETE /api/contacts.
 async function syncContactsToBackend(contacts) {
     const currentUser = getCurrentUser();
-    if (!currentUser || !contacts) return;
+    if (!currentUser) return;
     try {
+        if (Array.isArray(contacts) && contacts.length === 0) {
+            const res = await fetch(`/api/contacts?userId=${encodeURIComponent(currentUser.id)}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || res.statusText);
+            }
+            return;
+        }
+        if (!contacts) return;
         const res = await fetch('/api/contacts/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id, contacts })
         });
         const data = await res.json().catch(() => ({}));
-        if (res.status === 409 && data.code === 'LARGE_REPLACE') {
-            const msg = data.error || 'Sync would remove many contacts.';
-            alert(msg + '\n\nReload the page to load your full contact list from the server.');
-            throw new Error('LARGE_REPLACE');
-        }
         if (!res.ok) throw new Error(data.error || res.statusText);
     } catch (err) {
         throw err;
