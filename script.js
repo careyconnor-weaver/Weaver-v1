@@ -1729,6 +1729,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         strengtheningVipFilter.addEventListener('change', updateStrengtheningNet);
     }
 
+    // Research quotes carousel (arrows + scroll)
+    initResearchQuotesScroll();
+
     // Call notes modal
     const callNotesModal = document.getElementById('call-notes-modal');
     const callNotesClose = callNotesModal.querySelector('.close-modal');
@@ -2284,6 +2287,43 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }, 2000);
                 }
             }, { passive: false });
+            
+            // Arrow buttons: step one article at a time
+            const step = cardWidth + gap;
+            const prevBtn = document.getElementById('research-quotes-prev');
+            const nextBtn = document.getElementById('research-quotes-next');
+            if (prevBtn) {
+                prevBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isAutoScrolling = false;
+                    quotesContainer.classList.remove('auto-scrolling');
+                    scrollPosition -= step;
+                    scrollPosition = wrapScrollPosition(scrollPosition);
+                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        isAutoScrolling = true;
+                        quotesContainer.classList.add('auto-scrolling');
+                    }, 2000);
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isAutoScrolling = false;
+                    quotesContainer.classList.remove('auto-scrolling');
+                    scrollPosition += step;
+                    scrollPosition = wrapScrollPosition(scrollPosition);
+                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        isAutoScrolling = true;
+                        quotesContainer.classList.add('auto-scrolling');
+                    }, 2000);
+                });
+            }
         }, 100); // Small delay to ensure DOM is ready
     }
     

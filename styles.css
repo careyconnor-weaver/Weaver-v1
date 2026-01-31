@@ -2227,6 +2227,42 @@ body {
 }
 
 /* Research Quotes Horizontal Scroll */
+.research-quotes-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-blue);
+    background: white;
+    color: var(--accent-blue);
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.research-quotes-arrow:hover {
+    background: var(--accent-blue);
+    color: white;
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
+.research-quotes-arrow:focus {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+.research-quotes-arrow-left {
+    left: 0.5rem;
+}
+.research-quotes-arrow-right {
+    right: 0.5rem;
+}
+
 .research-quotes-scroll {
     position: relative;
     overflow-x: auto;
