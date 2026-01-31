@@ -889,6 +889,7 @@ function openSubscriptionModal() {
 
 // Update pricing modal buttons: show "Current plan" (disabled) on Pro when user is already subscribed
 function updateSubscriptionModalButtons() {
+    const freeBtn = document.getElementById('subscribe-free-btn');
     const proBtn = document.getElementById('subscribe-pro-btn');
     const yearlyBtn = document.getElementById('subscribe-yearly-btn');
     if (!proBtn || !yearlyBtn) return;
@@ -900,6 +901,10 @@ function updateSubscriptionModalButtons() {
     const yearlyPriceId = 'price_1StXtnQZZ2GMzWg9YeTAGbIq';
 
     if (isPro) {
+        if (freeBtn) {
+            freeBtn.textContent = 'Free';
+            freeBtn.disabled = true;
+        }
         proBtn.textContent = 'Current plan';
         proBtn.disabled = true;
         proBtn.removeAttribute('onclick');
@@ -909,6 +914,10 @@ function updateSubscriptionModalButtons() {
         yearlyBtn.removeAttribute('onclick');
         yearlyBtn.onclick = null;
     } else {
+        if (freeBtn) {
+            freeBtn.textContent = 'Current plan';
+            freeBtn.disabled = true;
+        }
         proBtn.textContent = 'Subscribe Now';
         proBtn.disabled = false;
         proBtn.setAttribute('onclick', `handleSubscription('${monthlyPriceId}')`);
