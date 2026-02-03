@@ -1,6 +1,6 @@
 const { db } = require('./index');
 const { users, contacts, emails, notes, gmailTokens, assistantSettings } = require('./schema');
-const { eq, and, desc } = require('drizzle-orm');
+const { eq, and, desc, sql } = require('drizzle-orm');
 
 // Check if db is available
 if (!db) {
@@ -18,7 +18,9 @@ async function createUser(userId, email, password) {
 }
 
 async function getUserByEmail(email) {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (!email || typeof email !== 'string') return null;
+    const normalized = email.trim().toLowerCase();
+    const result = await db.select().from(users).where(sql`LOWER(${users.email}) = ${normalized}`).limit(1);
     return result[0] || null;
 }
 

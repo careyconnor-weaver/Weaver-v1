@@ -403,7 +403,7 @@ function toggleAuthMode() {
 async function handleAuth(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    const password = document.getElementById('auth-password').value.trim();
     const status = document.getElementById('auth-status');
     
     if (!email || !password) {
@@ -559,7 +559,7 @@ async function handleAuth(e) {
                 
                 // If user exists but password is wrong, provide helpful message
                 if (data.error?.includes('Invalid email or password')) {
-                    errorMsg = 'Invalid email or password. If you forgot your password, please contact support.';
+                    errorMsg = 'Invalid email or password. Check for typos, caps lock, or extra spaces. Email is not case-sensitive. If you forgot your password, please contact support.';
                 }
                 
                 status.textContent = errorMsg;
