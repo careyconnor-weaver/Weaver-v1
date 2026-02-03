@@ -1,21 +1,6 @@
-const { db, pool } = require('./index');
+const { db } = require('./index');
 const { users, contacts, emails, notes, gmailTokens, assistantSettings } = require('./schema');
 const { eq, and, desc } = require('drizzle-orm');
-
-function mapUserRowToCamel(row) {
-    if (!row) return null;
-    return {
-        id: row.id,
-        email: row.email,
-        password: row.password,
-        createdAt: row.created_at,
-        stripeCustomerId: row.stripe_customer_id ?? null,
-        stripeSubscriptionId: row.stripe_subscription_id ?? null,
-        subscriptionStatus: row.subscription_status ?? 'free',
-        subscriptionPlan: row.subscription_plan ?? null,
-        subscriptionCurrentPeriodEnd: row.subscription_current_period_end ? new Date(row.subscription_current_period_end) : null
-    };
-}
 
 // Check if db is available
 if (!db) {
@@ -33,33 +18,8 @@ async function createUser(userId, email, password) {
 }
 
 async function getUserByEmail(email) {
-    if (!email || typeof email !== 'string') return null;
-    const normalized = String(email).trim().toLowerCase();
-    if (!normalized) return null;
-    try {
-        if (pool) {
-            const r = await pool.query(
-                'SELECT * FROM users WHERE LOWER(TRIM(email)) = $1 LIMIT 1',
-                [normalized]
-            );
-            const row = r.rows && r.rows[0];
-            if (row) return mapUserRowToCamel(row);
-        }
-        if (!db) return null;
-        const result = await db.select().from(users).where(eq(users.email, String(email).trim())).limit(1);
-        return result[0] || null;
-    } catch (err) {
-        console.error('getUserByEmail error:', err);
-        if (pool) {
-            try {
-                const result = await db.select().from(users).where(eq(users.email, String(email).trim())).limit(1);
-                return result[0] || null;
-            } catch (e) {
-                console.error('getUserByEmail fallback error:', e);
-            }
-        }
-        return null;
-    }
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0] || null;
 }
 
 async function getUserById(userId) {

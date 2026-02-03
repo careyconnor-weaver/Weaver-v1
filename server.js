@@ -1025,57 +1025,45 @@ app.get('/api/gmail/sync-label', async (req, res) => {
 // Users
 app.post('/api/users/signup', async (req, res) => {
     try {
-        let { userId, email, password } = req.body;
+        const { userId, email, password } = req.body;
         if (!userId || !email || !password) {
-            return res.status(400).json({ error: 'userId, email, and password are required' });
-        }
-        email = String(email).trim().toLowerCase();
-        password = String(password).trim();
-        if (!email || !password) {
             return res.status(400).json({ error: 'userId, email, and password are required' });
         }
         
         console.log('Signup attempt:', { userId, email, passwordLength: password.length });
-        
-        const existing = await dbAPI.getUserByEmail(email);
-        if (existing) {
-            return res.status(400).json({
-                error: 'An account with this email already exists',
-                details: 'Use the Login option to sign in, or use a different email.'
-            });
-        }
         
         const user = await dbAPI.createUser(userId, email, password);
         console.log('User created successfully:', user.id);
         res.json({ success: true, user: { id: user.id, email: user.email } });
     } catch (error) {
         console.error('Signup error:', error);
-        const code = error.code || (error.cause && error.cause.code);
-        const detail = error.detail || (error.cause && error.cause.detail);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
         
-        if (code === '23505' || (detail && String(detail).toLowerCase().includes('unique'))) {
-            return res.status(400).json({
+        if (error.code === '23505') { // Unique constraint violation
+            return res.status(400).json({ 
                 error: 'An account with this email already exists',
-                details: 'Use the Login option to sign in, or use a different email.'
+                details: error.detail || 'Email is already registered'
             });
         }
         
-        res.status(500).json({
+        // Return more detailed error message
+        const errorMessage = error.message || 'Failed to create user';
+        res.status(500).json({ 
             error: 'Failed to create user',
-            details: error.message || 'Please try again or contact support.',
-            code: code
+            details: errorMessage,
+            code: error.code
         });
     }
 });
 
 app.post('/api/users/login', async (req, res) => {
     try {
-        let { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        email = String(email).trim();
-        password = String(password).trim();
+        const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
@@ -1091,8 +1079,9 @@ app.post('/api/users/login', async (req, res) => {
         
         console.log(`User found: ${user.id}, checking password...`);
         
+        // Compare passwords (trim whitespace for safety)
         const storedPassword = (user.password || '').trim();
-        const providedPassword = password;
+        const providedPassword = (password || '').trim();
         
         console.log(`Password comparison: stored length=${storedPassword.length}, provided length=${providedPassword.length}`);
         
