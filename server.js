@@ -1025,22 +1025,12 @@ app.get('/api/gmail/sync-label', async (req, res) => {
 // Users
 app.post('/api/users/signup', async (req, res) => {
     try {
-        let { userId, email, password } = req.body;
+        const { userId, email, password } = req.body;
         if (!userId || !email || !password) {
-            return res.status(400).json({ error: 'userId, email, and password are required' });
-        }
-        email = String(email).trim().toLowerCase();
-        password = String(password).trim();
-        if (!email || !password) {
             return res.status(400).json({ error: 'userId, email, and password are required' });
         }
         
         console.log('Signup attempt:', { userId, email, passwordLength: password.length });
-        
-        const existing = await dbAPI.getUserByEmail(email);
-        if (existing) {
-            return res.status(400).json({ error: 'An account with this email already exists', details: 'Email is already registered' });
-        }
         
         const user = await dbAPI.createUser(userId, email, password);
         console.log('User created successfully:', user.id);
@@ -1073,12 +1063,7 @@ app.post('/api/users/signup', async (req, res) => {
 
 app.post('/api/users/login', async (req, res) => {
     try {
-        let { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        email = String(email).trim();
-        password = String(password).trim();
+        const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
@@ -1094,9 +1079,9 @@ app.post('/api/users/login', async (req, res) => {
         
         console.log(`User found: ${user.id}, checking password...`);
         
-        // Compare passwords (already trimmed above)
+        // Compare passwords (trim whitespace for safety)
         const storedPassword = (user.password || '').trim();
-        const providedPassword = password;
+        const providedPassword = (password || '').trim();
         
         console.log(`Password comparison: stored length=${storedPassword.length}, provided length=${providedPassword.length}`);
         
