@@ -1,4 +1,4 @@
-const { db, pool } = require('./index');
+const { db } = require('./index');
 const { users, contacts, emails, notes, gmailTokens, assistantSettings } = require('./schema');
 const { eq, and, desc } = require('drizzle-orm');
 
@@ -22,15 +22,9 @@ async function getUserByEmail(email) {
     const normalized = String(email).trim().toLowerCase();
     if (!normalized) return null;
     try {
-        if (pool) {
-            const r = await pool.query(
-                'SELECT * FROM users WHERE LOWER(TRIM(email)) = $1 LIMIT 1',
-                [normalized]
-            );
-            return r.rows && r.rows[0] ? r.rows[0] : null;
-        }
-        const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        return result[0] || null;
+        const result = await db.select().from(users);
+        const user = result.find(u => (String(u.email || '').trim().toLowerCase() === normalized));
+        return user || null;
     } catch (err) {
         console.error('getUserByEmail error:', err);
         return null;
