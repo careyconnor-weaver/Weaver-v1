@@ -403,7 +403,7 @@ function toggleAuthMode() {
 async function handleAuth(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    const password = document.getElementById('auth-password').value.trim();
     const status = document.getElementById('auth-status');
     
     if (!email || !password) {

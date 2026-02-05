@@ -12,7 +12,7 @@ async function createUser(userId, email, password) {
     const result = await db.insert(users).values({
         id: userId,
         email: email,
-        password: password, // In production, hash this!
+        password: (password || '').trim(), // In production, hash this!
     }).returning();
     return result[0];
 }

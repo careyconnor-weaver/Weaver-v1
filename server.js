@@ -1079,11 +1079,14 @@ app.post('/api/users/login', async (req, res) => {
         
         console.log(`User found: ${user.id}, checking password...`);
         
-        // Compare passwords (trim whitespace for safety)
         const storedPassword = (user.password || '').trim();
         const providedPassword = (password || '').trim();
         
-        console.log(`Password comparison: stored length=${storedPassword.length}, provided length=${providedPassword.length}`);
+        console.log('DEBUG - Login attempt:');
+        console.log('Email:', email);
+        console.log('Provided password:', JSON.stringify(providedPassword));
+        console.log('Stored password:', JSON.stringify(storedPassword));
+        console.log('Passwords match:', storedPassword === providedPassword);
         
         if (storedPassword !== providedPassword) {
             console.log(`Login attempt: Password mismatch for email: ${email}`);
