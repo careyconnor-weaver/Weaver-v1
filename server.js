@@ -1020,17 +1020,39 @@ app.get('/api/gmail/sync-label', async (req, res) => {
     }
 });
 
+// Clean password: remove whitespace and invisible characters (fixes cross-browser login)
+function cleanPassword(str) {
+    if (!str || typeof str !== 'string') return '';
+    let s = String(str).replace(/\s/g, ''); // Remove ALL whitespace (including invisible Unicode spaces)
+    s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width characters
+    s = s.replace(/[\x00-\x1F\x7F]/g, ''); // Remove non-printable characters
+    return s;
+}
+
 // ============ DATABASE API ROUTES ============
 
 // Users
 app.post('/api/users/signup', async (req, res) => {
     try {
-        const { userId, email, password } = req.body;
+        let { userId, email, password } = req.body;
         if (!userId || !email || !password) {
+            return res.status(400).json({ error: 'userId, email, and password are required' });
+        }
+        email = String(email).trim().toLowerCase();
+        password = cleanPassword(password);
+        if (!email || !password) {
             return res.status(400).json({ error: 'userId, email, and password are required' });
         }
         
         console.log('Signup attempt:', { userId, email, passwordLength: password.length });
+        
+        const existing = await dbAPI.getUserByEmail(email);
+        if (existing) {
+            return res.status(400).json({
+                error: 'An account with this email already exists',
+                details: 'Use the Login option to sign in, or use a different email.'
+            });
+        }
         
         const user = await dbAPI.createUser(userId, email, password);
         console.log('User created successfully:', user.id);
@@ -1063,7 +1085,12 @@ app.post('/api/users/signup', async (req, res) => {
 
 app.post('/api/users/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        let { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+        email = String(email).trim().toLowerCase();
+        password = cleanPassword(password);
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
@@ -1079,8 +1106,8 @@ app.post('/api/users/login', async (req, res) => {
         
         console.log(`User found: ${user.id}, checking password...`);
         
-        const storedPassword = (user.password || '').trim();
-        const providedPassword = (password || '').trim();
+        const storedPassword = cleanPassword(user.password || '');
+        const providedPassword = password;
         
         console.log('DEBUG - Login attempt:');
         console.log('Email:', email);

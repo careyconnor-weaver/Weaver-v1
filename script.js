@@ -399,11 +399,21 @@ function toggleAuthMode() {
     document.getElementById('auth-status').style.display = 'none';
 }
 
+// Clean password: remove whitespace and invisible characters (fixes cross-browser login)
+function cleanPassword(str) {
+    if (!str || typeof str !== 'string') return '';
+    let s = str.replace(/\s/g, ''); // Remove ALL whitespace (including invisible Unicode spaces)
+    s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width characters
+    s = s.replace(/[\x00-\x1F\x7F]/g, ''); // Remove non-printable characters
+    return s;
+}
+
 // Handle auth form submission
 async function handleAuth(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
+    const email = document.getElementById('auth-email').value.trim().toLowerCase();
+    let password = document.getElementById('auth-password').value;
+    password = cleanPassword(password);
     const status = document.getElementById('auth-status');
     
     if (!email || !password) {
