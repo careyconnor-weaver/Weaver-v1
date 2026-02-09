@@ -1373,7 +1373,7 @@ function closeGmailLabelReviewModal() {
 async function processGmailLabelEmails() {
     const currentUser = getCurrentUser();
     if (!currentUser) return;
-    
+
     // Collect all decisions - group emails by email address
     const emailGroups = {};
     gmailLabelEmails.forEach(email => {
@@ -1382,38 +1382,41 @@ async function processGmailLabelEmails() {
         }
         emailGroups[email.email].push(email);
     });
-    
+
     const contacts = getContacts();
     let processed = 0;
     let skipped = 0;
     let errors = [];
-    
+
     // Process each email group
     const emailArray = Object.entries(emailGroups);
     for (let index = 0; index < emailArray.length; index++) {
         const [email, emails] = emailArray[index];
         const decision = gmailLabelReviewData[email];
-        
+
         if (!decision || decision.action === 'skip') {
             skipped += emails.length;
             continue;
         }
-        
+
         // Get name from input
         const nameInput = document.getElementById(`gmail-name-${index}`);
         const name = nameInput ? nameInput.value.trim() : decision.name || '';
-        
+
         if (!name && decision.action === 'new') {
             errors.push(`Name required for ${email}`);
             continue;
         }
-        
+
         let contact;
+        let contactIndex = -1;
+
         if (decision.action === 'existing') {
             const contactSelect = document.getElementById(`gmail-contact-select-${index}`);
             const contactId = contactSelect ? contactSelect.value : decision.contactId;
-            contact = contacts.find(c => c.id === contactId);
-            
+            contactIndex = contacts.findIndex(c => c.id === contactId);
+            contact = contactIndex >= 0 ? contacts[contactIndex] : null;
+
             if (!contact) {
                 errors.push(`Contact not found for ${email}`);
                 continue;
@@ -1428,45 +1431,78 @@ async function processGmailLabelEmails() {
                 notes: [],
                 createdAt: new Date().toISOString()
             };
+            // Add to contacts array and get the index
             contacts.push(contact);
+            contactIndex = contacts.length - 1;
         }
-        
-        // Add emails to contact
+
+        // Initialize emails array if needed
         if (!contact.emails) contact.emails = [];
-        
+
+        // Add each email to the contact's timeline
         emails.forEach(emailData => {
-            // Check if email already exists
-            const exists = contact.emails.some(e => 
-                e.date === emailData.date && 
+            // Check if email already exists (same date, direction, and subject)
+            const exists = contact.emails.some(e =>
+                e.date === emailData.date &&
                 e.direction === emailData.direction &&
-                e.subject === emailData.subject
+                (e.subject || '') === (emailData.subject || '')
             );
-            
+
             if (!exists) {
-                const sentEmails = contact.emails.filter(e => e.direction === 'sent');
+                // Determine email type based on direction and existing emails
+                let emailType = 'received'; // Default for received emails
+
+                if (emailData.direction === 'sent') {
+                    // For sent emails, check if it's cold or follow-up
+                    const previousSentEmails = contact.emails.filter(e =>
+                        e.direction === 'sent' &&
+                        e.date < emailData.date
+                    );
+                    emailType = previousSentEmails.length === 0 ? 'cold' : 'follow-up';
+                }
+
+                // Add the email with proper structure
                 contact.emails.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                     date: emailData.date,
                     direction: emailData.direction,
-                    type: emailData.direction === 'sent' ? (sentEmails.length === 0 ? 'cold' : 'follow-up') : 'received',
+                    type: emailType,
                     subject: emailData.subject || ''
                 });
+
                 processed++;
+                console.log(`Added ${emailData.direction} email from ${emailData.date} to ${contact.name}`);
+            } else {
+                console.log(`Skipped duplicate email for ${contact.name} on ${emailData.date}`);
             }
         });
-        
-        // Update first email date if needed
+
+        // Sort emails by date to ensure proper chronological order
+        contact.emails.sort((a, b) => a.date.localeCompare(b.date));
+
+        // Update firstEmailDate to earliest email
         if (contact.emails.length > 0) {
-            const sortedEmails = [...contact.emails].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sortedEmails = [...contact.emails].sort((a, b) => a.date.localeCompare(b.date));
             contact.firstEmailDate = sortedEmails[0].date;
+            console.log(`Set firstEmailDate for ${contact.name}: ${contact.firstEmailDate}`);
+        }
+
+        // Update the contact in the contacts array (critical for preserving changes)
+        if (contactIndex >= 0) {
+            contacts[contactIndex] = contact;
+            console.log(`Updated contact ${contact.name} with ${contact.emails.length} total emails`);
         }
     }
-    
-    // Save contacts
+
+    // CRITICAL: Save contacts array (this persists the changes)
+    console.log('Saving contacts to localStorage/database...');
     saveContacts(contacts);
+
+    // Update UI
     updateContactDropdown();
     updateFirmFilter();
     displayContacts();
-    
+
     // Show results
     let message = `Processed ${processed} email(s) successfully.`;
     if (skipped > 0) {
@@ -1475,10 +1511,10 @@ async function processGmailLabelEmails() {
     if (errors.length > 0) {
         message += `\n\nErrors:\n${errors.join('\n')}`;
     }
-    
+
     alert(message);
     closeGmailLabelReviewModal();
-    
+
     // Refresh contact list if on contacts page
     if (document.getElementById('contacts') && document.getElementById('contacts').classList.contains('active')) {
         filterContacts();
