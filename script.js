@@ -2120,7 +2120,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     newContactForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        
+
         // Check if user is logged in
         const user = getCurrentUser();
         if (!user) {
@@ -2135,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             return;
         }
-        
+
         const name = document.getElementById('new-contact-name').value;
         const firm = document.getElementById('new-contact-firm').value;
         const position = document.getElementById('new-contact-position').value;
@@ -2145,7 +2145,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const callDate = document.getElementById('new-contact-call-date').value;
         const notesText = document.getElementById('new-contact-notes-text').value.trim();
         const status = document.getElementById('new-contact-status');
-        
+
         // Validate dates are not in the future
         if (firstEmailDate) {
             const firstDateValidation = validateDateNotFuture(firstEmailDate, 'First contact date');
@@ -2156,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
         }
-        
+
         if (callDate) {
             const callDateValidation = validateDateNotFuture(callDate, 'Call date');
             if (!callDateValidation.valid) {
@@ -2180,7 +2180,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             notes: [],
             priority: priority || 'medium'
         };
-        
+
         // If firstEmailDate is provided, create a sent email entry for it
         if (firstEmailDate) {
             contact.emails.push({
@@ -2196,21 +2196,92 @@ document.addEventListener('DOMContentLoaded', async function() {
         // If notes were provided (text or image), process them
         if (newContactNotesMode === 'text' && notesText) {
             processCallNotesForNewContact(null, contact, status, callDate, notesText);
+
+            // Clear form after successful processing
+            setTimeout(() => {
+                clearNewContactForm();
+            }, 1500); // Wait for success message to show
+
         } else if (newContactNotesMode === 'image' && newContactNotesFile) {
             processCallNotesForNewContact(newContactNotesFile, contact, status, callDate, null);
+
+            // Clear form after successful processing
+            setTimeout(() => {
+                clearNewContactForm();
+            }, 1500); // Wait for success message to show
+
         } else {
             // No notes, just add contact (may return null if free limit reached)
             const result = addContact(contact);
+
             if (result !== null) {
-                newContactForm.reset();
-                newContactNotesPreview.style.display = 'none';
-                newContactNotesFile = null;
+                // Show success message
+                status.textContent = `Contact "${contact.name}" added successfully!`;
+                status.className = 'upload-status success';
+                status.style.display = 'block';
+
+                // Clear form immediately
+                clearNewContactForm();
+
+                // Navigate to contacts view after a brief delay
                 setTimeout(() => {
                     document.querySelector('a[href="#contacts"]').click();
-                }, 500);
+                }, 1500);
             }
         }
     });
+
+    // Function to clear the new contact form
+    function clearNewContactForm() {
+        // Clear all text inputs
+        document.getElementById('new-contact-name').value = '';
+        document.getElementById('new-contact-email').value = '';
+        document.getElementById('new-contact-firm').value = '';
+        document.getElementById('new-contact-position').value = '';
+        document.getElementById('new-contact-first-email').value = '';
+        document.getElementById('new-contact-call-date').value = '';
+
+        // Reset priority to default (medium)
+        document.getElementById('new-contact-priority').value = 'medium';
+
+        // Clear notes textarea
+        document.getElementById('new-contact-notes-text').value = '';
+
+        // Clear image file input
+        const imageInput = document.getElementById('new-contact-notes-input');
+        if (imageInput) {
+            imageInput.value = '';
+        }
+
+        // Hide and clear image preview
+        const imagePreview = document.getElementById('new-contact-notes-preview');
+        if (imagePreview) {
+            imagePreview.style.display = 'none';
+            imagePreview.innerHTML = '';
+        }
+
+        // Clear newContactNotesFile variable
+        newContactNotesFile = null;
+
+        // Reset notes mode to text (default)
+        newContactNotesMode = 'text';
+        toggleNewContactNotesMode('text');
+
+        // Clear status message after a delay
+        const status = document.getElementById('new-contact-status');
+        if (status) {
+            setTimeout(() => {
+                status.textContent = '';
+                status.className = '';
+                status.style.display = 'none';
+            }, 3000); // Clear status after 3 seconds
+        }
+
+        console.log('New contact form cleared');
+    }
+
+    // Make it globally accessible
+    window.clearNewContactForm = clearNewContactForm;
 
     // Subscribe form
     const subscribeForm = document.getElementById('subscribe-form');
@@ -6113,18 +6184,12 @@ async function processCallNotesForNewContact(file, contact, statusElement, callD
         addContact(contact);
         statusElement.textContent = `Contact "${contact.name}" added successfully!`;
         statusElement.className = 'upload-status success';
-        
-        // Reset form
-        const form = document.getElementById('new-contact-form');
-        if (form) {
-            form.reset();
+
+        // Clear form
+        if (typeof clearNewContactForm === 'function') {
+            clearNewContactForm();
         }
-        const preview = document.getElementById('new-contact-notes-preview');
-        if (preview) {
-            preview.style.display = 'none';
-        }
-        newContactNotesFile = null;
-        
+
         // Switch to contacts view
         setTimeout(() => {
             document.querySelector('a[href="#contacts"]').click();
