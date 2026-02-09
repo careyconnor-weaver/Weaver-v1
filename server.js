@@ -404,6 +404,85 @@ app.post('/api/process-call-notes', upload.single('image'), async (req, res) => 
     }
 });
 
+// Helper: detect company/firm name from email domain using OpenAI (used by /api/detect-firm and Gmail sync)
+async function detectFirmFromDomain(email, name) {
+    if (!openai) return null;
+    if (!email || typeof email !== 'string') return null;
+    const domain = email.split('@')[1];
+    if (!domain) return null;
+    const freeProviders = [
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+        'aol.com', 'icloud.com', 'protonmail.com', 'mail.com',
+        'zoho.com', 'yandex.com', 'gmx.com', 'inbox.com'
+    ];
+    if (freeProviders.includes(domain.toLowerCase())) return null;
+    const prompt = `Given the email domain "${domain}"${name ? ` and the person's name "${name}"` : ''}, identify the company or organization name.
+
+Rules:
+1. Return ONLY the formal company name (e.g., "Goldman Sachs", "Morgan Stanley", "Bain Capital")
+2. Use proper capitalization and spacing
+3. Remove common suffixes like LLC, Inc, Corp, LP unless they're part of the brand (e.g., "J.P. Morgan" not "J.P. Morgan & Co.")
+4. For investment firms, include the full name (e.g., "New Mountain Capital" not "New Mountain")
+5. If the domain is clearly a company (e.g., "newmountaincapital.com" → "New Mountain Capital")
+6. If uncertain or if it's a personal/unclear domain, respond with "UNKNOWN"
+
+Email domain: ${domain}
+${name ? `Person's name: ${name}` : ''}
+
+Company name:`;
+    try {
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4',
+            messages: [
+                { role: 'system', content: 'You are a business intelligence assistant that identifies company names from email domains. Always respond with just the company name or \'UNKNOWN\'.' },
+                { role: 'user', content: prompt }
+            ],
+            max_tokens: 100,
+            temperature: 0.3
+        });
+        let firmName = (completion.choices[0].message.content || '').trim();
+        firmName = firmName.replace(/^["']|["']$/g, '').replace(/\.$/, '');
+        if (firmName.toUpperCase() === 'UNKNOWN' || firmName.toUpperCase() === 'N/A' || firmName.toUpperCase() === 'NONE' || firmName.length < 2) return null;
+        return firmName;
+    } catch (err) {
+        console.error('detectFirmFromDomain error:', err.message);
+        return null;
+    }
+}
+
+// API endpoint for detecting firm/company name from email address
+app.post('/api/detect-firm', async (req, res) => {
+    try {
+        if (!openai) {
+            return res.status(503).json({ error: 'OpenAI API key not configured.' });
+        }
+        const { email, name } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        console.log('Detecting firm for email:', email, 'name:', name);
+        const domain = email.split('@')[1];
+        if (!domain) {
+            return res.json({ firm: null });
+        }
+        const freeProviders = [
+            'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+            'aol.com', 'icloud.com', 'protonmail.com', 'mail.com',
+            'zoho.com', 'yandex.com', 'gmx.com', 'inbox.com'
+        ];
+        if (freeProviders.includes(domain.toLowerCase())) {
+            console.log('Free email provider detected, no firm');
+            return res.json({ firm: null });
+        }
+        const firm = await detectFirmFromDomain(email, name);
+        console.log('Detected firm:', firm);
+        res.json({ firm: firm });
+    } catch (error) {
+        console.error('Firm detection error:', error);
+        res.status(500).json({ error: 'Failed to detect firm', message: error.message });
+    }
+});
+
 // Gmail OAuth Configuration
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -983,7 +1062,30 @@ app.get('/api/gmail/sync-label', async (req, res) => {
         }
         
         console.log(`Processing complete: ${processedCount} processed, ${errorCount} errors, ${emailData.length} email entries created`);
-        
+
+        // Detect firms for unique email addresses (internal helper, no HTTP)
+        const uniqueEmails = [...new Set(emailData.map(e => e.email))];
+        const firmDetections = {};
+        if (openai) {
+            console.log(`Detecting firms for ${uniqueEmails.length} unique email addresses...`);
+            for (const email of uniqueEmails) {
+                try {
+                    const emailEntry = emailData.find(e => e.email === email);
+                    const name = emailEntry ? emailEntry.name : null;
+                    const firm = await detectFirmFromDomain(email, name);
+                    if (firm) {
+                        firmDetections[email] = firm;
+                        console.log(`Detected firm for ${email}: ${firm}`);
+                    }
+                } catch (err) {
+                    console.error(`Error detecting firm for ${email}:`, err.message);
+                }
+            }
+        }
+        emailData.forEach(entry => {
+            if (firmDetections[entry.email]) entry.firm = firmDetections[entry.email];
+        });
+
         res.json({
             success: true,
             emails: emailData,

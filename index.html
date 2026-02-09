@@ -195,7 +195,12 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="new-contact-firm">Firm</label>
-                                    <input type="text" id="new-contact-firm">
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="text" id="new-contact-firm" style="flex: 1;">
+                                        <button type="button" onclick="detectFirmFromEmail()" class="btn btn-secondary" style="white-space: nowrap; padding: 0.5rem 1rem;">
+                                            Auto-detect
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="new-contact-position">Position</label>

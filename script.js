@@ -1087,6 +1087,61 @@ async function syncMyPlan() {
     }
 }
 
+// Auto-detect firm from email address (uses /api/detect-firm)
+async function detectFirmFromEmail() {
+    const emailInput = document.getElementById('new-contact-email');
+    const firmInput = document.getElementById('new-contact-firm');
+    const nameInput = document.getElementById('new-contact-name');
+
+    if (!emailInput || !firmInput) return;
+
+    const email = emailInput.value.trim();
+    const name = nameInput ? nameInput.value.trim() : null;
+
+    if (!email) {
+        alert('Please enter an email address first');
+        return;
+    }
+
+    if (!email.includes('@')) {
+        alert('Please enter a valid email address');
+        return;
+    }
+
+    const originalText = firmInput.value;
+    firmInput.value = 'Detecting...';
+    firmInput.disabled = true;
+
+    try {
+        const response = await fetch('/api/detect-firm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to detect firm');
+        }
+
+        const data = await response.json();
+
+        if (data.firm) {
+            firmInput.value = data.firm;
+            console.log('Auto-detected firm:', data.firm);
+        } else {
+            firmInput.value = originalText;
+            alert('Could not auto-detect firm from this email address. Please enter manually.');
+        }
+    } catch (error) {
+        console.error('Error detecting firm:', error);
+        firmInput.value = originalText;
+        alert('Error detecting firm. Please enter manually.');
+    } finally {
+        firmInput.disabled = false;
+    }
+}
+window.detectFirmFromEmail = detectFirmFromEmail;
+
 // Update profile menu with subscription info
 function updateProfileMenuWithSubscription() {
     const menuContent = document.getElementById('profile-menu-content');
@@ -1260,18 +1315,29 @@ async function syncGmailLabel() {
         Object.values(emailGroups).forEach((group, index) => {
             const isExisting = existingEmails.has(group.email.toLowerCase());
             const contactId = isExisting ? contacts.find(c => c.email?.toLowerCase() === group.email.toLowerCase())?.id : null;
-            
+            const detectedFirm = group.emails[0]?.firm || null;
+
             html += `<div class="gmail-email-group" style="border: 1px solid var(--silver-gray); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">`;
             html += `<h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Email Address: ${group.email}</h3>`;
+            if (detectedFirm) {
+                html += `<p style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-weight: 600;">Detected Firm: ${detectedFirm}</p>`;
+            }
             html += `<p style="margin: 0 0 1rem 0; color: var(--text-medium); font-size: 0.9rem;">${group.emails.length} email(s) found</p>`;
-            
+
             // Name confirmation
             html += `<div style="margin-bottom: 1rem;">`;
             html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Name (from email):</label>`;
-            html += `<input type="text" id="gmail-name-${index}" value="${group.name || ''}" placeholder="Enter contact name" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
+            html += `<input type="text" id="gmail-name-${index}" value="${(group.name || '').replace(/"/g, '&quot;')}" placeholder="Enter contact name" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
             html += `<p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-medium);">Is this name correct? Edit if needed.</p>`;
             html += `</div>`;
-            
+
+            // Firm input (pre-filled with detected firm)
+            html += `<div style="margin-bottom: 1rem;">`;
+            html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Firm/Company:</label>`;
+            html += `<input type="text" id="gmail-firm-${index}" value="${(detectedFirm || '').replace(/"/g, '&quot;')}" placeholder="Enter firm name (optional)" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
+            html += `<p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-medium);">Auto-detected from email domain. Edit if needed.</p>`;
+            html += `</div>`;
+
             // Contact assignment
             if (isExisting && contactId) {
                 const contact = contacts.find(c => c.id === contactId);
@@ -1399,9 +1465,11 @@ async function processGmailLabelEmails() {
             continue;
         }
 
-        // Get name from input
+        // Get name and firm from inputs
         const nameInput = document.getElementById(`gmail-name-${index}`);
+        const firmInput = document.getElementById(`gmail-firm-${index}`);
         const name = nameInput ? nameInput.value.trim() : decision.name || '';
+        const firm = firmInput ? firmInput.value.trim() : (emails[0]?.firm || '');
 
         if (!name && decision.action === 'new') {
             errors.push(`Name required for ${email}`);
@@ -1421,17 +1489,18 @@ async function processGmailLabelEmails() {
                 errors.push(`Contact not found for ${email}`);
                 continue;
             }
+            if (firm && !contact.firm) contact.firm = firm;
         } else {
-            // Create new contact
+            // Create new contact with firm
             contact = {
                 id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                 name: name,
                 email: email,
+                firm: firm || null,
                 emails: [],
                 notes: [],
                 createdAt: new Date().toISOString()
             };
-            // Add to contacts array and get the index
             contacts.push(contact);
             contactIndex = contacts.length - 1;
         }
