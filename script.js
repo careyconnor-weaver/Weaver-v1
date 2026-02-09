@@ -959,6 +959,9 @@ async function handleSubscription(priceId) {
         return;
     }
 
+    // Store user in sessionStorage before redirect (persists during Stripe redirect so we can restore session)
+    sessionStorage.setItem('weaver_user_before_stripe', JSON.stringify(user));
+
     let btn = null;
     try {
         // Disable button during processing
@@ -1498,9 +1501,73 @@ document.addEventListener('click', (e) => {
 
 // Navigation functionality
 document.addEventListener('DOMContentLoaded', async function() {
+    // Handle return from Stripe Checkout - restore session so user stays logged in
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const userIdFromUrl = urlParams.get('user_id');
+    const wasCanceled = urlParams.get('canceled');
+
+    // Restore user from sessionStorage first (set before redirect to Stripe)
+    const storedUser = sessionStorage.getItem('weaver_user_before_stripe');
+    if (storedUser && !getCurrentUser()) {
+        try {
+            setCurrentUser(JSON.parse(storedUser));
+            sessionStorage.removeItem('weaver_user_before_stripe');
+            console.log('Restored user from sessionStorage after Stripe redirect');
+        } catch (e) {
+            sessionStorage.removeItem('weaver_user_before_stripe');
+        }
+    }
+
+    // If we have user_id in URL but still no current user, try restoring from weaver_users by id
+    if (userIdFromUrl && !getCurrentUser()) {
+        const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
+        const userEmail = Object.keys(users).find(function(email) { return users[email].id === userIdFromUrl; });
+        if (userEmail) {
+            setCurrentUser(users[userEmail]);
+            console.log('Restored user session after Stripe redirect (from weaver_users)');
+        }
+    }
+
+    // If successful payment (session_id, not canceled), refresh subscription and show success
+    if (sessionId && !wasCanceled) {
+        const user = getCurrentUser();
+        if (user) {
+            try {
+                const response = await fetch('/api/users/refresh-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.user) {
+                        setCurrentUser({
+                            id: data.user.id,
+                            email: data.user.email,
+                            subscriptionStatus: data.user.subscriptionStatus || 'free',
+                            subscriptionPlan: data.user.subscriptionPlan || null,
+                            stripeCustomerId: data.user.stripeCustomerId || null,
+                            stripeSubscriptionId: data.user.stripeSubscriptionId || null
+                        });
+                        alert('✓ Subscription activated! Welcome to Weaver Pro.');
+                    }
+                }
+            } catch (err) {
+                console.error('Error refreshing subscription after Stripe return:', err);
+            }
+        }
+    }
+
+    // Clean up URL parameters so user doesn't see session_id/user_id/canceled
+    if (userIdFromUrl || sessionId || wasCanceled) {
+        const cleanPath = window.location.pathname || '/';
+        window.history.replaceState({}, document.title, cleanPath);
+    }
+
     // Check authentication on page load
     checkAuth();
-    
+
     // Refresh subscription status if user is logged in (helps catch cases where webhook hasn't fired yet)
     const currentUser = getCurrentUser();
     if (currentUser && currentUser.id) {

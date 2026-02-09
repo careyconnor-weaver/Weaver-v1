@@ -153,8 +153,8 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
                     quantity: 1,
                 },
             ],
-            success_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}/cancel.html`,
+            success_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}?session_id={CHECKOUT_SESSION_ID}&user_id=${userId}`,
+            cancel_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}?canceled=true&user_id=${userId}`,
             metadata: {
                 userId: userId
             }
