@@ -1823,6 +1823,7 @@ body {
 /* Timeline dot colors */
 .timeline-email-sent .timeline-dot { background: var(--accent-blue); }
 .timeline-email-received .timeline-dot { background: #48bb78; }
+.timeline-email-both .timeline-dot { background: linear-gradient(90deg, var(--accent-blue) 50%, #48bb78 50%); }
 .timeline-call .timeline-dot { background: #f0ad4e; }
 
 /* Today marker - positioned at left:100% so it shares coordinate space with dots */
@@ -1911,6 +1912,11 @@ body {
     border-top: 4px solid #f0ad4e;
 }
 
+.timeline-popup-email-both {
+    border-top: 4px solid;
+    border-image: linear-gradient(90deg, var(--accent-blue) 50%, #48bb78 50%) 1;
+}
+
 /* Timeline legend */
 .timeline-legend {
     display: flex;
@@ -1940,6 +1946,10 @@ body {
 
 .legend-dot.legend-email-received {
     background: #48bb78;
+}
+
+.legend-dot.legend-email-both {
+    background: linear-gradient(90deg, var(--accent-blue) 50%, #48bb78 50%);
 }
 
 .legend-dot.legend-call {

@@ -3841,6 +3841,31 @@ function buildTimelineItems(timeline, contact) {
     
     var html = '';
     
+    // Group timeline items by date to detect sent+received on the same day
+    var dateGroups = {};
+    for (var i = 0; i < timeline.length; i++) {
+        var dateKey = timeline[i].date;
+        if (!dateGroups[dateKey]) dateGroups[dateKey] = [];
+        dateGroups[dateKey].push(i);
+    }
+    
+    // Check which dates have both sent and received emails
+    var bothDates = {};
+    for (var dk in dateGroups) {
+        var indices = dateGroups[dk];
+        var hasSent = false;
+        var hasReceived = false;
+        for (var j = 0; j < indices.length; j++) {
+            var t = timeline[indices[j]].type;
+            if (t === 'email-sent') hasSent = true;
+            if (t === 'email-received') hasReceived = true;
+        }
+        if (hasSent && hasReceived) bothDates[dk] = true;
+    }
+    
+    // Track dates already rendered to avoid duplicate dots for same-date sent+received
+    var renderedBothDates = {};
+    
     for (var i = 0; i < timeline.length; i++) {
         var item = timeline[i];
         var itemDate = parseLocalDate(item.date);
@@ -3854,9 +3879,18 @@ function buildTimelineItems(timeline, contact) {
         
         var itemType = item.type.indexOf('email') >= 0 ? item.type : 'call';
         
+        // If this date has both sent and received emails, render a single combined dot
+        if (bothDates[item.date] && (itemType === 'email-sent' || itemType === 'email-received')) {
+            if (renderedBothDates[item.date]) continue; // Skip duplicate
+            renderedBothDates[item.date] = true;
+            itemType = 'email-both';
+        }
+        
         var tooltipContent = '';
         if (itemType === 'call') {
             tooltipContent = item.summary || 'No notes recorded';
+        } else if (itemType === 'email-both') {
+            tooltipContent = 'Sent &amp; Received';
         } else {
             tooltipContent = item.subject || 'No subject';
         }
@@ -3872,7 +3906,7 @@ function buildTimelineItems(timeline, contact) {
             tooltipContent = tooltipContent.substring(0, 200);
         }
         
-        var typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
+        var typeLabel = itemType === 'email-both' ? 'Email Sent &amp; Received' : (item.label || (itemType === 'call' ? 'Call' : 'Email'));
         var formattedDate = formatLocalDate(item.date);
         
         html += '<div class="timeline-item timeline-' + itemType + '" style="left: ' + position + '%">';
@@ -4194,6 +4228,10 @@ function showContactDetail(contactId) {
                 <div class="legend-item">
                     <span class="legend-dot legend-email-received"></span>
                     <span>Email Received</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot legend-email-both"></span>
+                    <span>Sent &amp; Received</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot legend-call"></span>
