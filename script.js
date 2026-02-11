@@ -4041,14 +4041,48 @@ function showContactDetail(contactId) {
                     const position = timeline.length === 1 ? 50 : (index / (timeline.length - 1)) * 100;
                     const itemType = item.type.includes('email') ? item.type : 'call';
 
+                    let tooltipContent = '';
+                    if (itemType === 'call') {
+                        tooltipContent = item.summary || 'No notes recorded';
+                    } else {
+                        tooltipContent = item.subject || 'No subject';
+                    }
+                    const escapedTooltip = tooltipContent
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;')
+                        .substring(0, 200);
+
+                    const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
+
                     return `
                         <div class="timeline-item timeline-${itemType}" style="left: ${position}%">
-                            <div class="timeline-dot" data-index="${index}"></div>
-                            <div class="timeline-date-label">${formatLocalDate(item.date)}</div>
+                            <div class="timeline-dot"
+                                 data-index="${index}"
+                                 data-type="${itemType}"
+                                 data-date="${formatLocalDate(item.date)}"
+                                 data-label="${typeLabel}"
+                                 data-content="${escapedTooltip}"
+                                 onclick="showTimelinePopup(event, this)"
+                                 onmouseenter="showTimelinePopup(event, this)"
+                                 onmouseleave="hideTimelinePopup()">
+                            </div>
                         </div>
                     `;
                 }).join('') : '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>'}
             </div>
+
+            <!-- Timeline Popup (hidden by default) -->
+            <div id="timeline-popup" class="timeline-popup" style="display: none;">
+                <div class="timeline-popup-header">
+                    <span class="timeline-popup-type"></span>
+                    <span class="timeline-popup-date"></span>
+                </div>
+                <div class="timeline-popup-content"></div>
+            </div>
+
             <div class="timeline-legend">
                 <div class="legend-item">
                     <span class="legend-dot legend-email-sent"></span>
@@ -4070,17 +4104,16 @@ function showContactDetail(contactId) {
                 <button class="btn btn-primary" onclick="openQuickAdd('call', '${contact.id}')">+ Add Call</button>
             </div>
 
-            <!-- Chronological Interactions Dropdown -->
-            <div class="interactions-dropdown">
-                <button class="interactions-dropdown-header" onclick="toggleInteractionsDropdown()">
-                    <span>View All Interactions (${timeline.length})</span>
-                    <span class="interactions-dropdown-icon" id="interactions-dropdown-icon">+</span>
+            <!-- Chronological Interactions Accordion -->
+            <div class="interactions-accordion">
+                <button class="interactions-accordion-header" type="button" onclick="toggleInteractionsAccordion()">
+                    <span>All Interactions (${timeline.length})</span>
+                    <span class="interactions-accordion-icon" id="interactions-accordion-icon">+</span>
                 </button>
-                <div class="interactions-dropdown-content" id="interactions-dropdown-content" style="display: none;">
+                <div class="interactions-accordion-content" id="interactions-accordion-content">
                     ${timeline.length === 0 ?
                         '<p class="no-interactions">No interactions recorded yet. Add emails or calls using the buttons above.</p>' :
-                        timeline.slice().reverse().map((item, index) => {
-                            const actualIndex = timeline.length - 1 - index;
+                        timeline.map((item, index) => {
                             const itemType = item.type.includes('email') ? item.type : 'call';
                             const iconMap = {
                                 'email-sent': '📤',
@@ -4098,37 +4131,31 @@ function showContactDetail(contactId) {
                             }
 
                             return `
-                                <div class="interaction-item interaction-${itemType}">
-                                    <div class="interaction-header">
-                                        <div class="interaction-icon">${icon}</div>
-                                        <div class="interaction-meta">
-                                            <span class="interaction-type">${typeLabel}</span>
-                                            <span class="interaction-date">${formatLocalDate(item.date)}</span>
-                                        </div>
-                                        <div class="interaction-actions">
-                                            <button class="timeline-edit-btn" onclick="editTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Edit">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                </svg>
-                                            </button>
-                                            <button class="timeline-delete-btn" onclick="deleteTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Delete">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                </svg>
-                                            </button>
+                                <div class="interaction-row interaction-${itemType}">
+                                    <div class="interaction-row-left">
+                                        <span class="interaction-row-icon">${icon}</span>
+                                        <div class="interaction-row-info">
+                                            <div class="interaction-row-top">
+                                                <span class="interaction-row-type">${typeLabel}</span>
+                                                <span class="interaction-row-date">${formatLocalDate(item.date)}</span>
+                                            </div>
+                                            <div class="interaction-row-details">${details}</div>
+                                            ${itemType === 'call' && item.extractedText ? `
+                                                <details class="interaction-row-full-notes">
+                                                    <summary>View Full Notes</summary>
+                                                    <div class="interaction-row-full-notes-content">${item.extractedText}</div>
+                                                </details>
+                                            ` : ''}
                                         </div>
                                     </div>
-                                    <div class="interaction-details">
-                                        ${details}
+                                    <div class="interaction-row-actions">
+                                        <button class="interaction-row-edit" onclick="editTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Edit">
+                                            ✏️
+                                        </button>
+                                        <button class="interaction-row-delete" onclick="deleteTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Delete">
+                                            🗑️
+                                        </button>
                                     </div>
-                                    ${itemType === 'call' && item.extractedText ? `
-                                        <details class="interaction-full-text">
-                                            <summary>View Full Notes</summary>
-                                            <div class="full-text-content">${item.extractedText}</div>
-                                        </details>
-                                    ` : ''}
                                 </div>
                             `;
                         }).join('')
@@ -6813,23 +6840,76 @@ window.toggleFavorTip = function() {
     }
 };
 
-// Toggle general notes dropdown
-// Toggle interactions dropdown
-function toggleInteractionsDropdown() {
-    const content = document.getElementById('interactions-dropdown-content');
-    const icon = document.getElementById('interactions-dropdown-icon');
+// Timeline popup functions
+let popupTimeout = null;
+
+function showTimelinePopup(event, element) {
+    event.stopPropagation();
+    if (popupTimeout) { clearTimeout(popupTimeout); popupTimeout = null; }
+
+    const popup = document.getElementById('timeline-popup');
+    if (!popup) return;
+
+    const type = element.getAttribute('data-type');
+    const date = element.getAttribute('data-date');
+    const label = element.getAttribute('data-label');
+    const content = element.getAttribute('data-content');
+
+    const typeSpan = popup.querySelector('.timeline-popup-type');
+    const dateSpan = popup.querySelector('.timeline-popup-date');
+    const contentDiv = popup.querySelector('.timeline-popup-content');
+
+    if (typeSpan) typeSpan.textContent = label;
+    if (dateSpan) dateSpan.textContent = date;
+    if (contentDiv) contentDiv.textContent = content;
+
+    popup.className = 'timeline-popup timeline-popup-' + type;
+
+    const rect = element.getBoundingClientRect();
+    const containerRect = element.closest('.timeline-section').getBoundingClientRect();
+
+    const popupWidth = 280;
+    let left = rect.left - containerRect.left + (rect.width / 2) - (popupWidth / 2);
+    if (left < 10) left = 10;
+    if (left + popupWidth > containerRect.width - 10) left = containerRect.width - popupWidth - 10;
+
+    popup.style.left = left + 'px';
+    popup.style.top = (rect.bottom - containerRect.top + 10) + 'px';
+    popup.style.display = 'block';
+
+    popup.onmouseenter = function() {
+        if (popupTimeout) { clearTimeout(popupTimeout); popupTimeout = null; }
+    };
+    popup.onmouseleave = function() { hideTimelinePopup(); };
+}
+
+function hideTimelinePopup() {
+    popupTimeout = setTimeout(function() {
+        const popup = document.getElementById('timeline-popup');
+        if (popup) popup.style.display = 'none';
+    }, 200);
+}
+
+window.showTimelinePopup = showTimelinePopup;
+window.hideTimelinePopup = hideTimelinePopup;
+
+// Toggle interactions accordion
+function toggleInteractionsAccordion() {
+    const content = document.getElementById('interactions-accordion-content');
+    const icon = document.getElementById('interactions-accordion-icon');
 
     if (content && icon) {
-        if (content.style.display === 'none' || !content.style.display) {
-            content.style.display = 'block';
-            icon.textContent = '\u2212'; // minus sign
+        const isHidden = !content.classList.contains('open');
+        if (isHidden) {
+            content.classList.add('open');
+            icon.textContent = '\u2212';
         } else {
-            content.style.display = 'none';
+            content.classList.remove('open');
             icon.textContent = '+';
         }
     }
 }
-window.toggleInteractionsDropdown = toggleInteractionsDropdown;
+window.toggleInteractionsAccordion = toggleInteractionsAccordion;
 
 function toggleGeneralNotes() {
     const accordion = document.getElementById('general-notes-accordion');
