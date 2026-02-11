@@ -1746,20 +1746,23 @@ body {
     font-size: 1.8rem;
 }
 
+/* ============ TIMELINE IMPROVEMENTS ============ */
+
 .timeline-container {
     position: relative;
-    height: 200px;
+    height: 80px;
     margin: 2rem 0;
-    padding: 2rem 0;
+    padding: 0 20px;
 }
 
 .timeline-line {
     position: absolute;
     top: 50%;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--silver-gray);
+    left: 20px;
+    right: 20px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--light-accent) 100%);
+    border-radius: 2px;
     transform: translateY(-50%);
 }
 
@@ -1770,7 +1773,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    z-index: 2;
+    z-index: 10;
 }
 
 .timeline-dot {
@@ -1779,154 +1782,41 @@ body {
     border-radius: 50%;
     border: 3px solid white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    margin-bottom: 0.5rem;
     cursor: pointer;
-    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.timeline-dot[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 8px;
-    padding: 0.5rem 0.75rem;
-    background: var(--text-dark);
-    color: white;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    max-width: 250px;
-    word-wrap: break-word;
-    z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    pointer-events: none;
-}
-
-.timeline-dot[data-tooltip]:hover::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 2px;
-    border: 6px solid transparent;
-    border-top-color: var(--text-dark);
-    z-index: 1001;
-    pointer-events: none;
+.timeline-dot:hover {
+    transform: scale(1.3);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
 .timeline-email-sent .timeline-dot {
     background: var(--accent-blue);
-    border: 3px solid white;
 }
 
 .timeline-email-received .timeline-dot {
-    background: #9f7aea;
-    border: 3px solid white;
+    background: #48bb78;
 }
 
 .timeline-call .timeline-dot {
-    background: var(--success);
-    border: 3px solid white;
+    background: #f0ad4e;
 }
 
-.timeline-today {
-    z-index: 3;
-    /* Position marker at end of line, above the line */
-    left: 100% !important;
-    transform: translate(0, -100%) !important;
-    align-items: flex-start; /* Align items to the left so label goes right */
-}
-
-.timeline-today-marker {
-    font-size: 1.5rem;
-    margin-bottom: 0;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+.timeline-date-label {
     position: absolute;
-    left: 0; /* Marker stays at the line end */
-    transform: translateX(-50%) translateY(-100%); /* Center marker horizontally, position above line */
-    top: 0;
-}
-
-.timeline-today .timeline-label {
-    background: linear-gradient(135deg, var(--accent-blue), var(--light-accent));
-    color: white;
-    font-weight: 600;
-    margin-left: 1.5rem; /* Position label to the right of the marker */
-    position: relative;
-}
-
-.timeline-today .timeline-date {
-    color: white;
-}
-
-.timeline-today .timeline-type {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.timeline-label {
+    top: 24px;
+    font-size: 0.7rem;
+    color: var(--text-medium);
+    white-space: nowrap;
     text-align: center;
-    background: white;
-    padding: 0.5rem;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-width: 120px;
-    position: relative;
+    transform: translateX(-50%);
+    left: 50%;
 }
 
-.timeline-actions {
-    display: flex;
-    gap: 0.25rem;
-    justify-content: center;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--text-light);
-}
-
-.timeline-edit-btn,
-.timeline-delete-btn {
-    background: transparent;
-    border: 1px solid var(--text-muted);
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    color: var(--text-medium);
-}
-
-.timeline-edit-btn:hover {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: white;
-}
-
-.timeline-delete-btn:hover {
-    background: var(--error);
-    border-color: var(--error);
-    color: white;
-}
-
-.timeline-edit-btn svg,
-.timeline-delete-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
-.timeline-date {
-    font-size: 0.85rem;
-    color: var(--text-dark);
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.timeline-type {
-    font-size: 0.75rem;
-    color: var(--text-medium);
+/* Hide the old hover labels */
+.timeline-label {
+    display: none !important;
 }
 
 .timeline-legend {
@@ -1934,62 +1824,254 @@ body {
     justify-content: center;
     gap: 2rem;
     margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--silver-gray);
 }
 
 .legend-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-dark);
+    font-size: 0.85rem;
+    color: var(--text-medium);
 }
 
 .legend-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid white;
 }
 
-.legend-email-sent {
+.legend-dot.legend-email-sent {
     background: var(--accent-blue);
 }
 
-.legend-email-received {
-    background: #9f7aea;
+.legend-dot.legend-email-received {
+    background: #48bb78;
 }
 
-.legend-call {
-    background: var(--success);
+.legend-dot.legend-call {
+    background: #f0ad4e;
 }
 
-.legend-today {
-    font-size: 1.2rem;
-    display: inline-block;
-}
+/* ============ INTERACTIONS DROPDOWN ============ */
 
-.timeline-subject {
-    font-size: 0.7rem;
-    color: var(--text-medium);
-    margin-top: 0.25rem;
-    font-style: italic;
-    max-width: 150px;
+.interactions-dropdown {
+    margin-top: 2rem;
+    border: 2px solid var(--silver-gray);
+    border-radius: 8px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+.interactions-dropdown-header {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--eggshell-white);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    transition: background 0.2s;
+}
+
+.interactions-dropdown-header:hover {
+    background: #e8e8e0;
+}
+
+.interactions-dropdown-icon {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--accent-blue);
+    transition: transform 0.2s;
+}
+
+.interactions-dropdown-content {
+    background: white;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.no-interactions {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-medium);
+    font-style: italic;
+}
+
+.interaction-item {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--silver-gray);
+    transition: background 0.2s;
+}
+
+.interaction-item:last-child {
+    border-bottom: none;
+}
+
+.interaction-item:hover {
+    background: var(--eggshell-white);
+}
+
+.interaction-item.interaction-email-sent {
+    border-left: 4px solid var(--accent-blue);
+}
+
+.interaction-item.interaction-email-received {
+    border-left: 4px solid #48bb78;
+}
+
+.interaction-item.interaction-call {
+    border-left: 4px solid #f0ad4e;
+}
+
+.interaction-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.interaction-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.interaction-meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.interaction-type {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.interaction-date {
+    font-size: 0.8rem;
+    color: var(--text-medium);
+}
+
+.interaction-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.interaction-item:hover .interaction-actions {
+    opacity: 1;
+}
+
+.interaction-actions .timeline-edit-btn,
+.interaction-actions .timeline-delete-btn {
+    padding: 0.35rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.interaction-actions .timeline-edit-btn {
+    background: var(--accent-blue);
+    color: white;
+}
+
+.interaction-actions .timeline-edit-btn:hover {
+    background: var(--light-accent);
+}
+
+.interaction-actions .timeline-delete-btn {
+    background: #f56565;
+    color: white;
+}
+
+.interaction-actions .timeline-delete-btn:hover {
+    background: #e53e3e;
+}
+
+.interaction-details {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    line-height: 1.5;
+    padding-left: 2.25rem;
+    word-break: break-word;
+}
+
+.interaction-full-text {
+    margin-top: 0.75rem;
+    padding-left: 2.25rem;
+}
+
+.interaction-full-text summary {
+    font-size: 0.8rem;
+    color: var(--accent-blue);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.interaction-full-text summary:hover {
+    text-decoration: underline;
+}
+
+.full-text-content {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: var(--eggshell-white);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .quick-actions {
     display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
     flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin: 1.5rem 0;
 }
 
-.quick-actions .btn {
-    flex: 1;
-    min-width: 150px;
-}
+/* Responsive timeline adjustments */
+@media (max-width: 600px) {
+    .timeline-container {
+        height: 100px;
+    }
 
+    .timeline-date-label {
+        font-size: 0.6rem;
+        transform: translateX(-50%) rotate(-45deg);
+        transform-origin: center top;
+    }
+
+    .interaction-header {
+        flex-wrap: wrap;
+    }
+
+    .interaction-actions {
+        opacity: 1;
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
+    }
+
+    .timeline-legend {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+}
 
 /* Call Notes Section */
 .call-notes-section {

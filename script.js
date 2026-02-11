@@ -4037,52 +4037,17 @@ function showContactDetail(contactId) {
             <h2>Interaction Timeline</h2>
             <div class="timeline-container">
                 <div class="timeline-line"></div>
-                ${timeline.map((item, index) => {
-                    const itemDate = parseLocalDate(item.date);
-                    const position = dateRange > 0 && itemDate ? ((itemDate - minDate) / dateRange) * 100 : 0;
+                ${timeline.length > 0 ? timeline.map((item, index) => {
+                    const position = timeline.length === 1 ? 50 : (index / (timeline.length - 1)) * 100;
                     const itemType = item.type.includes('email') ? item.type : 'call';
-                    // Create tooltip text for email notes/subject
-                    const tooltipText = item.subject ? item.subject : (item.type === 'call' ? item.summary : '');
-                    const hasTooltip = tooltipText && tooltipText.trim().length > 0;
-                    
-                    // Escape HTML and quotes for tooltip
-                    const escapedTooltip = hasTooltip ? tooltipText
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#39;')
-                        .replace(/\n/g, ' ') : '';
-                    
+
                     return `
                         <div class="timeline-item timeline-${itemType}" style="left: ${position}%">
-                            <div class="timeline-dot" ${hasTooltip ? `title="${escapedTooltip}" data-tooltip="${escapedTooltip}"` : ''}></div>
-                            <div class="timeline-label">
-                                <div class="timeline-date">${formatLocalDate(item.date)}</div>
-                                <div class="timeline-type">${item.label || (item.type === 'call' ? 'Call' : 'Email')}</div>
-                                ${item.subject ? `<div class="timeline-subject">${item.subject}</div>` : ''}
-                                <div class="timeline-actions">
-                                    <button class="timeline-edit-btn" onclick="editTimelineItem('${contactId}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Edit">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                        </svg>
-                                    </button>
-                                    <button class="timeline-delete-btn" onclick="deleteTimelineItem('${contactId}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Delete">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
+                            <div class="timeline-dot" data-index="${index}"></div>
+                            <div class="timeline-date-label">${formatLocalDate(item.date)}</div>
                         </div>
                     `;
-                }).join('')}
-                <!-- Today marker at the end, positioned to the right of the line -->
-                <div class="timeline-item timeline-today" style="left: 100%; transform: translate(0, -50%);">
-                    <div class="timeline-today-marker">📍</div>
-                </div>
+                }).join('') : '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>'}
             </div>
             <div class="timeline-legend">
                 <div class="legend-item">
@@ -4097,16 +4062,78 @@ function showContactDetail(contactId) {
                     <span class="legend-dot legend-call"></span>
                     <span>Call</span>
                 </div>
-                <div class="legend-item">
-                    <span class="legend-today">📍</span>
-                    <span>Today</span>
-                </div>
             </div>
-            
+
             <div class="quick-actions">
                 <button class="btn btn-primary" onclick="openQuickAdd('email-sent', '${contact.id}')">+ Add Email Sent</button>
                 <button class="btn btn-primary" onclick="openQuickAdd('email-received', '${contact.id}')">+ Add Email Received</button>
                 <button class="btn btn-primary" onclick="openQuickAdd('call', '${contact.id}')">+ Add Call</button>
+            </div>
+
+            <!-- Chronological Interactions Dropdown -->
+            <div class="interactions-dropdown">
+                <button class="interactions-dropdown-header" onclick="toggleInteractionsDropdown()">
+                    <span>View All Interactions (${timeline.length})</span>
+                    <span class="interactions-dropdown-icon" id="interactions-dropdown-icon">+</span>
+                </button>
+                <div class="interactions-dropdown-content" id="interactions-dropdown-content" style="display: none;">
+                    ${timeline.length === 0 ?
+                        '<p class="no-interactions">No interactions recorded yet. Add emails or calls using the buttons above.</p>' :
+                        timeline.slice().reverse().map((item, index) => {
+                            const actualIndex = timeline.length - 1 - index;
+                            const itemType = item.type.includes('email') ? item.type : 'call';
+                            const iconMap = {
+                                'email-sent': '📤',
+                                'email-received': '📥',
+                                'call': '📞'
+                            };
+                            const icon = iconMap[itemType] || '📌';
+                            const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
+
+                            let details = '';
+                            if (itemType === 'call') {
+                                details = item.summary || 'No notes recorded';
+                            } else {
+                                details = item.subject || 'No subject';
+                            }
+
+                            return `
+                                <div class="interaction-item interaction-${itemType}">
+                                    <div class="interaction-header">
+                                        <div class="interaction-icon">${icon}</div>
+                                        <div class="interaction-meta">
+                                            <span class="interaction-type">${typeLabel}</span>
+                                            <span class="interaction-date">${formatLocalDate(item.date)}</span>
+                                        </div>
+                                        <div class="interaction-actions">
+                                            <button class="timeline-edit-btn" onclick="editTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Edit">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="timeline-delete-btn" onclick="deleteTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Delete">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="interaction-details">
+                                        ${details}
+                                    </div>
+                                    ${itemType === 'call' && item.extractedText ? `
+                                        <details class="interaction-full-text">
+                                            <summary>View Full Notes</summary>
+                                            <div class="full-text-content">${item.extractedText}</div>
+                                        </details>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')
+                    }
+                </div>
             </div>
         </div>
         
@@ -6787,6 +6814,23 @@ window.toggleFavorTip = function() {
 };
 
 // Toggle general notes dropdown
+// Toggle interactions dropdown
+function toggleInteractionsDropdown() {
+    const content = document.getElementById('interactions-dropdown-content');
+    const icon = document.getElementById('interactions-dropdown-icon');
+
+    if (content && icon) {
+        if (content.style.display === 'none' || !content.style.display) {
+            content.style.display = 'block';
+            icon.textContent = '\u2212'; // minus sign
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '+';
+        }
+    }
+}
+window.toggleInteractionsDropdown = toggleInteractionsDropdown;
+
 function toggleGeneralNotes() {
     const accordion = document.getElementById('general-notes-accordion');
     const icon = document.getElementById('general-notes-icon');
