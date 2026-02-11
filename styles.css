@@ -1758,19 +1758,19 @@ body {
     color: var(--text-dark);
 }
 
-/* Timeline container - extra padding for today marker */
+/* Timeline container - no padding so dots and today marker share the same coordinate space */
 .timeline-container {
     position: relative;
     height: 100px;
-    margin: 2rem 20px 2rem 20px;
-    padding-right: 80px;
+    margin: 2rem 50px 2rem 20px;
+    overflow: visible;
 }
 
 .timeline-line {
     position: absolute;
     top: 50%;
     left: 0;
-    right: 60px;
+    right: 0;
     height: 4px;
     background: linear-gradient(90deg, var(--accent-blue) 0%, var(--light-accent) 100%);
     border-radius: 2px;
@@ -1825,13 +1825,18 @@ body {
 .timeline-email-received .timeline-dot { background: #48bb78; }
 .timeline-call .timeline-dot { background: #f0ad4e; }
 
-/* Today marker */
+/* Today marker - positioned at left:100% so it shares coordinate space with dots */
 .timeline-today-marker {
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    left: 100%;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-50%);
     z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .timeline-today-line {
@@ -1839,7 +1844,6 @@ body {
     height: 50px;
     background: var(--text-medium);
     border-radius: 2px;
-    margin: 0 auto;
 }
 
 .timeline-today-label {
@@ -1849,6 +1853,7 @@ body {
     text-align: center;
     margin-top: 4px;
     line-height: 1.2;
+    white-space: nowrap;
 }
 
 /* Timeline Popup */
@@ -1960,6 +1965,17 @@ body {
 
     .timeline-container {
         height: 120px;
+        margin-right: 40px;
+    }
+}
+
+@media (max-width: 480px) {
+    .timeline-date-label {
+        display: none;
+    }
+
+    .timeline-container {
+        margin-right: 30px;
     }
 }
 
