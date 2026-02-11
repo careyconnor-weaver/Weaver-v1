@@ -4009,7 +4009,7 @@ function showContactDetail(contactId) {
                 itemIndex: emailIndex,
                 type: email.direction === 'received' ? 'email-received' : 'email-sent',
                 date: email.date,
-                label: email.direction === 'received' ? 'Email Received' : (email.type === 'cold' ? 'Cold Email Sent' : 'Follow-up Email Sent'),
+                label: email.direction === 'received' ? 'Email Received' : (email.type === 'cold' && !contact.emails.some(e => e.direction === 'received' && e.date <= email.date) ? 'Cold Email Sent' : 'Email Sent'),
                 subject: email.subject || '',
                 direction: email.direction,
                 emailType: email.type
