@@ -484,14 +484,17 @@ app.post('/api/detect-firm', async (req, res) => {
 });
 
 // Gmail OAuth Configuration
-const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/gmail/callback'
-);
+// Create a fresh OAuth2 client per user to avoid shared-state race conditions
+function createOAuth2Client() {
+    return new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/gmail/callback'
+    );
+}
 
-// Store user tokens (in production, use a database)
-const userTokens = {};
+// In-memory token cache (backed by database for persistence across restarts)
+const userTokensCache = {};
 
 // Gmail OAuth: Get authorization URL
 app.get('/api/gmail/auth', (req, res) => {
@@ -501,16 +504,17 @@ app.get('/api/gmail/auth', (req, res) => {
             return res.status(400).json({ error: 'User ID is required' });
         }
 
+        const client = createOAuth2Client();
         const scopes = [
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.send'
         ];
 
-        const authUrl = oauth2Client.generateAuthUrl({
+        const authUrl = client.generateAuthUrl({
             access_type: 'offline',
             scope: scopes,
-            state: userId, // Pass user ID in state
-            prompt: 'consent' // Force consent screen to get refresh token
+            state: userId,
+            prompt: 'consent' // Force consent to always get a refresh token
         });
 
         res.json({ authUrl });
@@ -520,7 +524,7 @@ app.get('/api/gmail/auth', (req, res) => {
     }
 });
 
-// Gmail OAuth: Handle callback
+// Gmail OAuth: Handle callback - store tokens in database for persistence
 app.get('/api/gmail/callback', async (req, res) => {
     try {
         const { code, state: userId } = req.query;
@@ -529,19 +533,45 @@ app.get('/api/gmail/callback', async (req, res) => {
             return res.status(400).json({ error: 'Missing code or user ID' });
         }
 
-        const { tokens } = await oauth2Client.getToken(code);
-        userTokens[userId] = tokens;
+        const client = createOAuth2Client();
+        const { tokens } = await client.getToken(code);
 
-        // Store tokens in a simple file (in production, use a database)
-        const tokensFile = path.join(__dirname, 'gmail_tokens.json');
-        let allTokens = {};
-        if (fs.existsSync(tokensFile)) {
-            allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
+        console.log('Gmail OAuth callback - received tokens for user:', userId);
+        console.log('  Has refresh_token:', !!tokens.refresh_token);
+        console.log('  Has access_token:', !!tokens.access_token);
+        console.log('  Expiry:', tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'none');
+
+        // Store tokens in database (persistent across deploys/restarts)
+        try {
+            await dbAPI.saveGmailToken(userId, {
+                accessToken: tokens.access_token,
+                refreshToken: tokens.refresh_token,
+                expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+                tokenType: tokens.token_type,
+                scope: tokens.scope
+            });
+            console.log('Gmail tokens saved to database for user:', userId);
+        } catch (dbErr) {
+            console.error('Failed to save Gmail tokens to database:', dbErr);
+            // Fallback: still cache in memory so the current session works
         }
-        allTokens[userId] = tokens;
-        fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
 
-        // Redirect to success page
+        // Also cache in memory for fast access
+        userTokensCache[userId] = tokens;
+
+        // Also write to file as backup (in case DB has issues)
+        try {
+            const tokensFile = path.join(__dirname, 'gmail_tokens.json');
+            let allTokens = {};
+            if (fs.existsSync(tokensFile)) {
+                allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
+            }
+            allTokens[userId] = tokens;
+            fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
+        } catch (fileErr) {
+            console.log('Could not write token file backup (non-critical):', fileErr.message);
+        }
+
         res.send(`
             <html>
                 <head>
@@ -594,45 +624,80 @@ app.get('/api/gmail/callback', async (req, res) => {
     }
 });
 
-// Gmail: Get connection status
-app.get('/api/gmail/status', (req, res) => {
+// Gmail: Get connection status - checks database for persistent tokens
+app.get('/api/gmail/status', async (req, res) => {
     try {
         const userId = req.query.userId;
         if (!userId) {
             return res.status(400).json({ error: 'User ID is required' });
         }
 
-        const tokensFile = path.join(__dirname, 'gmail_tokens.json');
-        let hasTokens = false;
-        
-        if (fs.existsSync(tokensFile)) {
-            const allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
-            hasTokens = !!allTokens[userId];
+        // Check database first (persistent)
+        try {
+            const dbToken = await dbAPI.getGmailToken(userId);
+            if (dbToken && (dbToken.refreshToken || dbToken.accessToken)) {
+                return res.json({ connected: true });
+            }
+        } catch (dbErr) {
+            console.log('DB check failed, falling back to cache/file:', dbErr.message);
         }
 
-        res.json({ connected: hasTokens });
+        // Fallback: check in-memory cache
+        if (userTokensCache[userId]) {
+            return res.json({ connected: true });
+        }
+
+        // Fallback: check file
+        try {
+            const tokensFile = path.join(__dirname, 'gmail_tokens.json');
+            if (fs.existsSync(tokensFile)) {
+                const allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
+                if (allTokens[userId]) {
+                    return res.json({ connected: true });
+                }
+            }
+        } catch (fileErr) {
+            // ignore file errors
+        }
+
+        res.json({ connected: false });
     } catch (error) {
         console.error('Gmail status error:', error);
         res.status(500).json({ error: 'Failed to check status', message: error.message });
     }
 });
 
-// Gmail: Disconnect
-app.post('/api/gmail/disconnect', (req, res) => {
+// Gmail: Disconnect - removes from all storage locations
+app.post('/api/gmail/disconnect', async (req, res) => {
     try {
         const { userId } = req.body;
         if (!userId) {
             return res.status(400).json({ error: 'User ID is required' });
         }
 
-        const tokensFile = path.join(__dirname, 'gmail_tokens.json');
-        if (fs.existsSync(tokensFile)) {
-            const allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
-            delete allTokens[userId];
-            fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
+        // Remove from database
+        try {
+            await dbAPI.deleteGmailToken(userId);
+            console.log('Gmail tokens deleted from database for user:', userId);
+        } catch (dbErr) {
+            console.error('Failed to delete Gmail tokens from database:', dbErr);
         }
 
-        delete userTokens[userId];
+        // Remove from memory cache
+        delete userTokensCache[userId];
+
+        // Remove from file backup
+        try {
+            const tokensFile = path.join(__dirname, 'gmail_tokens.json');
+            if (fs.existsSync(tokensFile)) {
+                const allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
+                delete allTokens[userId];
+                fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
+            }
+        } catch (fileErr) {
+            // ignore file errors
+        }
+
         res.json({ success: true, message: 'Gmail disconnected' });
     } catch (error) {
         console.error('Gmail disconnect error:', error);
@@ -640,31 +705,83 @@ app.post('/api/gmail/disconnect', (req, res) => {
     }
 });
 
-// Helper function to get Gmail client for a user
-async function getGmailClient(userId) {
-    let tokens = userTokens[userId];
-    
-    if (!tokens) {
+// Helper: Load tokens from all storage layers (DB > cache > file)
+async function loadUserTokens(userId) {
+    // 1. Check in-memory cache first (fastest)
+    if (userTokensCache[userId]) {
+        return userTokensCache[userId];
+    }
+
+    // 2. Check database (persistent across restarts/deploys)
+    try {
+        const dbToken = await dbAPI.getGmailToken(userId);
+        if (dbToken) {
+            const tokens = {
+                access_token: dbToken.accessToken,
+                refresh_token: dbToken.refreshToken,
+                expiry_date: dbToken.expiryDate ? new Date(dbToken.expiryDate).getTime() : null,
+                token_type: dbToken.tokenType || 'Bearer',
+                scope: dbToken.scope
+            };
+            userTokensCache[userId] = tokens; // Populate cache
+            console.log('Gmail tokens loaded from database for user:', userId);
+            return tokens;
+        }
+    } catch (dbErr) {
+        console.log('DB token load failed, trying file fallback:', dbErr.message);
+    }
+
+    // 3. Fallback to file (legacy/backup)
+    try {
         const tokensFile = path.join(__dirname, 'gmail_tokens.json');
         if (fs.existsSync(tokensFile)) {
             const allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
-            tokens = allTokens[userId];
+            if (allTokens[userId]) {
+                userTokensCache[userId] = allTokens[userId];
+                // Migrate file tokens to database for future persistence
+                try {
+                    const t = allTokens[userId];
+                    await dbAPI.saveGmailToken(userId, {
+                        accessToken: t.access_token,
+                        refreshToken: t.refresh_token,
+                        expiryDate: t.expiry_date ? new Date(t.expiry_date) : null,
+                        tokenType: t.token_type,
+                        scope: t.scope
+                    });
+                    console.log('Migrated file-based Gmail tokens to database for user:', userId);
+                } catch (migrateErr) {
+                    console.log('Token migration to DB failed (non-critical):', migrateErr.message);
+                }
+                return allTokens[userId];
+            }
         }
+    } catch (fileErr) {
+        // ignore
     }
-    
-    if (!tokens) {
-        throw new Error('Gmail not connected. Please connect your Gmail account first.');
+
+    return null;
+}
+
+// Helper: Save updated tokens to all storage layers
+async function saveUserTokens(userId, tokens) {
+    // Update memory cache
+    userTokensCache[userId] = tokens;
+
+    // Save to database
+    try {
+        await dbAPI.saveGmailToken(userId, {
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+            tokenType: tokens.token_type,
+            scope: tokens.scope
+        });
+    } catch (dbErr) {
+        console.error('Failed to save refreshed tokens to database:', dbErr);
     }
-    
-    oauth2Client.setCredentials(tokens);
-    
-    // Refresh token if needed
-    if (tokens.expiry_date && tokens.expiry_date <= Date.now()) {
-        const { credentials } = await oauth2Client.refreshAccessToken();
-        tokens = credentials;
-        userTokens[userId] = tokens;
-        
-        // Save updated tokens
+
+    // Save to file backup
+    try {
         const tokensFile = path.join(__dirname, 'gmail_tokens.json');
         let allTokens = {};
         if (fs.existsSync(tokensFile)) {
@@ -672,9 +789,61 @@ async function getGmailClient(userId) {
         }
         allTokens[userId] = tokens;
         fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
+    } catch (fileErr) {
+        // non-critical
     }
-    
-    return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+// Helper function to get Gmail client for a user (per-user OAuth2 client)
+async function getGmailClient(userId) {
+    let tokens = await loadUserTokens(userId);
+
+    if (!tokens) {
+        throw new Error('Gmail not connected. Please connect your Gmail account first.');
+    }
+
+    // Create a fresh OAuth2 client for this user (avoids shared-state issues)
+    const client = createOAuth2Client();
+    client.setCredentials(tokens);
+
+    // Check if access token is expired or about to expire (within 5 minutes)
+    const bufferMs = 5 * 60 * 1000;
+    const isExpired = tokens.expiry_date && (tokens.expiry_date <= Date.now() + bufferMs);
+
+    if (isExpired && tokens.refresh_token) {
+        try {
+            console.log('Gmail access token expired for user:', userId, '- refreshing...');
+            const { credentials } = await client.refreshAccessToken();
+
+            // Preserve the refresh token (Google may not return it on refresh)
+            if (!credentials.refresh_token && tokens.refresh_token) {
+                credentials.refresh_token = tokens.refresh_token;
+            }
+
+            tokens = credentials;
+            client.setCredentials(tokens);
+
+            // Save refreshed tokens to all storage layers
+            await saveUserTokens(userId, tokens);
+            console.log('Gmail tokens refreshed and saved for user:', userId);
+        } catch (refreshErr) {
+            console.error('Gmail token refresh failed for user:', userId, refreshErr.message);
+            // If refresh fails, try to use existing token anyway - it might still work
+            // Don't delete the tokens; let the actual API call fail if needed
+        }
+    }
+
+    // Set up automatic token refresh listener
+    client.on('tokens', async (newTokens) => {
+        console.log('Gmail auto-refresh triggered for user:', userId);
+        // Preserve refresh token
+        if (!newTokens.refresh_token && tokens.refresh_token) {
+            newTokens.refresh_token = tokens.refresh_token;
+        }
+        await saveUserTokens(userId, newTokens);
+    });
+
+    return google.gmail({ version: 'v1', auth: client });
 }
 
 // Helper function to parse email address and name from header

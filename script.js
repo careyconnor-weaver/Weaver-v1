@@ -637,7 +637,7 @@ function updateUserDisplay() {
     }
 }
 
-// Check Gmail connection status
+// Check Gmail connection status - always verify with server (database) as source of truth
 async function checkGmailStatus(userId) {
     try {
         const response = await fetch(`/api/gmail/status?userId=${userId}`);
@@ -646,11 +646,14 @@ async function checkGmailStatus(userId) {
         if (data.connected) {
             localStorage.setItem(`weaver_gmail_connected_${userId}`, 'true');
         } else {
+            // Server says not connected - clear local state
+            // Only clear if server explicitly returned connected: false (not a network error)
             localStorage.removeItem(`weaver_gmail_connected_${userId}`);
         }
     } catch (error) {
-        // Server might not be running, that's okay
-        console.log('Could not check Gmail status:', error.message);
+        // Network error - don't change local state, keep existing connection status
+        // This prevents a temporary network glitch from disconnecting Gmail
+        console.log('Could not check Gmail status (keeping existing state):', error.message);
     }
 }
 
@@ -1222,6 +1225,19 @@ async function syncGmailLabel() {
         const data = await response.json();
         
         if (!data.success) {
+            // Check if it's a token/connection error - prompt reconnect instead of generic error
+            const errMsg = (data.error || '').toLowerCase();
+            if (errMsg.includes('not connected') || errMsg.includes('token') || errMsg.includes('auth') || errMsg.includes('invalid_grant') || errMsg.includes('refresh')) {
+                localStorage.removeItem(`weaver_gmail_connected_${currentUser.id}`);
+                if (content) {
+                    content.innerHTML = `
+                        <p style="color: #e53e3e; font-weight: 600;">Gmail connection expired.</p>
+                        <p style="color: var(--text-medium);">Please reconnect your Gmail account from the profile menu and try again.</p>
+                        <button class="btn btn-primary" onclick="connectGmail()" style="margin-top: 1rem;">Reconnect Gmail</button>
+                    `;
+                }
+                return;
+            }
             throw new Error(data.error || 'Failed to fetch emails');
         }
         
