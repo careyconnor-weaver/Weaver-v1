@@ -1799,21 +1799,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         vipFilter.addEventListener('change', filterContacts);
     }
     
-    // See My Net button
-    const seeMyNetBtn = document.getElementById('see-my-net');
-    if (seeMyNetBtn) {
-        seeMyNetBtn.addEventListener('click', showNetworkMap);
-    }
-    
-    // Back to network list button
-    const backToNetworkListBtn = document.getElementById('back-to-network-list');
-    if (backToNetworkListBtn) {
-        backToNetworkListBtn.addEventListener('click', () => {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById('contacts').classList.add('active');
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        });
-    }
 
     // Export to Excel
     const exportExcelBtn = document.getElementById('export-excel');
