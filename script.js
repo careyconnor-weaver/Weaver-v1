@@ -4037,76 +4037,41 @@ function showContactDetail(contactId) {
             <h2>Interaction Timeline</h2>
             <div class="timeline-container">
                 <div class="timeline-line"></div>
-                ${(() => {
-                    if (timeline.length === 0) {
-                        return '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>';
+                ${timeline.length > 0 ? timeline.map((item, index) => {
+                    const position = timeline.length === 1 ? 50 : (index / (timeline.length - 1)) * 100;
+                    const itemType = item.type.includes('email') ? item.type : 'call';
+
+                    let tooltipContent = '';
+                    if (itemType === 'call') {
+                        tooltipContent = item.summary || 'No notes recorded';
+                    } else {
+                        tooltipContent = item.subject || 'No subject';
                     }
+                    const escapedTooltip = tooltipContent
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;')
+                        .substring(0, 200);
 
-                    const today = new Date();
-                    today.setHours(23, 59, 59, 999);
+                    const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
 
-                    const firstDate = new Date(timeline[0].date);
-                    firstDate.setHours(0, 0, 0, 0);
-
-                    const totalSpan = today.getTime() - firstDate.getTime();
-
-                    let itemsHtml = timeline.map((item, index) => {
-                        const itemDate = new Date(item.date);
-                        const itemType = item.type.includes('email') ? item.type : 'call';
-
-                        let position;
-                        if (totalSpan === 0) {
-                            position = 0;
-                        } else {
-                            const itemSpan = itemDate.getTime() - firstDate.getTime();
-                            position = (itemSpan / totalSpan) * 100;
-                        }
-                        position = Math.max(0, Math.min(100, position));
-
-                        let tooltipContent = '';
-                        if (itemType === 'call') {
-                            tooltipContent = item.summary || 'No notes recorded';
-                        } else {
-                            tooltipContent = item.subject || 'No subject';
-                        }
-                        const escapedTooltip = tooltipContent
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .replace(/"/g, '&quot;')
-                            .replace(/'/g, '&#39;')
-                            .substring(0, 200);
-
-                        const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
-                        const formattedDate = formatLocalDate(item.date);
-
-                        return \`
-                            <div class="timeline-item timeline-\${itemType}" style="left: \${position}%">
-                                <div class="timeline-date-above">\${formattedDate}</div>
-                                <div class="timeline-dot"
-                                     data-index="\${index}"
-                                     data-type="\${itemType}"
-                                     data-date="\${formattedDate}"
-                                     data-label="\${typeLabel}"
-                                     data-content="\${escapedTooltip}"
-                                     onclick="showTimelinePopup(event, this)"
-                                     onmouseenter="showTimelinePopup(event, this)"
-                                     onmouseleave="hideTimelinePopup()">
-                                </div>
+                    return `
+                        <div class="timeline-item timeline-${itemType}" style="left: ${position}%">
+                            <div class="timeline-dot"
+                                 data-index="${index}"
+                                 data-type="${itemType}"
+                                 data-date="${formatLocalDate(item.date)}"
+                                 data-label="${typeLabel}"
+                                 data-content="${escapedTooltip}"
+                                 onclick="showTimelinePopup(event, this)"
+                                 onmouseenter="showTimelinePopup(event, this)"
+                                 onmouseleave="hideTimelinePopup()">
                             </div>
-                        \`;
-                    }).join('');
-
-                    const todayFormatted = formatLocalDate(today.toISOString());
-                    itemsHtml += \`
-                        <div class="timeline-today-marker" style="left: 100%">
-                            <div class="timeline-today-line"></div>
-                            <div class="timeline-today-label">Today<br>\${todayFormatted}</div>
                         </div>
-                    \`;
-
-                    return itemsHtml;
-                })()}
+                    `;
+                }).join('') : '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>'}
             </div>
 
             <!-- Timeline Popup (hidden by default) -->
