@@ -212,12 +212,10 @@ window.handleQuickAddSubmit = function(e) {
         const direction = interactionType === 'email-sent' ? 'sent' : 'received';
         
         // Determine if it's cold or follow-up (only for sent emails)
-        // Cold = first sent email AND no emails received yet; otherwise follow-up
         let emailType = 'received';
         if (direction === 'sent') {
             const sentEmails = contact.emails.filter(e => e.direction === 'sent' || !e.direction);
-            const receivedEmails = contact.emails.filter(e => e.direction === 'received');
-            emailType = (sentEmails.length === 0 && receivedEmails.length === 0) ? 'cold' : 'follow-up';
+            emailType = sentEmails.length === 0 ? 'cold' : 'follow-up';
         }
         
         // Add the email
@@ -1470,16 +1468,12 @@ async function processGmailLabelEmails() {
                 let emailType = 'received'; // Default for received emails
 
                 if (emailData.direction === 'sent') {
-                    // Cold = first sent email AND no emails received before it; otherwise follow-up
+                    // For sent emails, check if it's cold or follow-up
                     const previousSentEmails = contact.emails.filter(e =>
                         e.direction === 'sent' &&
                         e.date < emailData.date
                     );
-                    const previousReceivedEmails = contact.emails.filter(e =>
-                        e.direction === 'received' &&
-                        e.date <= emailData.date
-                    );
-                    emailType = (previousSentEmails.length === 0 && previousReceivedEmails.length === 0) ? 'cold' : 'follow-up';
+                    emailType = previousSentEmails.length === 0 ? 'cold' : 'follow-up';
                 }
 
                 // Add the email with proper structure
@@ -4015,7 +4009,7 @@ function showContactDetail(contactId) {
                 itemIndex: emailIndex,
                 type: email.direction === 'received' ? 'email-received' : 'email-sent',
                 date: email.date,
-                label: email.direction === 'received' ? 'Email Received' : (email.type === 'cold' ? 'Cold Email Sent' : 'Email Sent'),
+                label: email.direction === 'received' ? 'Email Received' : (email.type === 'cold' ? 'Cold Email Sent' : 'Follow-up Email Sent'),
                 subject: email.subject || '',
                 direction: email.direction,
                 emailType: email.type
@@ -4329,7 +4323,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
                             <label for="timeline-edit-email-type">Type</label>
                             <select id="timeline-edit-email-type">
                                 <option value="cold">Cold Email</option>
-                                <option value="follow-up">Email Sent</option>
+                                <option value="follow-up">Follow-up</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -5183,12 +5177,10 @@ function parseCSV(csvText) {
                         // Create email entries for each date
                         if (!contact.emails) contact.emails = [];
                         dates.forEach(date => {
-                            const sentCount = contact.emails.filter(e => e.direction === 'sent' || !e.direction).length;
-                            const receivedCount = contact.emails.filter(e => e.direction === 'received').length;
                             contact.emails.push({
                                 date: date,
                                 direction: 'sent',
-                                type: (sentCount === 0 && receivedCount === 0) ? 'cold' : 'follow-up',
+                                type: contact.emails.filter(e => e.direction === 'sent' || !e.direction).length === 0 ? 'cold' : 'follow-up',
                                 subject: ''
                             });
                         });
@@ -5780,12 +5772,10 @@ function processExcelData(excelData, status) {
                             contact.firstEmailDate = dates[0];
                             if (!contact.emails) contact.emails = [];
                             dates.forEach(date => {
-                                const sentCount = contact.emails.filter(e => e.direction === 'sent' || !e.direction).length;
-                                const receivedCount = contact.emails.filter(e => e.direction === 'received').length;
                                 contact.emails.push({
                                     date: date,
                                     direction: 'sent',
-                                    type: (sentCount === 0 && receivedCount === 0) ? 'cold' : 'follow-up',
+                                    type: contact.emails.filter(e => e.direction === 'sent' || !e.direction).length === 0 ? 'cold' : 'follow-up',
                                     subject: ''
                                 });
                             });
