@@ -3945,29 +3945,35 @@ function showContactDetail(contactId) {
                 <button class="btn btn-secondary" onclick="toggleEditMode('${contactId}')" id="edit-contact-btn">Edit</button>
             </div>
             <div class="contact-detail-info" id="contact-detail-info">
-                <div class="info-item">
-                    <strong>Firm:</strong> 
-                    <span id="contact-detail-firm">${contact.firm || 'N/A'}</span>
-                </div>
-                <div class="info-item">
-                    <strong>Position:</strong> 
-                    <span id="contact-detail-position">${contact.position || 'N/A'}</span>
-                </div>
-                <div class="info-item">
-                    <strong>Email:</strong> 
-                    <span id="contact-detail-email">${contact.email || 'N/A'}</span>
-                </div>
-                ${contact.firstEmailDate ? `<div class="info-item"><strong>First Contact:</strong> ${formatLocalDate(contact.firstEmailDate)}</div>` : ''}
-                <div class="info-item">
-                    <strong>Priority:</strong> 
-                    <span id="contact-detail-priority-display" class="priority-badge priority-${contact.priority || 'medium'}">${(contact.priority || 'medium').toUpperCase()}</span>
-                </div>
-                ${daysSinceLastContact !== null ? `
-                    <div class="info-item days-since-contact">
-                        <strong>Days Since Last Contact:</strong> 
-                        <span class="days-count ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span>
+                <div class="info-row">
+                    <div class="info-item">
+                        <strong>Firm</strong>
+                        <span id="contact-detail-firm">${contact.firm || 'N/A'}</span>
                     </div>
-                ` : '<div class="info-item"><strong>Days Since Last Contact:</strong> <span class="days-count">No contact yet</span></div>'}
+                    <div class="info-item">
+                        <strong>Position</strong>
+                        <span id="contact-detail-position">${contact.position || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Priority</strong>
+                        <span id="contact-detail-priority-display" class="priority-badge priority-${contact.priority || 'medium'}">${(contact.priority || 'medium').toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-item email-item full-width">
+                        <strong>Email</strong>
+                        <span id="contact-detail-email" class="email-value" title="${(contact.email || '').replace(/"/g, '&quot;')}">${contact.email || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    ${contact.firstEmailDate ? `<div class="info-item"><strong>First Contact</strong><span>${formatLocalDate(contact.firstEmailDate)}</span></div>` : ''}
+                    ${daysSinceLastContact !== null ? `
+                        <div class="info-item">
+                            <strong>Days Since Last Contact</strong>
+                            <span class="days-count ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span>
+                        </div>
+                    ` : '<div class="info-item"><strong>Days Since Last Contact</strong><span class="days-count">No contact yet</span></div>'}
+                </div>
             </div>
             <div id="contact-edit-form" class="contact-edit-form" style="display: none;">
                 <form id="edit-contact-form">
