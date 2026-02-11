@@ -3814,6 +3814,140 @@ function filterContacts() {
     displayContacts(filtered);
 }
 
+// Build timeline items with proportional date spacing
+function buildTimelineItems(timeline, contact) {
+    if (timeline.length === 0) {
+        return '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>';
+    }
+    
+    // Get today's date
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var todayTime = today.getTime();
+    
+    // Get first interaction date
+    var firstDate = parseLocalDate(timeline[0].date);
+    if (!firstDate) {
+        firstDate = new Date();
+    }
+    firstDate.setHours(0, 0, 0, 0);
+    var firstTime = firstDate.getTime();
+    
+    // Total time span from first interaction to today
+    var totalSpan = todayTime - firstTime;
+    if (totalSpan <= 0) {
+        totalSpan = 1; // Avoid division by zero
+    }
+    
+    var html = '';
+    
+    for (var i = 0; i < timeline.length; i++) {
+        var item = timeline[i];
+        var itemDate = parseLocalDate(item.date);
+        if (!itemDate) continue;
+        itemDate.setHours(0, 0, 0, 0);
+        var itemTime = itemDate.getTime();
+        
+        // Calculate position as percentage (0% = first interaction, 100% = today)
+        var position = ((itemTime - firstTime) / totalSpan) * 100;
+        position = Math.max(0, Math.min(100, position));
+        
+        var itemType = item.type.indexOf('email') >= 0 ? item.type : 'call';
+        
+        var tooltipContent = '';
+        if (itemType === 'call') {
+            tooltipContent = item.summary || 'No notes recorded';
+        } else {
+            tooltipContent = item.subject || 'No subject';
+        }
+        
+        // Escape for HTML attribute
+        tooltipContent = tooltipContent
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        if (tooltipContent.length > 200) {
+            tooltipContent = tooltipContent.substring(0, 200);
+        }
+        
+        var typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
+        var formattedDate = formatLocalDate(item.date);
+        
+        html += '<div class="timeline-item timeline-' + itemType + '" style="left: ' + position + '%">';
+        html += '<div class="timeline-date-label">' + formattedDate + '</div>';
+        html += '<div class="timeline-dot" ';
+        html += 'data-index="' + i + '" ';
+        html += 'data-type="' + itemType + '" ';
+        html += 'data-date="' + formattedDate + '" ';
+        html += 'data-label="' + typeLabel + '" ';
+        html += 'data-content="' + tooltipContent + '" ';
+        html += 'onclick="showTimelinePopup(event, this)" ';
+        html += 'onmouseenter="showTimelinePopup(event, this)" ';
+        html += 'onmouseleave="hideTimelinePopup()">';
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    return html;
+}
+
+// Build the interactions list for the accordion
+function buildInteractionsList(timeline, contact) {
+    if (timeline.length === 0) {
+        return '<p class="no-interactions">No interactions recorded yet. Add emails or calls using the buttons above.</p>';
+    }
+    
+    var html = '';
+    
+    for (var i = 0; i < timeline.length; i++) {
+        var item = timeline[i];
+        var itemType = item.type.indexOf('email') >= 0 ? item.type : 'call';
+        
+        var icon = '📌';
+        if (itemType === 'email-sent') icon = '📤';
+        else if (itemType === 'email-received') icon = '📥';
+        else if (itemType === 'call') icon = '📞';
+        
+        var typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
+        
+        var details = '';
+        if (itemType === 'call') {
+            details = item.summary || 'No notes recorded';
+        } else {
+            details = item.subject || 'No subject';
+        }
+        
+        html += '<div class="interaction-row interaction-' + itemType + '">';
+        html += '<div class="interaction-row-left">';
+        html += '<span class="interaction-row-icon">' + icon + '</span>';
+        html += '<div class="interaction-row-info">';
+        html += '<div class="interaction-row-top">';
+        html += '<span class="interaction-row-type">' + typeLabel + '</span>';
+        html += '<span class="interaction-row-date">' + formatLocalDate(item.date) + '</span>';
+        html += '</div>';
+        html += '<div class="interaction-row-details">' + details + '</div>';
+        
+        if (itemType === 'call' && item.extractedText) {
+            html += '<details class="interaction-row-full-notes">';
+            html += '<summary>View Full Notes</summary>';
+            html += '<div class="interaction-row-full-notes-content">' + item.extractedText + '</div>';
+            html += '</details>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="interaction-row-actions">';
+        html += '<button class="interaction-row-edit" onclick="editTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Edit">✏️</button>';
+        html += '<button class="interaction-row-delete" onclick="deleteTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Delete">🗑️</button>';
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    return html;
+}
+
 // Track which section the user came from when viewing contact detail
 let previousSectionId = 'contacts';
 
@@ -4037,44 +4171,13 @@ function showContactDetail(contactId) {
             <h2>Interaction Timeline</h2>
             <div class="timeline-container">
                 <div class="timeline-line"></div>
-                ${timeline.length > 0 ? timeline.map((item, index) => {
-                    const position = timeline.length === 1 ? 50 : (index / (timeline.length - 1)) * 100;
-                    const itemType = item.type.includes('email') ? item.type : 'call';
-
-                    let tooltipContent = '';
-                    if (itemType === 'call') {
-                        tooltipContent = item.summary || 'No notes recorded';
-                    } else {
-                        tooltipContent = item.subject || 'No subject';
-                    }
-                    const escapedTooltip = tooltipContent
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#39;')
-                        .substring(0, 200);
-
-                    const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
-
-                    return `
-                        <div class="timeline-item timeline-${itemType}" style="left: ${position}%">
-                            <div class="timeline-dot"
-                                 data-index="${index}"
-                                 data-type="${itemType}"
-                                 data-date="${formatLocalDate(item.date)}"
-                                 data-label="${typeLabel}"
-                                 data-content="${escapedTooltip}"
-                                 onclick="showTimelinePopup(event, this)"
-                                 onmouseenter="showTimelinePopup(event, this)"
-                                 onmouseleave="hideTimelinePopup()">
-                            </div>
-                        </div>
-                    `;
-                }).join('') : '<p style="text-align: center; color: var(--text-medium); padding: 1rem;">No interactions yet</p>'}
+                ${buildTimelineItems(timeline, contact)}
+                <div class="timeline-today-marker">
+                    <div class="timeline-today-line"></div>
+                    <div class="timeline-today-label">Today<br>${formatLocalDate(new Date().toISOString().split('T')[0])}</div>
+                </div>
             </div>
 
-            <!-- Timeline Popup (hidden by default) -->
             <div id="timeline-popup" class="timeline-popup" style="display: none;">
                 <div class="timeline-popup-header">
                     <span class="timeline-popup-type"></span>
@@ -4104,62 +4207,13 @@ function showContactDetail(contactId) {
                 <button class="btn btn-primary" onclick="openQuickAdd('call', '${contact.id}')">+ Add Call</button>
             </div>
 
-            <!-- Chronological Interactions Accordion -->
             <div class="interactions-accordion">
                 <button class="interactions-accordion-header" type="button" onclick="toggleInteractionsAccordion()">
                     <span>All Interactions (${timeline.length})</span>
                     <span class="interactions-accordion-icon" id="interactions-accordion-icon">+</span>
                 </button>
                 <div class="interactions-accordion-content" id="interactions-accordion-content">
-                    ${timeline.length === 0 ?
-                        '<p class="no-interactions">No interactions recorded yet. Add emails or calls using the buttons above.</p>' :
-                        timeline.map((item, index) => {
-                            const itemType = item.type.includes('email') ? item.type : 'call';
-                            const iconMap = {
-                                'email-sent': '📤',
-                                'email-received': '📥',
-                                'call': '📞'
-                            };
-                            const icon = iconMap[itemType] || '📌';
-                            const typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
-
-                            let details = '';
-                            if (itemType === 'call') {
-                                details = item.summary || 'No notes recorded';
-                            } else {
-                                details = item.subject || 'No subject';
-                            }
-
-                            return `
-                                <div class="interaction-row interaction-${itemType}">
-                                    <div class="interaction-row-left">
-                                        <span class="interaction-row-icon">${icon}</span>
-                                        <div class="interaction-row-info">
-                                            <div class="interaction-row-top">
-                                                <span class="interaction-row-type">${typeLabel}</span>
-                                                <span class="interaction-row-date">${formatLocalDate(item.date)}</span>
-                                            </div>
-                                            <div class="interaction-row-details">${details}</div>
-                                            ${itemType === 'call' && item.extractedText ? `
-                                                <details class="interaction-row-full-notes">
-                                                    <summary>View Full Notes</summary>
-                                                    <div class="interaction-row-full-notes-content">${item.extractedText}</div>
-                                                </details>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="interaction-row-actions">
-                                        <button class="interaction-row-edit" onclick="editTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Edit">
-                                            ✏️
-                                        </button>
-                                        <button class="interaction-row-delete" onclick="deleteTimelineItem('${contact.id}', '${item.id}', '${item.itemType}', ${item.itemIndex})" title="Delete">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')
-                    }
+                    ${buildInteractionsList(timeline, contact)}
                 </div>
             </div>
         </div>

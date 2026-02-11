@@ -1746,7 +1746,7 @@ body {
     font-size: 1.8rem;
 }
 
-/* ============ IMPROVED TIMELINE ============ */
+/* ============ TIMELINE WITH PROPORTIONAL DATE SPACING ============ */
 
 .timeline-section {
     position: relative;
@@ -1758,33 +1758,56 @@ body {
     color: var(--text-dark);
 }
 
+/* Timeline container - extra padding for today marker */
 .timeline-container {
     position: relative;
-    height: 60px;
-    margin: 2rem 20px;
+    height: 100px;
+    margin: 2rem 20px 2rem 20px;
+    padding-right: 80px;
 }
 
 .timeline-line {
     position: absolute;
     top: 50%;
     left: 0;
-    right: 0;
+    right: 60px;
     height: 4px;
     background: linear-gradient(90deg, var(--accent-blue) 0%, var(--light-accent) 100%);
     border-radius: 2px;
     transform: translateY(-50%);
 }
 
+/* Timeline items */
 .timeline-item {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Date label above dot */
+.timeline-date-label {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    font-size: 0.65rem;
+    color: var(--text-medium);
+    white-space: nowrap;
+    text-align: center;
+    background: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .timeline-dot {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 3px solid white;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -1797,16 +1820,35 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
-.timeline-email-sent .timeline-dot {
-    background: var(--accent-blue);
+/* Timeline dot colors */
+.timeline-email-sent .timeline-dot { background: var(--accent-blue); }
+.timeline-email-received .timeline-dot { background: #48bb78; }
+.timeline-call .timeline-dot { background: #f0ad4e; }
+
+/* Today marker */
+.timeline-today-marker {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
 }
 
-.timeline-email-received .timeline-dot {
-    background: #48bb78;
+.timeline-today-line {
+    width: 3px;
+    height: 50px;
+    background: var(--text-medium);
+    border-radius: 2px;
+    margin: 0 auto;
 }
 
-.timeline-call .timeline-dot {
-    background: #f0ad4e;
+.timeline-today-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    text-align: center;
+    margin-top: 4px;
+    line-height: 1.2;
 }
 
 /* Timeline Popup */
@@ -1851,6 +1893,7 @@ body {
     word-break: break-word;
 }
 
+/* Popup color variants */
 .timeline-popup-email-sent {
     border-top: 4px solid var(--accent-blue);
 }
@@ -1868,7 +1911,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 2rem;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     padding-top: 1rem;
 }
 
@@ -1905,6 +1948,19 @@ body {
     gap: 0.75rem;
     justify-content: center;
     margin: 1.5rem 0;
+}
+
+/* Responsive date labels */
+@media (max-width: 768px) {
+    .timeline-date-label {
+        font-size: 0.55rem;
+        transform: translateX(-50%) rotate(-45deg);
+        transform-origin: center bottom;
+    }
+
+    .timeline-container {
+        height: 120px;
+    }
 }
 
 /* ============ INTERACTIONS ACCORDION ============ */
