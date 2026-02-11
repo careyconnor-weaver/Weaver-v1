@@ -3890,7 +3890,19 @@ function buildTimelineItems(timeline, contact) {
         if (itemType === 'call') {
             tooltipContent = item.summary || 'No notes recorded';
         } else if (itemType === 'email-both') {
-            tooltipContent = 'Sent &amp; Received';
+            // Gather all subjects for this date, one per line
+            var bothItems = dateGroups[item.date];
+            var lines = [];
+            for (var b = 0; b < bothItems.length; b++) {
+                var bi = timeline[bothItems[b]];
+                var biType = bi.type.indexOf('email') >= 0 ? bi.type : 'call';
+                if (biType === 'email-sent') {
+                    lines.push('Email Sent: ' + (bi.subject || 'No subject'));
+                } else if (biType === 'email-received') {
+                    lines.push('Email Received: ' + (bi.subject || 'No subject'));
+                }
+            }
+            tooltipContent = lines.join('\n');
         } else {
             tooltipContent = item.subject || 'No subject';
         }
@@ -3901,12 +3913,13 @@ function buildTimelineItems(timeline, contact) {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-        if (tooltipContent.length > 200) {
-            tooltipContent = tooltipContent.substring(0, 200);
+            .replace(/'/g, '&#39;')
+            .replace(/\n/g, '&#10;');
+        if (tooltipContent.length > 500) {
+            tooltipContent = tooltipContent.substring(0, 500);
         }
         
-        var typeLabel = itemType === 'email-both' ? 'Email Sent &amp; Received' : (item.label || (itemType === 'call' ? 'Call' : 'Email'));
+        var typeLabel = itemType === 'email-both' ? 'Sent &amp; Received' : (item.label || (itemType === 'call' ? 'Call' : 'Email'));
         var formattedDate = formatLocalDate(item.date);
         
         html += '<div class="timeline-item timeline-' + itemType + '" style="left: ' + position + '%">';
@@ -6951,9 +6964,9 @@ function showTimelinePopup(event, element) {
     const dateSpan = popup.querySelector('.timeline-popup-date');
     const contentDiv = popup.querySelector('.timeline-popup-content');
 
-    if (typeSpan) typeSpan.textContent = label;
+    if (typeSpan) typeSpan.innerHTML = label;
     if (dateSpan) dateSpan.textContent = date;
-    if (contentDiv) contentDiv.textContent = content;
+    if (contentDiv) contentDiv.innerHTML = content.replace(/&#10;/g, '<br>');
 
     popup.className = 'timeline-popup timeline-popup-' + type;
 
