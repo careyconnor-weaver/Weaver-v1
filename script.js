@@ -381,9 +381,257 @@ function checkAuth() {
         showAppView();
         updateUserDisplay();
         updateSidebarUser();
+        updateDashboard();
         filterContacts();
     }
 }
+
+// Dashboard
+function updateDashboard() {
+    var contacts = getContacts();
+    var totalContacts = contacts.length;
+
+    // Total distinct firms
+    var firmSet = {};
+    for (var i = 0; i < contacts.length; i++) {
+        var f = (contacts[i].firm || '').trim();
+        if (f && f !== 'N/A') firmSet[f.toLowerCase()] = f;
+    }
+    var firmNames = Object.keys(firmSet);
+    var totalFirms = firmNames.length;
+
+    // Response rate: contacts that have at least one received email
+    var contactsWithResponse = 0;
+    var totalEmails = 0;
+    var totalCalls = 0;
+    var totalVIP = 0;
+    var overdueCount = 0;
+    var now = new Date();
+    var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    var newThisMonth = 0;
+
+    for (var i = 0; i < contacts.length; i++) {
+        var c = contacts[i];
+        var emails = c.emails || [];
+        var notes = c.notes || [];
+        var sentCount = 0;
+        var receivedCount = 0;
+
+        for (var j = 0; j < emails.length; j++) {
+            totalEmails++;
+            if (emails[j].type === 'received' || emails[j].direction === 'received') {
+                receivedCount++;
+            } else {
+                sentCount++;
+            }
+        }
+        totalCalls += notes.length;
+        if (receivedCount > 0) contactsWithResponse++;
+        if (c.vip) totalVIP++;
+
+        // Overdue: last contact > 30 days ago
+        var lastDate = null;
+        for (var j = 0; j < emails.length; j++) {
+            var d = new Date(emails[j].date);
+            if (!lastDate || d > lastDate) lastDate = d;
+        }
+        for (var j = 0; j < notes.length; j++) {
+            var d = new Date(notes[j].date);
+            if (!lastDate || d > lastDate) lastDate = d;
+        }
+        if (c.firstEmailDate) {
+            var fed = new Date(c.firstEmailDate);
+            if (!lastDate || fed > lastDate) lastDate = fed;
+        }
+        if (lastDate) {
+            var daysSince = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+            if (daysSince > 30) overdueCount++;
+        }
+
+        // New this month
+        if (c.firstEmailDate) {
+            var fed = new Date(c.firstEmailDate);
+            if (fed >= monthStart) newThisMonth++;
+        }
+    }
+
+    var responseRate = totalContacts > 0 ? Math.round((contactsWithResponse / totalContacts) * 100) : 0;
+    var avgEmails = totalContacts > 0 ? (totalEmails / totalContacts).toFixed(1) : '0';
+
+    // Update stat cards
+    var el;
+    el = document.getElementById('dash-total-contacts'); if (el) el.textContent = totalContacts;
+    el = document.getElementById('dash-total-firms'); if (el) el.textContent = totalFirms;
+    el = document.getElementById('dash-response-rate'); if (el) el.textContent = responseRate + '%';
+    el = document.getElementById('dash-overdue'); if (el) el.textContent = overdueCount;
+    el = document.getElementById('dash-vip-count'); if (el) el.textContent = totalVIP;
+    el = document.getElementById('dash-total-emails'); if (el) el.textContent = totalEmails;
+    el = document.getElementById('dash-total-calls'); if (el) el.textContent = totalCalls;
+    el = document.getElementById('dash-avg-emails'); if (el) el.textContent = avgEmails;
+    el = document.getElementById('dash-new-month'); if (el) el.textContent = newThisMonth;
+
+    // Greeting
+    var user = getCurrentUser();
+    var greetEl = document.getElementById('dashboard-greeting');
+    if (greetEl && user) {
+        var hour = now.getHours();
+        var timeGreet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        var name = (user.email || '').split('@')[0];
+        greetEl.textContent = timeGreet + (name ? ', ' + name : '');
+    }
+
+    // Bar chart: last 6 months activity
+    var barChart = document.getElementById('dash-bar-chart');
+    if (barChart) {
+        var months = [];
+        for (var m = 5; m >= 0; m--) {
+            var d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+            months.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString('default', { month: 'short' }) });
+        }
+        var monthData = [];
+        for (var m = 0; m < months.length; m++) {
+            monthData.push({ sent: 0, received: 0, calls: 0, label: months[m].label });
+        }
+        for (var i = 0; i < contacts.length; i++) {
+            var emails = contacts[i].emails || [];
+            var notes = contacts[i].notes || [];
+            for (var j = 0; j < emails.length; j++) {
+                var ed = new Date(emails[j].date);
+                for (var m = 0; m < months.length; m++) {
+                    if (ed.getFullYear() === months[m].year && ed.getMonth() === months[m].month) {
+                        if (emails[j].type === 'received' || emails[j].direction === 'received') monthData[m].received++;
+                        else monthData[m].sent++;
+                    }
+                }
+            }
+            for (var j = 0; j < notes.length; j++) {
+                var nd = new Date(notes[j].date);
+                for (var m = 0; m < months.length; m++) {
+                    if (nd.getFullYear() === months[m].year && nd.getMonth() === months[m].month) {
+                        monthData[m].calls++;
+                    }
+                }
+            }
+        }
+        var maxVal = 1;
+        for (var m = 0; m < monthData.length; m++) {
+            var total = monthData[m].sent + monthData[m].received + monthData[m].calls;
+            if (total > maxVal) maxVal = total;
+        }
+        var chartHtml = '';
+        for (var m = 0; m < monthData.length; m++) {
+            var d = monthData[m];
+            var sentH = Math.max(2, (d.sent / maxVal) * 120);
+            var recvH = Math.max(d.received > 0 ? 2 : 0, (d.received / maxVal) * 120);
+            var callH = Math.max(d.calls > 0 ? 2 : 0, (d.calls / maxVal) * 120);
+            chartHtml += '<div class="dash-bar-group">';
+            chartHtml += '<div class="dash-bar-stack">';
+            if (d.calls > 0) chartHtml += '<div class="dash-bar" style="height:' + callH + 'px;background:var(--amber);border-radius:4px;"></div>';
+            if (d.received > 0) chartHtml += '<div class="dash-bar" style="height:' + recvH + 'px;background:var(--green);border-radius:4px;"></div>';
+            chartHtml += '<div class="dash-bar" style="height:' + sentH + 'px;background:var(--blue);border-radius:4px 4px 0 0;"></div>';
+            chartHtml += '</div>';
+            chartHtml += '<span class="dash-bar-label">' + d.label + '</span>';
+            chartHtml += '</div>';
+        }
+        barChart.innerHTML = chartHtml;
+    }
+
+    // Notifications: overdue contacts + VIP needing attention
+    var notifEl = document.getElementById('dash-notifications');
+    if (notifEl) {
+        var notifs = [];
+        for (var i = 0; i < contacts.length; i++) {
+            var c = contacts[i];
+            var lastDate = null;
+            var emails = c.emails || [];
+            var notes = c.notes || [];
+            for (var j = 0; j < emails.length; j++) {
+                var d = new Date(emails[j].date);
+                if (!lastDate || d > lastDate) lastDate = d;
+            }
+            for (var j = 0; j < notes.length; j++) {
+                var d = new Date(notes[j].date);
+                if (!lastDate || d > lastDate) lastDate = d;
+            }
+            if (c.firstEmailDate) {
+                var fed = new Date(c.firstEmailDate);
+                if (!lastDate || fed > lastDate) lastDate = fed;
+            }
+            if (lastDate) {
+                var daysSince = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+                if (daysSince > 30) {
+                    notifs.push({ type: 'overdue', name: c.name, firm: c.firm || '', days: daysSince, id: c.id, vip: c.vip });
+                }
+            }
+        }
+        notifs.sort(function(a, b) { return (b.vip ? 1 : 0) - (a.vip ? 1 : 0) || b.days - a.days; });
+        if (notifs.length === 0) {
+            notifEl.innerHTML = '<p class="dash-empty">All caught up — no overdue follow-ups!</p>';
+        } else {
+            var html = '';
+            var shown = Math.min(notifs.length, 5);
+            for (var i = 0; i < shown; i++) {
+                var n = notifs[i];
+                var iconClass = n.vip ? 'vip' : 'overdue';
+                var icon = n.vip ? '⭐' : '⏰';
+                html += '<div class="dash-notif-item" onclick="showContactDetail(\'' + n.id + '\')">';
+                html += '<div class="dash-notif-icon ' + iconClass + '">' + icon + '</div>';
+                html += '<div class="dash-notif-info">';
+                html += '<div class="dash-notif-text">' + n.name + (n.vip ? ' (VIP)' : '') + '</div>';
+                html += '<div class="dash-notif-sub">' + (n.firm ? n.firm + ' · ' : '') + n.days + ' days since last contact</div>';
+                html += '</div></div>';
+            }
+            if (notifs.length > 5) {
+                html += '<p style="text-align:center;font-size:12px;color:var(--slate);margin-top:8px;">+ ' + (notifs.length - 5) + ' more overdue</p>';
+            }
+            notifEl.innerHTML = html;
+        }
+    }
+
+    // Top firms
+    var firmsEl = document.getElementById('dash-firms-list');
+    if (firmsEl) {
+        var firmCounts = {};
+        for (var i = 0; i < contacts.length; i++) {
+            var f = (contacts[i].firm || '').trim();
+            if (f && f !== 'N/A') {
+                var key = f.toLowerCase();
+                if (!firmCounts[key]) firmCounts[key] = { name: f, count: 0 };
+                firmCounts[key].count++;
+            }
+        }
+        var sorted = Object.values(firmCounts).sort(function(a, b) { return b.count - a.count; });
+        if (sorted.length === 0) {
+            firmsEl.innerHTML = '<p class="dash-empty">No firms yet.</p>';
+        } else {
+            var html = '';
+            var shown = Math.min(sorted.length, 6);
+            for (var i = 0; i < shown; i++) {
+                var escapedName = sorted[i].name.replace(/'/g, "\\'");
+                html += '<div class="dash-firm-row" onclick="goToFirmFilter(\'' + escapedName + '\')" style="cursor:pointer;">';
+                html += '<span class="dash-firm-name">' + sorted[i].name + '</span>';
+                html += '<span class="dash-firm-count">' + sorted[i].count + '</span>';
+                html += '</div>';
+            }
+            firmsEl.innerHTML = html;
+        }
+    }
+}
+
+window.goToFirmFilter = function(firmName) {
+    var firmSelect = document.getElementById('firm-filter');
+    if (firmSelect) {
+        for (var i = 0; i < firmSelect.options.length; i++) {
+            if (firmSelect.options[i].value === firmName) {
+                firmSelect.value = firmName;
+                break;
+            }
+        }
+    }
+    var link = document.querySelector('.nav-link[href="#contacts"]');
+    if (link) link.click();
+    setTimeout(function() { filterContacts(); }, 50);
+};
 
 // Show auth modal, optionally in 'login' or 'signup' mode
 function showAuthModal(mode) {
@@ -1751,6 +1999,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const targetSection = document.getElementById(targetId);
             if (targetSection) {
                 targetSection.classList.add('active');
+                
+                if (targetId === 'dashboard') {
+                    updateDashboard();
+                }
                 
                 if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
                     setTimeout(() => {
