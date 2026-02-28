@@ -339,16 +339,48 @@ window.handleQuickAddSubmit = function(e) {
     }
 };
 
+// Show / hide landing page vs app container
+function showAppView() {
+    var landing = document.getElementById('landing-page');
+    var app = document.getElementById('app-container');
+    if (landing) landing.style.display = 'none';
+    if (app) app.style.display = 'block';
+}
+function showLandingView() {
+    var landing = document.getElementById('landing-page');
+    var app = document.getElementById('app-container');
+    if (landing) landing.style.display = '';
+    if (app) app.style.display = 'none';
+}
+
+// Update sidebar user info
+function updateSidebarUser() {
+    var user = getCurrentUser();
+    var avatarEl = document.getElementById('sb-avatar-initials');
+    var nameEl = document.getElementById('sb-user-name');
+    var planEl = document.getElementById('sb-plan-display');
+    if (user) {
+        var initials = user.email ? user.email.substring(0, 2).toUpperCase() : '--';
+        if (avatarEl) avatarEl.textContent = initials;
+        if (nameEl) nameEl.textContent = user.email || 'User';
+        var isPro = hasActiveSubscription(user);
+        if (planEl) planEl.textContent = isPro ? 'Pro Plan' : 'Free Plan';
+    } else {
+        if (avatarEl) avatarEl.textContent = '--';
+        if (nameEl) nameEl.textContent = 'User';
+        if (planEl) planEl.textContent = 'Free Plan';
+    }
+}
+
 // Check if user is logged in on page load
 function checkAuth() {
     const currentUser = getCurrentUser();
     if (!currentUser) {
-        // Don't auto-show login modal - let users navigate first
-        // They can click profile icon to login when ready
+        showLandingView();
     } else {
-        // Update UI with user info
+        showAppView();
         updateUserDisplay();
-        // Load user's contacts
+        updateSidebarUser();
         filterContacts();
     }
 }
@@ -360,6 +392,7 @@ function showAuthModal() {
         modal.classList.add('active');
     }
 }
+window.openAuthModal = showAuthModal;
 
 // Close auth modal
 function closeAuthModal() {
@@ -492,7 +525,9 @@ async function handleAuth(e) {
             
             setTimeout(() => {
                 closeAuthModal();
+                showAppView();
                 updateUserDisplay();
+                updateSidebarUser();
                 filterContacts();
             }, 1000);
         } else {
@@ -554,7 +589,9 @@ async function handleAuth(e) {
                         
                         setTimeout(() => {
                             closeAuthModal();
+                            showAppView();
                             updateUserDisplay();
+                            updateSidebarUser();
                             filterContacts();
                         }, 1000);
                         return;
@@ -607,7 +644,9 @@ async function handleAuth(e) {
             
             setTimeout(() => {
                 closeAuthModal();
+                showAppView();
                 updateUserDisplay();
+                updateSidebarUser();
                 filterContacts();
             }, 1000);
         }
@@ -623,13 +662,15 @@ async function handleAuth(e) {
     }
 }
 
-// Update user display in navbar
+// Update user display
 function updateUserDisplay() {
     const currentUser = getCurrentUser();
     const userEmailDisplay = document.getElementById('user-email-display');
     if (userEmailDisplay && currentUser) {
         userEmailDisplay.textContent = currentUser.email;
     }
+    
+    updateSidebarUser();
     
     // Check Gmail connection status
     if (currentUser) {
@@ -727,13 +768,14 @@ function logout() {
         profileMenu.style.display = 'none';
     }
     updateUserDisplay();
+    updateSidebarUser();
     // Clear contacts display
     const contactsList = document.getElementById('contacts-list');
     if (contactsList) {
         contactsList.innerHTML = '';
     }
-    // Show login modal
-    showAuthModal();
+    // Show landing page
+    showLandingView();
 }
 
 // Gmail connection functions
@@ -1680,82 +1722,54 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
     }
-    // Navigation
+    // Navigation — sidebar nav links
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('.section');
-    const hamburger = document.querySelector('.hamburger');
-    const navMenu = document.querySelector('.nav-menu');
 
-    // Smooth scroll and section switching
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const targetId = link.getAttribute('href').substring(1);
+            const href = link.getAttribute('href');
+            if (!href) return;
+            const targetId = href.substring(1);
             
-            // Update active nav link
+            // Update active nav link (sidebar)
             navLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
             
-            // Show target section (hide contact detail if showing)
+            // Update sidebar active state
+            document.querySelectorAll('.sb-item').forEach(item => item.classList.remove('active'));
+            if (link.classList.contains('sb-item')) link.classList.add('active');
+            
+            // Show target section
             sections.forEach(s => s.classList.remove('active'));
             const targetSection = document.getElementById(targetId);
             if (targetSection) {
                 targetSection.classList.add('active');
                 
-                // Update Strengthening the Net if that section is being shown
                 if (targetId === 'strengthening-net' && typeof updateStrengtheningNet === 'function') {
                     setTimeout(() => {
                         updateStrengtheningNet();
-                        // Initialize Networking Assistant when section becomes active
                         if (typeof initNetworkingAssistant === 'function') {
                             initNetworkingAssistant();
                         }
                     }, 100);
                 }
                 
-                // Initialize Tips & Tricks accordion if that section is being shown
                 if (targetId === 'tips-tricks') {
                     setTimeout(() => initTipsAccordion(), 100);
                 }
             }
             
-            // Close mobile menu
-            navMenu.classList.remove('active');
+            window.scrollTo(0, 0);
         });
     });
 
-    // Handle hero button navigation
-    const heroButtons = document.querySelectorAll('.hero-buttons a');
-    heroButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetId = button.getAttribute('href').substring(1);
-            
-            // Update active nav link
-            navLinks.forEach(l => {
-                if (l.getAttribute('href') === button.getAttribute('href')) {
-                    navLinks.forEach(nl => nl.classList.remove('active'));
-                    l.classList.add('active');
-                }
-            });
-            
-            // Show target section
-            sections.forEach(s => s.classList.remove('active'));
-            document.getElementById(targetId).classList.add('active');
-        });
-    });
-
-    // Hamburger menu toggle
-    hamburger.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-    });
-
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-            navMenu.classList.remove('active');
-        }
-    });
+    // goToMyNetwork helper for back button
+    window.goToMyNetwork = function() {
+        var link = document.querySelector('.nav-link[href="#contacts"]');
+        if (link) link.click();
+    };
 
     // Load contacts from backend when user is logged in (so data persists across devices)
     if (getCurrentUser()) await loadContactsFromAPI();
@@ -6673,9 +6687,10 @@ let networkMapState = {
 };
 
 function showNetworkMap() {
-    // Hide all sections and show network map
+    var mapEl = document.getElementById('network-map');
+    if (!mapEl) return;
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.getElementById('network-map').classList.add('active');
+    mapEl.classList.add('active');
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     
     // Reset map state

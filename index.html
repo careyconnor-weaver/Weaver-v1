@@ -1,1234 +1,583 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weaver - Networking Services for Students</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="api.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weaver — Networking for Students</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
+<script src="api.js"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">
-                <img src="assets/Shutterstock_2736822973.png" alt="Weaver Logo" class="logo-image">
-                <h1 class="logo-text">Weaver</h1>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="#home" class="nav-link active">Home</a></li>
-                <li><a href="#about" class="nav-link">About</a></li>
-                <li><a href="#upload-notes" class="nav-link">Add Contacts</a></li>
-                <li><a href="#contacts" class="nav-link">My <span class="underline-net">Net</span>work</a></li>
-                <li><a href="#strengthening-net" class="nav-link">Strengthening the <span class="underline-net">Net</span></a></li>
-                <li><a href="#tips-tricks" class="nav-link">Tips & Tricks</a></li>
-            </ul>
-            <div class="nav-right">
-                <button id="profile-btn" class="profile-btn" onclick="toggleProfileMenu()" title="Profile">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </button>
-                <div id="profile-menu" class="profile-menu" style="display: none;">
-                    <div id="profile-menu-content"></div>
-                </div>
-            </div>
-            <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- LANDING PAGE (visible when not logged in)   -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="landing-page">
+
+<nav class="landing-nav">
+  <a href="#" class="nav-brand">
+    <img src="/assets/Shutterstock_2736822973.png" alt="Weaver logo" class="brand-logo">
+    <span>Weaver</span>
+  </a>
+  <div class="landing-nav-right">
+    <a href="#features">Features</a>
+    <a href="#research">Why Network</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#" class="nav-cta" onclick="openAuthModal(); return false;">Get Started Free</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-pill"><span class="dot"></span> Built for students</div>
+      <h1>Stop letting great connections <em>go cold</em></h1>
+      <p class="hero-sub">Weaver is the networking CRM built for students. Track your contacts, get follow-up reminders, log call notes, and turn coffee chats into real career opportunities.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary-landing" onclick="openAuthModal(); return false;">Start Free →</a>
+        <a href="#features" class="btn-ghost">See features ↓</a>
+      </div>
+      <div class="hero-assurance">
+        <div class="assurance-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Free to start, no credit card
         </div>
-    </nav>
-
-    <!-- Home Section -->
-    <section id="home" class="section active">
-        <div class="hero">
-            <div class="hero-content">
-                <img src="assets/Shutterstock_2736822973.png" alt="Weaver Logo" class="hero-logo">
-                <h1 class="hero-title">Weaver</h1>
-                <p class="hero-subtitle">Intelligent Networking Services for Students</p>
-                <p class="hero-description">
-                    Transform your networking efforts with AI-powered contact management, 
-                    automated follow-ups, and personalized article recommendations.
-                </p>
-                <div class="hero-buttons">
-                    <a href="#upload-notes" class="btn btn-primary">Get Started</a>
-                    <a href="#about" class="btn btn-secondary">Learn More</a>
-                    <button onclick="openSubscriptionModal()" class="btn" style="background: transparent; border: 2px solid var(--accent-blue); color: var(--accent-blue);">View Pricing</button>
-                </div>
-            </div>
+        <div class="assurance-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export your data anytime
         </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="section">
-        <div class="container">
-            <div class="about-hero">
-                <h1 class="about-slogan">WEAVE THE NET</h1>
-                <p class="about-tagline">Your <span class="underline-net">Net</span>working Solution</p>
-            </div>
-            <div class="about-description">
-                <p>
-                    Weaver makes networking simple and systematic whether you are starting from zero or managing hundreds of relationships. Upload a spreadsheet of existing contacts to instantly get follow-up recommendations and automated outreach, or add people one-by-one as you meet them and build a clean, exportable database you can download to Excel anytime. You can also upload photos of your call notes—Weaver will log them to the right contact and summarize the key takeaways so you always know what to do next.
-                </p>
-            </div>
-            <h2 class="section-title">About Weaver</h2>
-            <div class="about-content">
-                <div class="about-text">
-                    <h3>Our Mission</h3>
-                    <p>
-                        Weaver is dedicated to helping students build and maintain meaningful professional 
-                        relationships through intelligent networking management. We understand that networking 
-                        is crucial for career success, but keeping track of contacts, follow-ups, and 
-                        maintaining relationships can be overwhelming.
-                    </p>
-                    <h3>How Weaver Helps</h3>
-                    <div class="features-grid">
-                        <div class="feature-card">
-                            <div class="feature-icon">📊</div>
-                            <h4>Contact Database</h4>
-                            <p>Upload your networking tracker spreadsheet and instantly create a comprehensive 
-                            database of all your contacts with their firms, positions, and interaction history.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">📝</div>
-                            <h4>Call Notes Summarization</h4>
-                            <p>Upload photos of your call notes and let our AI summarize and log them directly 
-                            into each contact's profile for easy reference.</p>
-                        </div>
-                        <div class="feature-card" style="position: relative; opacity: 0.8;">
-                            <div style="position: absolute; top: 1rem; right: 1rem; background: var(--accent-blue); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10;">
-                                🚧 COMING SOON
-                            </div>
-                            <div class="feature-icon">📧</div>
-                            <h4>Smart Follow-ups</h4>
-                            <p>Never miss a follow-up opportunity. Weaver analyzes priority levels, last email 
-                            dates, and interaction frequency to send timely reminders.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">📰</div>
-                            <h4>Personalized Articles</h4>
-                            <p>Receive 3 relevant news articles for each contact based on your call notes, 
-                            their interests, industry, and position - perfect for meaningful follow-ups.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="assurance-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Gmail integration
         </div>
-    </section>
-
-    <!-- Add Contacts Section -->
-    <section id="upload-notes" class="section">
-        <div class="container">
-            <h2 class="section-title">Add Contacts</h2>
-            <div class="upload-notes-container">
-                <!-- Mode Toggle -->
-                <div class="mode-toggle">
-                    <button class="mode-btn active" data-mode="new">Add New Contact</button>
-                    <button class="mode-btn" data-mode="spreadsheet">Upload Spreadsheet</button>
-                    <button class="mode-btn" data-mode="existing">Add Notes to Existing Contact</button>
-                </div>
-
-                <!-- Existing Contact Mode -->
-                <div id="existing-contact-mode" class="contact-mode">
-                    <div class="upload-box">
-                        <div class="form-group">
-                            <label for="contact-select">Select Contact: *</label>
-                            <select id="contact-select" class="contact-dropdown" required>
-                                <option value="">-- Select a contact --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="call-date">Call Date: *</label>
-                            <input type="date" id="call-date" max="" required>
-                        </div>
-                        <div class="notes-input-toggle">
-                            <button type="button" class="toggle-btn active" data-mode="text">Write Notes</button>
-                            <button type="button" class="toggle-btn" data-mode="image">Upload Image</button>
-                        </div>
-                        
-                        <!-- Text Notes Input -->
-                        <div id="text-notes-mode" class="notes-input-mode active">
-                            <div class="form-group">
-                                <label for="notes-text">Call Notes: *</label>
-                                <textarea id="notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea>
-                            </div>
-                        </div>
-                        
-                        <!-- Image Upload Mode -->
-                        <div id="image-notes-mode" class="notes-input-mode">
-                        <div class="upload-icon">📞</div>
-                        <h3>Add Call Notes</h3>
-                        <p>Write notes or upload a photo from your call</p>
-                            <input type="file" id="notes-input" accept="image/*" class="file-input">
-                            <label for="notes-input" class="btn btn-primary btn-choose-image">Choose Image</label>
-                            <div id="notes-preview" class="image-preview"></div>
-                        </div>
-                        
-                        <div id="notes-status" class="upload-status"></div>
-                        <button id="process-notes" class="btn btn-primary btn-submit-large" style="margin-top: 2rem;">
-                            Add Call Notes
-                        </button>
-                    </div>
-                </div>
-
-                <!-- New Contact Mode -->
-                <div id="new-contact-mode" class="contact-mode active">
-                    <div class="upload-box">
-                        <h3>Add New Contact</h3>
-                        <p>Fill in the contact information and optionally add call notes</p>
-                        <form id="new-contact-form">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="new-contact-name">Name *</label>
-                                    <input type="text" id="new-contact-name" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-contact-email">Email</label>
-                                    <input type="email" id="new-contact-email">
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="new-contact-firm">Firm</label>
-                                    <input type="text" id="new-contact-firm">
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-contact-position">Position</label>
-                                    <input type="text" id="new-contact-position">
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="new-contact-first-email">First Contact Date</label>
-                                    <input type="date" id="new-contact-first-email" max="">
-                                </div>
-                                <div class="form-group">
-                                    <label for="new-contact-priority">Priority</label>
-                                    <select id="new-contact-priority">
-                                        <option value="low">Low</option>
-                                        <option value="medium" selected>Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="new-contact-call-date">Call Date (if adding notes)</label>
-                                <input type="date" id="new-contact-call-date" max="">
-                            </div>
-                            <div class="form-group">
-                                <label>Add Call Notes (Optional)</label>
-                                <div class="notes-input-toggle">
-                                    <button type="button" class="toggle-btn active" data-mode="text" onclick="toggleNewContactNotesMode('text')">Write Notes</button>
-                                    <button type="button" class="toggle-btn" data-mode="image" onclick="toggleNewContactNotesMode('image')">Upload Image</button>
-                                </div>
-                                
-                                <!-- Text Notes Input -->
-                                <div id="new-contact-text-notes-mode" class="notes-input-mode active">
-                                    <textarea id="new-contact-notes-text" rows="6" placeholder="Enter your call notes here..."></textarea>
-                                </div>
-                                
-                                <!-- Image Upload Mode -->
-                                <div id="new-contact-image-notes-mode" class="notes-input-mode">
-                                    <input type="file" id="new-contact-notes-input" accept="image/*" class="file-input">
-                                    <label for="new-contact-notes-input" class="btn btn-secondary btn-choose-image" style="margin-top: 0.5rem;">
-                                        Choose Image
-                                    </label>
-                                    <div id="new-contact-notes-preview" class="image-preview"></div>
-                                </div>
-                            </div>
-                            <div id="new-contact-status" class="upload-status"></div>
-                            <button type="submit" class="btn btn-primary btn-submit-large" style="margin-top: 2rem;">
-                                Add Contact
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Upload Spreadsheet Mode -->
-                <div id="spreadsheet-mode" class="contact-mode">
-                    <div class="upload-box">
-                        <div class="upload-icon">📁</div>
-                        <h3>Upload Spreadsheet</h3>
-                        <p>Upload your networking tracker spreadsheet (CSV or Excel format)</p>
-                        
-                        <div class="spreadsheet-instructions">
-                            <h4>Required Columns:</h4>
-                            <ul>
-                                <li><strong>Name</strong> - Contact's full name</li>
-                                <li><strong>Company</strong> - Company name (synonyms: Firm, Bank, Organization, Org)</li>
-                                <li><strong>Contact Date</strong> - Contact date(s) in MM/DD/YEAR format (synonyms: Date, First Email Date, First Contact)</li>
-                                <li class="date-format-note">📅 <strong>Date Format:</strong> Use MM/DD/YEAR (e.g., 1/15/2024 or 01/15/2024). You can list multiple dates separated by commas, colons, or semicolons (e.g., "1/15/2024, 2/20/2024" or "1/15/2024; 2/20/2024"). Each date will appear on the contact's timeline.</li>
-                            </ul>
-                            <div style="border: 2px solid #ffc107; border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0; font-weight: 600;">
-                                <p style="margin: 0 0 0.75rem 0; color: var(--text-dark); font-size: 1.05rem;">
-                                    ⚠️ <strong>IMPORTANT:</strong> Your upload will only work if:
-                                </p>
-                                <ul style="margin: 0 0 0 1.5rem; padding: 0; color: var(--text-dark); font-size: 1rem;">
-                                    <li style="margin-bottom: 0.5rem;">Contacts are in the <strong>FIRST tab</strong> of your spreadsheet</li>
-                                    <li style="margin-bottom: 0;">Headers start in the <strong>first row and column (A1)</strong></li>
-                                </ul>
-                            </div>
-                            <h4>Optional Columns (will be saved if included):</h4>
-                            <ul>
-                                <li>Position, Title, Role</li>
-                                <li>Phone, Phone Number, Mobile</li>
-                                <li>Location, City, Address</li>
-                                <li>Email, Email Address</li>
-                                <li>Priority (Low, Medium, High)</li>
-                                <li>Any other columns will be saved as additional notes</li>
-                            </ul>
-                        </div>
-                        
-                        <input type="file" id="spreadsheet-input" accept=".csv,.xlsx,.xls" class="file-input">
-                        <label for="spreadsheet-input" class="btn btn-primary">Choose File</label>
-                        <div id="spreadsheet-status" class="upload-status" style="display: none;"></div>
-                        <div style="display: none; margin-top: 1rem;" id="process-button-container">
-                            <button type="button" id="process-spreadsheet" class="btn btn-secondary">
-                                Process Spreadsheet
-                            </button>
-                            <p class="header-note" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-medium); font-style: italic;">
-                                ⚠️ Note: Headers must be in the first row and column (e.g., Name must be in cell A1)
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="network-circle">
+        <div class="net-ring"></div><div class="net-ring"></div><div class="net-ring"></div><div class="net-ring"></div>
+        <div class="net-center">
+          <svg viewBox="0 0 36 36" fill="none"><path d="M10 13L14 23L18 16L22 23L26 13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="net-center-text">your network</span>
         </div>
-    </section>
+        <div class="net-node nn-1">SC</div><div class="net-node nn-2">MR</div><div class="net-node nn-3">EP</div>
+        <div class="net-node nn-4">JL</div><div class="net-node nn-5">AK</div><div class="net-node nn-6">DT</div>
+        <div class="float-card fc-1"><div class="fc-label">Follow-up Due</div><div class="fc-value">Sarah C.</div><div class="fc-sub">Goldman Sachs · 3 days</div></div>
+        <div class="float-card fc-2"><div class="fc-label">Network Size</div><div class="fc-value">47</div><div class="fc-sub">across 12 firms</div></div>
+        <div class="float-card fc-3"><div class="fc-label">Call Logged</div><div class="fc-value">25 min</div><div class="fc-sub">AI summary ready</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="why-section" id="research">
+  <div class="why-inner">
+    <h2>Networking isn't optional. <em>It's the job.</em></h2>
+    <p class="why-sub">The research is clear: how you maintain relationships matters more than how many you have. Weaver helps you do it systematically.</p>
+    <div class="research-grid">
+      <div class="rg-item"><div class="rg-num">44%</div><div class="rg-unit">Higher Reply Rate</div><div class="rg-desc">Campaigns with even one follow-up see 44% more replies than those with none</div></div>
+      <div class="rg-item"><div class="rg-num">#1</div><div class="rg-unit">Career Factor</div><div class="rg-desc">Maintaining contacts had the highest impact on salary growth among all networking behaviors</div></div>
+      <div class="rg-item"><div class="rg-num">2x</div><div class="rg-unit">Job Mobility</div><div class="rg-desc">Moderately weak ties increased job mobility more than strong ties in LinkedIn study</div></div>
+      <div class="rg-item"><div class="rg-num">85%</div><div class="rg-unit">of Jobs</div><div class="rg-desc">Filled through networking according to LinkedIn workforce research</div></div>
+    </div>
+    <div class="rg-source">Sources: Woodpecker, Journal of Applied Psychology, MIT/LinkedIn Research, LinkedIn Workforce Report</div>
+  </div>
+</section>
+
+<section class="features-landing" id="features">
+  <div class="section-center">
+    <div class="section-tag">Features</div>
+    <h2>Everything a spreadsheet can't do</h2>
+    <p>You started networking in a Google Sheet. It worked until it didn't. Weaver picks up where spreadsheets break down.</p>
+  </div>
+  <div class="features-grid-landing">
+    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h3>Contact Database</h3><p>Import your spreadsheet or add contacts one by one. Names, firms, positions, call history — all searchable, all sortable.</p></div>
+    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>AI Call Notes</h3><p>Upload a photo of your handwritten notes or type them in. AI summarizes key takeaways and logs them to the right contact.</p></div>
+    <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg></div><h3>Smart Reminders</h3><p>Never ghost a contact. Set follow-up intervals for cold vs. warm contacts and get email reminders when it's time to reach out.</p></div>
+    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><h3>Gmail Sync</h3><p>Connect Gmail, label threads "Weaver," and email timelines sync automatically. No manual logging.</p></div>
+    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h3>Article Suggestions</h3><p>Get 3 relevant articles per contact based on their industry, role, and your call notes — perfect for a reason to follow up.</p></div>
+    <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><h3>Export to Excel</h3><p>Your data is yours. Export everything to a clean spreadsheet anytime. No lock-in, no hostage situations.</p></div>
+  </div>
+</section>
+
+<section class="trust">
+  <div class="trust-inner">
+    <div class="trust-item"><div class="trust-icon">🔒</div><h3>Your Contacts Stay Private</h3><p>Your network data is encrypted and isolated to your account. We never share, sell, or access your contacts.</p></div>
+    <div class="trust-item"><div class="trust-icon">🎓</div><h3>Built by Students, for Students</h3><p>We know the IB/consulting networking grind because we've done it. Every feature solves a real problem we had.</p></div>
+    <div class="trust-item"><div class="trust-icon">📤</div><h3>No Lock-In</h3><p>Export your full database to Excel with one click. If you leave, your data leaves with you.</p></div>
+  </div>
+</section>
+
+<section class="pricing-landing" id="pricing">
+  <div class="section-center">
+    <div class="section-tag">Pricing</div>
+    <h2>Simple, student-friendly pricing</h2>
+    <p>Start free. Upgrade when your network outgrows 20 contacts.</p>
+  </div>
+  <div class="pricing-grid-landing">
+    <div class="price-card"><div class="price-name">Free</div><div class="price-desc">Get started</div><div class="price-amount">$0<span class="price-period"> /mo</span></div><ul class="price-features"><li>Up to 20 contacts</li><li>Contact database</li><li>Spreadsheet import</li><li>5 call notes/month</li><li class="off">AI summarization</li><li class="off">Email reminders</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal()">Start Free</button></div>
+    <div class="price-card featured"><div class="price-popular">Popular</div><div class="price-name">Pro</div><div class="price-desc">Everything you need</div><div class="price-amount">$5<span class="price-period"> /mo</span></div><ul class="price-features"><li>Unlimited contacts</li><li>AI call note summaries</li><li>Email reminders</li><li>Article suggestions</li><li>Gmail sync</li><li>Priority support</li></ul><button class="price-btn price-btn-fill" onclick="openAuthModal()">Get Pro →</button></div>
+    <div class="price-card"><div class="price-name">Pro Yearly</div><div class="price-desc">Save 17%</div><div class="price-amount">$50<span class="price-period"> /yr</span></div><ul class="price-features"><li>All Pro features</li><li>$4.17/month effective</li><li>Annual savings</li><li>Priority updates</li><li>&nbsp;</li><li>&nbsp;</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal()">Get Yearly</button></div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <h2>Your network is your<br>net worth. Start building.</h2>
+  <p>Free to start. No credit card. Import your spreadsheet in 2 minutes and never lose a contact again.</p>
+  <a href="#" class="btn-primary-landing" onclick="openAuthModal(); return false;">Create Free Account →</a>
+  <div class="cta-note">20 contacts free · Pro from $5/mo · Cancel anytime</div>
+</section>
+
+<footer class="landing-footer">
+  <div class="footer-inner">
+    <div class="footer-left">© 2025 <strong>Weaver</strong>. Built for students who network.</div>
+    <div class="footer-links">
+      <a href="mailto:info@studentweaver.com">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</div><!-- end #landing-page -->
 
 
-    <!-- My Network Section -->
-    <section id="contacts" class="section">
-        <div class="container">
-            <div class="network-header">
-                <div>
-                    <h2 class="section-title">My <span class="underline-net">Net</span>work</h2>
-                    <p id="contact-count" class="contact-count" style="margin: 0.5rem 0 0 0; font-size: 1rem; color: var(--text-medium); font-weight: 500;">0 contacts</p>
-                </div>
-            </div>
-            
-            <!-- Gmail Connection Instructions Dropdown -->
-            <div class="gmail-connection-dropdown" style="margin: 1rem 0; max-width: 700px; margin-left: auto; margin-right: auto;">
-                <button class="gmail-dropdown-header" onclick="toggleGmailInstructions()" style="width: 100%; padding: 0.75rem 1rem; background: white; border: 2px solid var(--accent-blue); border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; font-weight: 600; color: var(--text-dark); transition: all 0.3s;">
-                    <span>📧 Want to connect your Gmail account?</span>
-                    <span class="gmail-dropdown-icon" style="font-size: 1.2rem; transition: transform 0.3s;">+</span>
-                </button>
-                <div class="gmail-dropdown-content" id="gmail-instructions-content" style="display: none; padding: 1rem; background: var(--eggshell-white); border: 2px solid var(--silver-gray); border-top: none; border-radius: 0 0 8px 8px; margin-top: -2px;">
-                    <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--accent-blue); font-size: 1.1rem;">Step-by-Step Gmail Connection Guide</h3>
-                    
-                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
-                        <div style="display: flex; align-items: start; gap: 0.75rem;">
-                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">1</span>
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Connect Your Gmail Account</h4>
-                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
-                                    Click on the <strong>profile icon</strong> in the top right corner, then click <strong>"Connect Gmail"</strong>. Follow the prompts to authorize Weaver.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
-                        <div style="display: flex; align-items: start; gap: 0.75rem;">
-                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">2</span>
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Create a "Weaver" Label in Gmail</h4>
-                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
-                                    In Gmail, create a new label called <strong>"Weaver"</strong>:
-                                </p>
-                                <ul style="margin: 0.25rem 0 0 1.25rem; padding: 0; color: var(--text-medium); line-height: 1.6; font-size: 0.9rem;">
-                                    <li>Right-click any email → "Label" → "Create new"</li>
-                                    <li>Name it exactly <strong>"Weaver"</strong> (case-sensitive)</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="gmail-instruction-step" style="margin-bottom: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent-blue);">
-                        <div style="display: flex; align-items: start; gap: 0.75rem;">
-                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-blue); flex-shrink: 0;">3</span>
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Move Contacts to the "Weaver" Label</h4>
-                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
-                                    Select emails or chains you want to sync and apply the <strong>"Weaver"</strong> label to them.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="gmail-instruction-step" style="margin-bottom: 0; padding: 0.75rem; background: white; border-radius: 6px; border-left: 3px solid var(--success);">
-                        <div style="display: flex; align-items: start; gap: 0.75rem;">
-                            <span style="font-size: 1.2rem; font-weight: bold; color: var(--success); flex-shrink: 0;">4</span>
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.25rem 0; color: var(--text-dark); font-size: 0.95rem;">Sync from Weaver Label</h4>
-                                <p style="margin: 0; color: var(--text-medium); line-height: 1.5; font-size: 0.9rem;">
-                                    Go to the <strong>profile icon</strong> and click <strong>"Sync from Weaver Label"</strong>. This will:
-                                </p>
-                                <ul style="margin: 0.25rem 0 0 1.25rem; padding: 0; color: var(--text-medium); line-height: 1.6; font-size: 0.9rem;">
-                                    <li>Update interaction timelines for existing contacts</li>
-                                    <li>Prompt you to add new contacts that aren't recognized</li>
-                                </ul>
-                                <p style="margin: 0.5rem 0 0 0; color: var(--text-medium); line-height: 1.5; font-size: 0.85rem; font-style: italic;">
-                                    💡 <strong>Note:</strong> You can hit the sync button as often as you want to keep your timelines up to date!
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="contacts-controls">
-                <div class="search-filter-container">
-                    <div class="search-box">
-                        <input type="text" id="contact-search" placeholder="Search contacts by name, firm, or position...">
-                    </div>
-                    <div class="filter-box">
-                        <label for="firm-filter">Filter by Firm:</label>
-                        <select id="firm-filter">
-                            <option value="">All Firms</option>
-                        </select>
-                    </div>
-                    <div class="sort-box">
-                        <label for="sort-by-days">
-                            <input type="checkbox" id="sort-by-days">
-                            Sort by Days Since Last Contact
-                        </label>
-                    </div>
-                    <div class="filter-box">
-                        <label for="vip-filter">
-                            <input type="checkbox" id="vip-filter">
-                            Show VIP Only
-                        </label>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <button id="export-excel" class="btn btn-primary">Export to Excel</button>
-                    <button id="delete-all-contacts" class="btn btn-secondary" style="background: var(--error); color: white;">Delete All Contacts</button>
-                </div>
-            </div>
-            <div id="contacts-list" class="contacts-list">
-                <div class="empty-state">
-                    <p>No contacts yet. Upload your spreadsheet to get started!</p>
-                </div>
-            </div>
+<!-- ═══════════════════════════════════════════ -->
+<!-- APP CONTAINER (visible when logged in)      -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="app-container" style="display: none;">
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="app-sidebar">
+      <div class="sb-brand">
+        <img src="/assets/Shutterstock_2736822973.png" alt="Weaver logo" class="brand-logo sidebar-logo">
+        <span>Weaver</span>
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Main</div>
+        <a class="sb-item nav-link active" href="#contacts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          My Network
+        </a>
+        <a class="sb-item nav-link" href="#upload-notes">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Contacts
+        </a>
+        <a class="sb-item nav-link" href="#strengthening-net">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+          Follow-ups
+        </a>
+        <a class="sb-item nav-link" href="#tips-tricks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Tips &amp; Tricks
+        </a>
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Tools</div>
+        <a class="sb-item" href="#" onclick="if(window.syncGmailLabel) syncGmailLabel(); return false;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Gmail Sync
+        </a>
+        <a class="sb-item" href="#" onclick="document.getElementById('export-excel').click(); return false;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </a>
+        <a class="sb-item" href="#" onclick="openSubscriptionModal(); return false;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+      </div>
+      <div class="sb-bottom">
+        <div id="profile-btn" class="sb-user" onclick="toggleProfileMenu()" style="cursor:pointer;">
+          <div class="sb-avatar" id="sb-avatar-initials">--</div>
+          <div>
+            <div class="sb-name" id="sb-user-name">User</div>
+            <div class="sb-email" id="sb-plan-display">Free Plan</div>
+          </div>
         </div>
-    </section>
-
-
-    <!-- Contact Detail View -->
-    <section id="contact-detail" class="section">
-        <div class="container">
-            <button id="back-to-network" class="btn btn-secondary" style="margin-bottom: 2rem;" onclick="if(window.goToMyNetwork) { window.goToMyNetwork(); } else { const link = document.querySelector('a[href=&quot;#contacts&quot;]'); if(link) link.click(); } return false;">← Back to My Network</button>
-            <div id="contact-detail-content"></div>
+        <div id="profile-menu" class="profile-menu" style="display: none;">
+          <div id="profile-menu-content"></div>
         </div>
-    </section>
+      </div>
+    </aside>
 
-    <!-- Quick Add Modal -->
-    <div id="quick-add-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="if (window.closeQuickAddModal) window.closeQuickAddModal();">&times;</span>
-            <h2 id="quick-add-title">Add Interaction</h2>
-            <form id="quick-add-form">
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- ═══ MY NETWORK ═══ -->
+      <section id="contacts" class="section active">
+        <div class="top-bar">
+          <div>
+            <h1>My Network</h1>
+            <p id="contact-count" style="margin:4px 0 0;font-size:13px;color:var(--slate);">0 contacts</p>
+          </div>
+          <div class="top-bar-actions">
+            <button class="tb-btn tb-btn-outline" onclick="document.querySelector('.nav-link[href=&quot;#upload-notes&quot;]').click()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Contact
+            </button>
+          </div>
+        </div>
+
+        <div class="gmail-connection-dropdown" style="margin:0 0 1.5rem;">
+          <button class="gmail-dropdown-header" onclick="toggleGmailInstructions()" style="width:100%;padding:10px 16px;background:white;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--navy);font-family:var(--font);">
+            <span>📧 Want to connect your Gmail account?</span>
+            <span class="gmail-dropdown-icon" style="transition:transform 0.3s;">+</span>
+          </button>
+          <div class="gmail-dropdown-content" id="gmail-instructions-content" style="display:none;padding:16px;background:var(--off-white);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);">
+            <h3 style="margin:0 0 12px;color:var(--blue);font-size:15px;">Step-by-Step Gmail Connection Guide</h3>
+            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
+              <strong>1.</strong> Click your profile in the sidebar, then <strong>"Connect Gmail"</strong>. Follow the prompts to authorize Weaver.
+            </div>
+            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
+              <strong>2.</strong> In Gmail, create a new label called <strong>"Weaver"</strong> (case-sensitive).
+            </div>
+            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
+              <strong>3.</strong> Apply the <strong>"Weaver"</strong> label to email threads you want to sync.
+            </div>
+            <div style="padding:10px;background:white;border-radius:6px;border-left:3px solid var(--green);font-size:13px;color:var(--navy);line-height:1.6;">
+              <strong>4.</strong> Click <strong>"Gmail Sync"</strong> in the sidebar. You can sync as often as you want!
+            </div>
+          </div>
+        </div>
+
+        <div class="table-toolbar" style="margin-bottom:16px;">
+          <div class="table-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="contact-search" placeholder="Search contacts by name, firm, or position...">
+          </div>
+          <div class="table-filters">
+            <select id="firm-filter" class="filter-chip" style="padding:6px 12px;font-size:12px;border-radius:100px;border:1px solid var(--border);background:white;font-family:var(--font);cursor:pointer;">
+              <option value="">All Firms</option>
+            </select>
+            <label class="filter-chip" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="checkbox" id="sort-by-days" style="width:14px;height:14px;">
+              Sort by Days
+            </label>
+            <label class="filter-chip" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="checkbox" id="vip-filter" style="width:14px;height:14px;">
+              VIP Only
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <button id="export-excel" class="tb-btn tb-btn-outline">Export to Excel</button>
+          <button id="delete-all-contacts" class="tb-btn tb-btn-outline" style="color:var(--red);border-color:var(--red);">Delete All</button>
+        </div>
+        <div id="contacts-list" class="contacts-list">
+          <div class="empty-state"><p>No contacts yet. Upload your spreadsheet to get started!</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ ADD CONTACTS ═══ -->
+      <section id="upload-notes" class="section">
+        <div class="top-bar"><h1>Add Contacts</h1></div>
+        <div class="upload-notes-container">
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="new">Add New Contact</button>
+            <button class="mode-btn" data-mode="spreadsheet">Upload Spreadsheet</button>
+            <button class="mode-btn" data-mode="existing">Add Notes to Existing</button>
+          </div>
+
+          <div id="existing-contact-mode" class="contact-mode">
+            <div class="upload-box">
+              <div class="form-group"><label for="contact-select">Select Contact: *</label><select id="contact-select" class="contact-dropdown" required><option value="">-- Select a contact --</option></select></div>
+              <div class="form-group"><label for="call-date">Call Date: *</label><input type="date" id="call-date" max="" required></div>
+              <div class="notes-input-toggle">
+                <button type="button" class="toggle-btn active" data-mode="text">Write Notes</button>
+                <button type="button" class="toggle-btn" data-mode="image">Upload Image</button>
+              </div>
+              <div id="text-notes-mode" class="notes-input-mode active"><div class="form-group"><label for="notes-text">Call Notes: *</label><textarea id="notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea></div></div>
+              <div id="image-notes-mode" class="notes-input-mode">
+                <div class="upload-icon">📞</div><h3>Add Call Notes</h3><p>Write notes or upload a photo from your call</p>
+                <input type="file" id="notes-input" accept="image/*" class="file-input"><label for="notes-input" class="tb-btn tb-btn-outline">Choose Image</label>
+                <div id="notes-preview" class="image-preview"></div>
+              </div>
+              <div id="notes-status" class="upload-status"></div>
+              <button id="process-notes" class="tb-btn tb-btn-primary" style="margin-top:1rem;width:100%;">Add Call Notes</button>
+            </div>
+          </div>
+
+          <div id="new-contact-mode" class="contact-mode active">
+            <div class="upload-box">
+              <h3>Add New Contact</h3><p style="color:var(--slate);font-size:14px;margin-bottom:1rem;">Fill in the contact information and optionally add call notes</p>
+              <form id="new-contact-form">
+                <div class="form-row"><div class="form-group"><label for="new-contact-name">Name *</label><input type="text" id="new-contact-name" required></div><div class="form-group"><label for="new-contact-email">Email</label><input type="email" id="new-contact-email"></div></div>
+                <div class="form-row"><div class="form-group"><label for="new-contact-firm">Firm</label><input type="text" id="new-contact-firm"></div><div class="form-group"><label for="new-contact-position">Position</label><input type="text" id="new-contact-position"></div></div>
+                <div class="form-row"><div class="form-group"><label for="new-contact-first-email">First Contact Date</label><input type="date" id="new-contact-first-email" max=""></div><div class="form-group"><label for="new-contact-priority">Priority</label><select id="new-contact-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div></div>
+                <div class="form-group"><label for="new-contact-call-date">Call Date (if adding notes)</label><input type="date" id="new-contact-call-date" max=""></div>
                 <div class="form-group">
-                    <label for="quick-add-date">Date: *</label>
-                    <input type="date" id="quick-add-date" max="" required>
+                  <label>Add Call Notes (Optional)</label>
+                  <div class="notes-input-toggle"><button type="button" class="toggle-btn active" data-mode="text" onclick="toggleNewContactNotesMode('text')">Write Notes</button><button type="button" class="toggle-btn" data-mode="image" onclick="toggleNewContactNotesMode('image')">Upload Image</button></div>
+                  <div id="new-contact-text-notes-mode" class="notes-input-mode active"><textarea id="new-contact-notes-text" rows="6" placeholder="Enter your call notes here..."></textarea></div>
+                  <div id="new-contact-image-notes-mode" class="notes-input-mode"><input type="file" id="new-contact-notes-input" accept="image/*" class="file-input"><label for="new-contact-notes-input" class="tb-btn tb-btn-outline" style="margin-top:0.5rem;">Choose Image</label><div id="new-contact-notes-preview" class="image-preview"></div></div>
                 </div>
-                <div id="quick-add-email-type" class="form-group" style="display: none;">
-                    <label for="quick-email-type">Email Type: *</label>
-                    <select id="quick-email-type">
-                        <option value="sent">I Sent Email</option>
-                        <option value="received">I Received Email</option>
-                    </select>
+                <div id="new-contact-status" class="upload-status"></div>
+                <button type="submit" class="tb-btn tb-btn-primary" style="margin-top:1rem;width:100%;">Add Contact</button>
+              </form>
+            </div>
+          </div>
+
+          <div id="spreadsheet-mode" class="contact-mode">
+            <div class="upload-box">
+              <div class="upload-icon">📁</div><h3>Upload Spreadsheet</h3><p style="color:var(--slate);font-size:14px;">Upload your networking tracker spreadsheet (CSV or Excel format)</p>
+              <div class="spreadsheet-instructions">
+                <h4>Required Columns:</h4>
+                <ul><li><strong>Name</strong> - Contact's full name</li><li><strong>Company</strong> - Company name (synonyms: Firm, Bank, Organization, Org)</li><li><strong>Contact Date</strong> - Contact date(s) in MM/DD/YEAR format</li><li class="date-format-note">📅 <strong>Date Format:</strong> Use MM/DD/YEAR (e.g., 1/15/2024). Multiple dates can be separated by commas, colons, or semicolons.</li></ul>
+                <div style="border:2px solid var(--amber);border-radius:8px;padding:1rem;margin:1rem 0;font-size:13px;">
+                  <p style="margin:0 0 0.5rem;font-weight:600;">⚠️ IMPORTANT: Your upload will only work if:</p>
+                  <ul style="margin:0 0 0 1rem;padding:0;"><li>Contacts are in the <strong>FIRST tab</strong></li><li>Headers start in <strong>cell A1</strong></li></ul>
                 </div>
-                <div id="quick-add-email-subject" class="form-group" style="display: none;">
-                    <label for="quick-email-subject">General Notes (Optional)</label>
-                    <textarea id="quick-email-subject" rows="3" placeholder="Notes from the email or what they said..."></textarea>
-                </div>
-                <div id="quick-add-notes-toggle" class="form-group" style="display: none;">
-                    <label>Add Call Notes:</label>
-                    <div class="notes-input-toggle">
-                        <button type="button" class="toggle-btn active" data-mode="text" onclick="toggleQuickAddNotesMode('text')">Write Notes</button>
-                        <button type="button" class="toggle-btn" data-mode="image" onclick="toggleQuickAddNotesMode('image')">Upload Image</button>
-                    </div>
-                </div>
-                <div id="quick-add-notes-text" class="form-group" style="display: none;">
-                    <label for="quick-notes-text">Call Notes: *</label>
-                    <textarea id="quick-notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea>
-                </div>
-                <div id="quick-add-notes-image" class="form-group" style="display: none;">
-                    <label>Upload Call Notes Photo: *</label>
-                    <input type="file" id="quick-notes-image" accept="image/*" class="file-input">
-                    <label for="quick-notes-image" class="btn btn-secondary btn-choose-image" style="margin-top: 0.5rem;">
-                        Choose Image
-                    </label>
-                    <div id="quick-notes-preview" class="image-preview"></div>
-                </div>
-                <div id="quick-add-status" class="upload-status"></div>
-                <button type="button" id="quick-add-submit-btn" class="btn btn-primary btn-submit-large" style="margin-top: 1rem;">
-                    Add Interaction
-                </button>
-            </form>
+                <h4>Optional Columns:</h4>
+                <ul><li>Position, Title, Role</li><li>Phone, Email, Location</li><li>Priority (Low, Medium, High)</li><li>Any other columns saved as notes</li></ul>
+              </div>
+              <input type="file" id="spreadsheet-input" accept=".csv,.xlsx,.xls" class="file-input">
+              <label for="spreadsheet-input" class="tb-btn tb-btn-primary">Choose File</label>
+              <div id="spreadsheet-status" class="upload-status" style="display:none;"></div>
+              <div style="display:none;margin-top:1rem;" id="process-button-container">
+                <button type="button" id="process-spreadsheet" class="tb-btn tb-btn-outline">Process Spreadsheet</button>
+                <p style="margin-top:0.5rem;font-size:12px;color:var(--slate);font-style:italic;">⚠️ Headers must be in the first row and column (A1)</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <!-- ═══ CONTACT DETAIL ═══ -->
+      <section id="contact-detail" class="section">
+        <button id="back-to-network" class="tb-btn tb-btn-outline" style="margin-bottom:1.5rem;" onclick="if(window.goToMyNetwork){window.goToMyNetwork();}else{const l=document.querySelector('.nav-link[href=&quot;#contacts&quot;]');if(l)l.click();} return false;">← Back to My Network</button>
+        <div id="contact-detail-content"></div>
+      </section>
+
+      <!-- ═══ STRENGTHENING THE NET ═══ -->
+      <section id="strengthening-net" class="section">
+        <div class="top-bar"><h1>Strengthening the Net</h1></div>
+
+        <div class="research-quotes-scroll" id="research-quotes-scroll" style="margin:0 0 2rem;position:relative;">
+          <button type="button" class="research-quotes-arrow research-quotes-arrow-left" id="research-quotes-prev" aria-label="Previous">←</button>
+          <button type="button" class="research-quotes-arrow research-quotes-arrow-right" id="research-quotes-next" aria-label="Next">→</button>
+          <div class="research-quotes-container" style="display:flex;gap:1rem;padding:0.5rem 0;">
+            <div class="research-quote-card"><div style="font-size:1.5rem;margin-bottom:0.5rem;">💼</div><h4>Prioritize maintenance over acquisition</h4><p>"Maintaining Internal Contacts had the highest impact on salary growth."</p><a href="http://homepages.se.edu/cvonbergen/files/2013/01/Effects-of-Networking-on-Career-Success_A-Longitudinal-Study.pdf" target="_blank" rel="noopener noreferrer">Read Research →</a></div>
+            <div class="research-quote-card"><div style="font-size:1.5rem;margin-bottom:0.5rem;">📈</div><h4>Implement systematic follow-up</h4><p>"Campaigns with at least one follow-up received 44% more replies."</p><a href="https://woodpecker.co/blog/follow-up-statistics/" target="_blank" rel="noopener noreferrer">Read Article →</a></div>
+            <div class="research-quote-card"><div style="font-size:1.5rem;margin-bottom:0.5rem;">🔗</div><h4>Cultivate weak ties strategically</h4><p>"Moderately weak ties increased job mobility the most."</p><a href="https://news.mit.edu/2022/weak-ties-linkedin-employment-0915" target="_blank" rel="noopener noreferrer">Read Article →</a></div>
+            <div class="research-quote-card"><div style="font-size:1.5rem;margin-bottom:0.5rem;">🤝</div><h4>Give before asking</h4><p>"Perceived generosity is positively related to social status and productivity."</p><a href="https://journals.aom.org/doi/10.5465/30040648" target="_blank" rel="noopener noreferrer">Read Research →</a></div>
+          </div>
+        </div>
+
+        <div style="background:white;border-radius:var(--radius);border:1px solid var(--border);padding:24px;margin-bottom:20px;">
+          <h3 style="margin:0 0 12px;font-size:15px;font-weight:600;">Follow-up Best Practices</h3>
+          <p style="margin:0 0 8px;font-size:13px;color:var(--navy);line-height:1.6;"><strong>For cold emails:</strong> Follow up 1-2 times with 10+ days between each.</p>
+          <p style="margin:0;font-size:13px;color:var(--navy);line-height:1.6;">
+            <strong>For established contacts:</strong> Check in once a quarter (~90 days).
+            <button class="expand-favor-tip" onclick="toggleFavorTip()" aria-expanded="false" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:1.1rem;margin-left:0.5rem;padding:0;vertical-align:middle;">+</button>
+          </p>
+          <div id="favor-tip-content" style="display:none;margin-top:12px;padding:12px;background:var(--blue-ghost);border-left:3px solid var(--blue);border-radius:4px;font-size:13px;color:var(--navy);line-height:1.6;">
+            The best way to strengthen relationships is to do them a favor and expect nothing in return. Send them an article relevant to their job or interests a couple times a year.
+          </div>
+        </div>
+
+        <div id="assistant-settings" style="display:none;">
+          <div style="display:grid;gap:1.5rem;">
+            <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);">
+              <h4 style="margin:0 0 12px;font-size:14px;">Follow-up Intervals</h4>
+              <div style="margin-bottom:12px;"><label style="font-size:13px;color:var(--navy);font-weight:500;">Cold Contacts</label><div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><input type="number" id="cold-contact-days" min="1" value="12" style="width:70px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;"><span style="font-size:12px;color:var(--slate);">days (Suggested: 10-14)</span></div></div>
+              <div><label style="font-size:13px;color:var(--navy);font-weight:500;">Established Contacts</label><div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><input type="number" id="established-contact-days" min="1" value="90" style="width:70px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;"><span style="font-size:12px;color:var(--slate);">days (Suggested: 90)</span></div></div>
+            </div>
+            <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);">
+              <h4 style="margin:0 0 12px;font-size:14px;">Reminder Types</h4>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:8px;"><input type="checkbox" id="reminder-cold-contacts" checked style="width:16px;height:16px;accent-color:var(--blue);"> Cold contact follow-ups</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:8px;"><input type="checkbox" id="reminder-established-contacts" checked style="width:16px;height:16px;accent-color:var(--blue);"> Established contact check-ins</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding-top:8px;border-top:1px solid var(--border);"><input type="checkbox" id="reminder-vip-only" style="width:16px;height:16px;accent-color:var(--blue);"> Only include VIP contacts</label>
+            </div>
+            <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h4 style="margin:0;font-size:14px;">Email Frequency</h4><button id="edit-email-time-btn" class="tb-btn tb-btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openEmailTimeModal()">Edit Time</button></div>
+              <label style="display:flex;align-items:start;gap:8px;cursor:pointer;font-size:13px;margin-bottom:8px;"><input type="radio" name="email-frequency" id="frequency-realtime" value="realtime" checked style="width:16px;height:16px;accent-color:var(--blue);margin-top:2px;"><div><strong>Real-time</strong><br><span style="color:var(--slate);">Email at <span id="display-email-time">9:00 AM ET</span> when contacts reach follow-up time</span></div></label>
+              <label style="display:flex;align-items:start;gap:8px;cursor:pointer;font-size:13px;"><input type="radio" name="email-frequency" id="frequency-weekly" value="weekly" style="width:16px;height:16px;accent-color:var(--blue);margin-top:2px;"><div><strong>Weekly digest</strong><br><span style="color:var(--slate);">Mondays at <span id="display-email-time-weekly">9:00 AM ET</span></span></div></label>
+            </div>
+          </div>
+          <div style="margin-top:1.5rem;text-align:center;position:relative;">
+            <button id="save-assistant-settings" class="tb-btn tb-btn-primary" style="padding:10px 32px;">Save Settings</button>
+            <div id="assistant-success-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--green);color:white;padding:1.5rem 2rem;border-radius:8px;box-shadow:var(--shadow-lg);z-index:3000;font-size:14px;font-weight:500;text-align:center;">✓ Settings saved</div>
+            <p id="assistant-save-status" style="margin:1rem 0 0;color:var(--slate);font-size:13px;display:none;"></p>
+          </div>
+        </div>
+
+        <hr style="margin:2rem 0;border:none;border-top:1px solid var(--border);">
+
+        <h3 style="margin:0 0 1.5rem;font-size:18px;font-weight:600;text-align:center;">Contacts That Need a Follow-up</h3>
+
+        <div class="strengthening-net-container">
+          <div style="background:white;padding:20px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px;">
+            <label for="follow-up-days" style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">Days Since Last Contact:</label>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input type="number" id="follow-up-days" min="1" value="90" style="width:80px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);"><span style="font-size:12px;color:var(--slate);">days</span></div>
+            <div style="padding-top:12px;border-top:1px solid var(--border);margin-bottom:10px;">
+              <label for="cold-email-filter" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="cold-email-filter" style="width:16px;height:16px;accent-color:var(--blue);"> Show only cold email contacts</label>
+            </div>
+            <div style="padding-top:12px;border-top:1px solid var(--border);">
+              <label for="strengthening-vip-filter" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="strengthening-vip-filter" style="width:16px;height:16px;accent-color:var(--blue);"> Show only VIP contacts</label>
+            </div>
+          </div>
+
+          <div id="strengthening-net-results" class="strengthening-net-results">
+            <div class="results-header"><h3 id="results-title">Contacts Needing Follow-up</h3><p id="results-count" class="results-count"></p></div>
+            <div id="strengthening-contacts-list" class="contacts-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TIPS & TRICKS ═══ -->
+      <section id="tips-tricks" class="section">
+        <div class="top-bar"><h1>Networking Tips &amp; Tricks</h1></div>
+        <p style="color:var(--slate);font-size:14px;margin-bottom:1.5rem;">Master the art of networking with these proven strategies and best practices.</p>
+        <div class="tips-accordion">
+          <div class="accordion-item"><button class="accordion-header"><span>Call Structure and Call Hygiene</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Take paper notes on every call</strong> so you can reference specifics later.</li><li><strong>Come prepared with questions, but prioritize follow-ups</strong> so the conversation feels natural.</li><li><strong>Start light for 1–3 minutes</strong> (how they are, how they like their city, etc.).</li><li><strong>Do not let them take over the entire call</strong>—proactively transition into your background early.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Outreach Email Timing and Execution</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Do not send first-touch emails Friday–Sunday.</strong></li><li><strong>Do not send emails before 9:00am or after 5:00pm.</strong></li><li><strong>Schedule-send emails</strong> with slightly "random" timestamps (e.g., 9:02 or 3:24).</li><li><strong>Always attach a typo-free resume</strong>, titled clearly.</li><li>Put <strong>your name in the subject line</strong> so they can find your thread easily.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Calendar Invite Best Practices</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Send the calendar invite immediately</strong> once a time is agreed.</li><li>Use <strong>Google Calendar</strong> (not Apple Calendar).</li><li>Title format: <strong>"Their Name / Your Name Chat."</strong></li><li>Set <strong>Location = their phone number</strong>, add them as a guest, and remove the Google Meet link.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Post-Call Follow-Up and Staying Top-of-Mind</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Send thank-you emails every time</strong>, ideally within a few hours.</li><li><strong>Always end the call by asking for a referral</strong> and reinforce that ask in the thank-you email.</li><li>Maintain momentum with your <strong>top 2–3 contacts per firm</strong> every 1–2 months.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>No-Response and Rescheduling Etiquette</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>If they don't pick up, <strong>wait 10–15 minutes and email</strong> asking to reschedule.</li><li>If no response to email, <strong>wait 7–10 days</strong> and follow up; after two follow-ups, pause.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Working Referral Introductions</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>When introduced by email, <strong>reply-all</strong>, move introducer to <strong>BCC</strong>, keep referral in <strong>CC</strong>.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Pipeline Expansion Mindset</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>Don't limit yourself to one alumni channel—network across schools and cities for unexpected introductions.</li></ul></div></div></div>
+        </div>
+      </section>
+
+    </div><!-- end .main-content -->
+  </div><!-- end .app-layout -->
+
+  <footer class="app-footer">
+    <p>© 2025 Weaver. All rights reserved.</p>
+    <p style="margin-top:4px;font-size:12px;">Need help? <a href="mailto:info@studentweaver.com" style="color:var(--blue);">info@studentweaver.com</a></p>
+  </footer>
+</div><!-- end #app-container -->
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MODALS (always present)                     -->
+<!-- ═══════════════════════════════════════════ -->
+
+<!-- Quick Add Modal -->
+<div id="quick-add-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="if(window.closeQuickAddModal)window.closeQuickAddModal();">&times;</span>
+    <h2 id="quick-add-title">Add Interaction</h2>
+    <form id="quick-add-form">
+      <div class="form-group"><label for="quick-add-date">Date: *</label><input type="date" id="quick-add-date" max="" required></div>
+      <div id="quick-add-email-type" class="form-group" style="display:none;"><label for="quick-email-type">Email Type: *</label><select id="quick-email-type"><option value="sent">I Sent Email</option><option value="received">I Received Email</option></select></div>
+      <div id="quick-add-email-subject" class="form-group" style="display:none;"><label for="quick-email-subject">General Notes (Optional)</label><textarea id="quick-email-subject" rows="3" placeholder="Notes from the email..."></textarea></div>
+      <div id="quick-add-notes-toggle" class="form-group" style="display:none;"><label>Add Call Notes:</label><div class="notes-input-toggle"><button type="button" class="toggle-btn active" data-mode="text" onclick="toggleQuickAddNotesMode('text')">Write Notes</button><button type="button" class="toggle-btn" data-mode="image" onclick="toggleQuickAddNotesMode('image')">Upload Image</button></div></div>
+      <div id="quick-add-notes-text" class="form-group" style="display:none;"><label for="quick-notes-text">Call Notes: *</label><textarea id="quick-notes-text" rows="6" placeholder="Enter your call notes here..." required></textarea></div>
+      <div id="quick-add-notes-image" class="form-group" style="display:none;"><label>Upload Call Notes Photo: *</label><input type="file" id="quick-notes-image" accept="image/*" class="file-input"><label for="quick-notes-image" class="tb-btn tb-btn-outline" style="margin-top:0.5rem;">Choose Image</label><div id="quick-notes-preview" class="image-preview"></div></div>
+      <div id="quick-add-status" class="upload-status"></div>
+      <button type="button" id="quick-add-submit-btn" class="tb-btn tb-btn-primary" style="margin-top:1rem;width:100%;">Add Interaction</button>
+    </form>
+  </div>
+</div>
+
+<!-- Call Notes Summary Modal -->
+<div id="call-notes-modal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2>Call Notes Summary</h2><div id="call-notes-content"></div></div></div>
+
+<!-- Email Time Settings Modal -->
+<div id="email-time-modal" class="modal">
+  <div class="modal-content" style="max-width:500px;">
+    <span class="close-modal" onclick="closeEmailTimeModal()">&times;</span>
+    <h2 style="margin:0 0 1.5rem;">Email Delivery Time</h2>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div><label style="display:block;margin-bottom:0.5rem;font-weight:500;">Time</label><input type="time" id="email-time" value="09:00" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;"></div>
+      <div><label style="display:block;margin-bottom:0.5rem;font-weight:500;">Timezone</label><select id="email-timezone" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:white;"><option value="America/New_York">Eastern Time (ET)</option><option value="America/Chicago">Central Time (CT)</option><option value="America/Denver">Mountain Time (MT)</option><option value="America/Los_Angeles">Pacific Time (PT)</option><option value="America/Phoenix">Arizona Time (MST)</option><option value="UTC">UTC</option><option value="Europe/London">London (GMT)</option><option value="Europe/Paris">Paris (CET)</option><option value="Asia/Tokyo">Tokyo (JST)</option></select></div>
     </div>
-
-    <!-- Call Notes Summary Modal -->
-    <div id="call-notes-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Call Notes Summary</h2>
-            <div id="call-notes-content"></div>
-        </div>
+    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="tb-btn tb-btn-outline" onclick="closeEmailTimeModal()">Cancel</button>
+      <button class="tb-btn tb-btn-primary" onclick="saveEmailTimeSettings()">Save</button>
     </div>
+  </div>
+</div>
 
-    <!-- Strengthening the Net Section -->
-    <section id="strengthening-net" class="section">
-        <div class="container">
-            <h2 class="section-title">Strengthening the <span class="underline-net">Net</span></h2>
-            
-            <!-- Research Quotes Scrolling Section -->
-            <div class="research-quotes-scroll" id="research-quotes-scroll" style="margin: 2rem 0 3rem 0; position: relative;">
-                <button type="button" class="research-quotes-arrow research-quotes-arrow-left" id="research-quotes-prev" aria-label="Previous article">←</button>
-                <button type="button" class="research-quotes-arrow research-quotes-arrow-right" id="research-quotes-next" aria-label="Next article">→</button>
-                <div class="research-quotes-container" style="display: flex; gap: 1.5rem; padding: 1rem 0;">
-                    <!-- Quote 1 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Prioritize maintenance over acquisition</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Four of the six networking scales… were significantly related to salary… Maintaining Internal Contacts had a significant positive impact on salary growth and obtained the highest relative weight."
-                        </p>
-                        <a href="http://homepages.se.edu/cvonbergen/files/2013/01/Effects-of-Networking-on-Career-Success_A-Longitudinal-Study.pdf" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Research → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 2 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Implement systematic follow-up</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Campaigns with no follow-ups noted an average reply rate of 9%, while those with at least one follow-up received 13% replies on average, a 44% increase… a campaign with so many as one follow-up converts about 22% more prospects than the one without any."
-                        </p>
-                        <a href="https://woodpecker.co/blog/follow-up-statistics/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Article → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 3 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔗</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Cultivate weak ties strategically</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "When we look at the experimental data, weak ties are better, on average, for job mobility than strong ties… our results show that moderately weak ties increased job mobility the most."
-                        </p>
-                        <a href="https://news.mit.edu/2022/weak-ties-linkedin-employment-0915" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Article → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 4 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🤝</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Give before asking</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Data collected from 161 employees… suggest that perceived generosity is positively related to individual social status, and frequent favor exchange was positively related to both status and productivity."
-                        </p>
-                        <a href="https://journals.aom.org/doi/10.5465/30040648" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Research → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 5 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Share information and resources regularly</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Employees who engage in organizational citizenship behaviors (OCBs) tend to be more effective in their roles because these behaviors help them develop important skills, expand their networks, and build relationships across the organization."
-                        </p>
-                        <a href="https://www.aihr.com/blog/organizational-citizenship-behavior/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Article → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 6 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Track and measure networking activities</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Networking behaviors were significantly related to number of promotions, total compensation, and perceived career success… explained by enhanced information, resources, and opportunities that result from developing networks of contacts."
-                        </p>
-                        <a href="https://onlinelibrary.wiley.com/doi/10.1002/job.253" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Research → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 7 -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Maintain connections after transitions</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Former employees (alumni) offer organizations a unique mix of insider knowledge and outside-world information and contacts, which makes them high-value relationship partners, and keeping in touch with alumni can result in business partnerships, re-hiring, and knowledge transfer."
-                        </p>
-                        <a href="https://news.ubc.ca/2024/03/why-businesses-are-cultivating-relationships-with-former-employees/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Article → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Duplicate cards for seamless loop -->
-                    <!-- Quote 1 (duplicate) -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Prioritize maintenance over acquisition</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Four of the six networking scales… were significantly related to salary… Maintaining Internal Contacts had a significant positive impact on salary growth and obtained the highest relative weight."
-                        </p>
-                        <a href="http://homepages.se.edu/cvonbergen/files/2013/01/Effects-of-Networking-on-Career-Success_A-Longitudinal-Study.pdf" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Research → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Quote 2 (duplicate) -->
-                    <div class="research-quote-card" style="flex-shrink: 0; width: 350px; background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(26, 35, 50, 0.1);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
-                        <h4 style="margin: 0 0 0.75rem 0; color: var(--accent-blue); font-size: 1rem; font-weight: 600;">Implement systematic follow-up</h4>
-                        <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6; font-size: 0.9rem; font-style: italic;">
-                            "Campaigns with no follow-ups noted an average reply rate of 9%, while those with at least one follow-up received 13% replies on average, a 44% increase… a campaign with so many as one follow-up converts about 22% more prospects than the one without any."
-                        </p>
-                        <a href="https://woodpecker.co/blog/follow-up-statistics/" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: none; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            Read Article → <span style="font-size: 0.75rem;">↗</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Networking Assistant Setup -->
-            <div class="networking-assistant-section" style="margin: 3rem 0; padding: 2rem; background: var(--eggshell-white); border-radius: 12px; border: 2px solid var(--silver-gray); width: 100%; max-width: 100%;">
-                <div style="text-align: center; margin-bottom: 2rem;">
-                    <h3 style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-size: 1.5rem;">
-                        Set Up Your Networking Assistant
-                    </h3>
-                    <p style="margin: 0 0 0.75rem 0; color: var(--text-dark); font-size: 1.1rem; font-weight: 500;">
-                        Don't just expand the net, strengthen it!
-                    </p>
-                    <p style="margin: 0; color: var(--text-medium); font-size: 0.95rem; font-style: italic; max-width: 800px; margin-left: auto; margin-right: auto;">
-                        — Weaver simplifies networking by enabling automated email reminders tailored to your network and preferences.
-                    </p>
-                </div>
-                
-                <!-- Follow-up Best Practices -->
-                <div class="strengthening-net-blurb" style="margin-bottom: 2.5rem; padding: 1.5rem; background: white; border-radius: 8px; border: 1px solid var(--silver-gray);">
-                    <h3 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.2rem;">Follow-up Best Practices</h3>
-                    <p style="margin: 0 0 1rem 0; color: var(--text-dark); line-height: 1.6;"><strong>For cold emails:</strong> We suggest following up 1-2 times before giving up, with 10+ days between each follow-up. This gives your contact time to respond while keeping you top-of-mind.</p>
-                    <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
-                        <strong>For strong, established contacts:</strong> We suggest checking in once a quarter (~90 days) to strengthen the relationship. Regular, meaningful touchpoints help maintain and deepen professional connections.
-                        <button class="expand-favor-tip" onclick="toggleFavorTip()" aria-expanded="false" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 1.2rem; margin-left: 0.5rem; padding: 0; vertical-align: middle;">+</button>
-                    </p>
-                    <div id="favor-tip-content" class="favor-tip-content" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(49, 130, 206, 0.05); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
-                        <p style="margin: 0; color: var(--text-dark); line-height: 1.6;">
-                            The best way to strengthen these relationships is to do them a favor and expect nothing in return. This reciprocity will help you down the line. A good, and easy favor, is to send them an article relevant to their job, interests, or call notes. Doing this a couple times a year helps you stay top of mind when they have the opportunity to help you in return.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- TEMPORARILY HIDDEN: Networking Assistant Settings -->
-                <!-- To restore: Remove this comment and the closing comment below, then change style="display: none;" to display: block; -->
-                <div id="assistant-settings" style="display: none;">
-                    <div class="assistant-settings-grid" style="display: grid; gap: 2rem;">
-                        
-                        <!-- Follow-up Intervals -->
-                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
-                            <h4 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.1rem;">Follow-up Intervals</h4>
-                            
-                            <div style="margin-bottom: 1.5rem;">
-                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
-                                    Cold Contacts (no reply or call yet)
-                                </label>
-                                <div style="display: flex; align-items: center; gap: 1rem;">
-                                    <input 
-                                        type="number" 
-                                        id="cold-contact-days" 
-                                        min="1" 
-                                        value="12" 
-                                        style="width: 80px; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
-                                    >
-                                    <span style="color: var(--text-medium);">days</span>
-                                    <span style="color: var(--text-medium); font-size: 0.9rem; font-style: italic;">(Suggested: 10-14 days)</span>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
-                                    Established Contacts (have replied or had a call)
-                                </label>
-                                <div style="display: flex; align-items: center; gap: 1rem;">
-                                    <input 
-                                        type="number" 
-                                        id="established-contact-days" 
-                                        min="1" 
-                                        value="90" 
-                                        style="width: 80px; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
-                                    >
-                                    <span style="color: var(--text-medium);">days</span>
-                                    <span style="color: var(--text-medium); font-size: 0.9rem; font-style: italic;">(Suggested: 90 days)</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Reminder Types -->
-                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
-                            <h4 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 1.1rem;">Reminder Types</h4>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                                    <input 
-                                        type="checkbox" 
-                                        id="reminder-cold-contacts" 
-                                        checked
-                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
-                                    >
-                                    <span style="color: var(--text-dark);">Cold contact follow-ups</span>
-                                </label>
-                                
-                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                                    <input 
-                                        type="checkbox" 
-                                        id="reminder-established-contacts" 
-                                        checked
-                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
-                                    >
-                                    <span style="color: var(--text-dark);">Established contact check-ins</span>
-                                </label>
-                                
-                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--silver-gray);">
-                                    <input 
-                                        type="checkbox" 
-                                        id="reminder-vip-only" 
-                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);"
-                                    >
-                                    <span style="color: var(--text-dark); font-weight: 500;">Only include VIP contacts</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Email Frequency -->
-                        <div class="settings-group" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--silver-gray);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                                <h4 style="margin: 0; color: var(--text-dark); font-size: 1.1rem;">Email Frequency</h4>
-                                <button 
-                                    id="edit-email-time-btn" 
-                                    class="btn btn-secondary" 
-                                    style="padding: 0.4rem 0.75rem; font-size: 0.85rem;"
-                                    onclick="openEmailTimeModal()"
-                                >
-                                    Edit Time
-                                </button>
-                            </div>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
-                                    <input 
-                                        type="radio" 
-                                        name="email-frequency" 
-                                        id="frequency-realtime" 
-                                        value="realtime"
-                                        checked
-                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); margin-top: 0.2rem;"
-                                    >
-                                    <div style="flex: 1;">
-                                        <span style="color: var(--text-dark); font-weight: 500; display: block; margin-bottom: 0.25rem;">Real-time reminders</span>
-                                        <span style="color: var(--text-medium); font-size: 0.9rem;">Email at <span id="display-email-time">9:00 AM ET</span> whenever contacts reach their follow-up time horizon</span>
-                                    </div>
-                                </label>
-                                
-                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
-                                    <input 
-                                        type="radio" 
-                                        name="email-frequency" 
-                                        id="frequency-weekly" 
-                                        value="weekly"
-                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); margin-top: 0.2rem;"
-                                    >
-                                    <div style="flex: 1;">
-                                        <span style="color: var(--text-dark); font-weight: 500; display: block; margin-bottom: 0.25rem;">Weekly digest</span>
-                                        <span style="color: var(--text-medium); font-size: 0.9rem;">One email per week (Monday <span id="display-email-time-weekly">9:00 AM ET</span>) with all contacts needing follow-up</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Save Button -->
-                    <div style="margin-top: 2rem; text-align: center; position: relative;">
-                        <button 
-                            id="save-assistant-settings" 
-                            class="btn btn-primary" 
-                            style="padding: 0.75rem 2rem; font-size: 1rem;"
-                        >
-                            Save Settings
-                        </button>
-                        <!-- Success Notification Popup -->
-                        <div id="assistant-success-popup" class="assistant-success-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #28a745; color: white; padding: 1.5rem 2rem; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); z-index: 3000; font-size: 1rem; font-weight: 500; text-align: center; min-width: 300px; max-width: 500px;">
-                            ✓ You have successfully updated your email preferences
-                        </div>
-                        <p id="assistant-save-status" style="margin: 1rem 0 0 0; color: var(--text-medium); font-size: 0.9rem; display: none;"></p>
-                    </div>
-                </div>
-                <!-- END TEMPORARILY HIDDEN: Networking Assistant Settings -->
-                <!-- 
-                CODE PRESERVED FOR LATER RESTORATION:
-                The entire assistant settings section (Follow-up Intervals, Reminder Types, Email Frequency, Save Button)
-                is preserved above but hidden with style="display: none;"
-                To restore: Remove the comment tags and change display: none to display: block
-                -->
-            </div>
-            
-            <!-- Page Break / Separator -->
-            <hr style="margin: 3rem 0; border: none; border-top: 3px solid var(--silver-gray); width: 100%; max-width: 100%;">
-            
-            <!-- Contacts Needing Follow-up Section -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 1.5rem 0; color: var(--accent-blue); font-size: 1.5rem; text-align: center;">
-                    Preview Your Contacts That Need a Follow-up
-                </h3>
-            </div>
-            
-            <div class="strengthening-net-container">
-                <div class="days-input-container">
-                    <label for="follow-up-days" class="days-input-label">
-                        <strong>Days Since Last Contact:</strong>
-                    </label>
-                    <div class="days-input-wrapper">
-                        <input 
-                            type="number" 
-                            id="follow-up-days" 
-                            class="days-input" 
-                            min="1" 
-                            value="90" 
-                            placeholder="Enter number of days"
-                        >
-                        <span class="days-label">days</span>
-                    </div>
-                    <p class="days-input-hint">
-                        Enter the number of days since last contact. Contacts that haven't been contacted in this many days will be shown below.
-                    </p>
-                    <div class="cold-email-filter-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--silver-gray);">
-                        <label for="cold-email-filter" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                            <input type="checkbox" id="cold-email-filter" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);">
-                            <span style="color: var(--text-dark); font-weight: 500;">Show only cold email contacts (0 calls, 0 emails received)</span>
-                        </label>
-                        <p style="font-size: 0.9rem; color: var(--text-medium); margin-top: 0.5rem; margin-left: 2rem;">
-                            Filter for contacts with no calls and no received emails - perfect for cold email follow-up reminders.
-                        </p>
-                    </div>
-                    <div class="vip-filter-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--silver-gray);">
-                        <label for="strengthening-vip-filter" style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                            <input type="checkbox" id="strengthening-vip-filter" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue);">
-                            <span style="color: var(--text-dark); font-weight: 500;">Show only VIP contacts</span>
-                        </label>
-                        <p style="font-size: 0.9rem; color: var(--text-medium); margin-top: 0.5rem; margin-left: 2rem;">
-                            Filter to show only contacts marked as VIP - your most important professional relationships.
-                        </p>
-                    </div>
-                </div>
-                
-                <div id="strengthening-net-results" class="strengthening-net-results">
-                    <div class="results-header">
-                        <h3 id="results-title">Contacts Needing Follow-up</h3>
-                        <p id="results-count" class="results-count"></p>
-                    </div>
-                    <div id="strengthening-contacts-list" class="contacts-list">
-                        <!-- Contacts will be displayed here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+<!-- Login/Signup Modal -->
+<div id="auth-modal" class="modal">
+  <div class="modal-content" style="max-width:400px;">
+    <span class="close-modal" onclick="closeAuthModal()">&times;</span>
+    <h2 id="auth-title">Login to Weaver</h2>
+    <form id="auth-form" onsubmit="event.preventDefault(); if(window.handleAuth) window.handleAuth(event); return false;">
+      <div class="form-group"><label for="auth-email">Email: *</label><input type="email" id="auth-email" required placeholder="your.email@example.com"></div>
+      <div class="form-group"><label for="auth-password">Password: *</label><input type="password" id="auth-password" required placeholder="Enter your password"></div>
+      <div id="auth-status" class="upload-status" style="display:none;"></div>
+      <button type="submit" id="auth-submit" class="tb-btn tb-btn-primary" style="width:100%;margin-top:1rem;"><span id="auth-submit-text">Login</span></button>
+      <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--slate);"><a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link" style="color:var(--blue);text-decoration:none;">Don't have an account? Sign up</a></p>
+    </form>
+  </div>
+</div>
 
-    <!-- Email Time Settings Modal -->
-    <div id="email-time-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <span class="close-modal" onclick="closeEmailTimeModal()">&times;</span>
-            <h2 style="margin: 0 0 1.5rem 0; color: var(--text-dark);">Email Delivery Time Settings</h2>
-            
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
-                        Time
-                    </label>
-                    <input 
-                        type="time" 
-                        id="email-time" 
-                        value="09:00"
-                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem;"
-                    >
-                </div>
-                
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">
-                        Timezone
-                    </label>
-                    <select 
-                        id="email-timezone" 
-                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 1rem; background: white; cursor: pointer;"
-                    >
-                        <option value="America/New_York">Eastern Time (ET)</option>
-                        <option value="America/Chicago">Central Time (CT)</option>
-                        <option value="America/Denver">Mountain Time (MT)</option>
-                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                        <option value="America/Phoenix">Arizona Time (MST)</option>
-                        <option value="America/Anchorage">Alaska Time (AKT)</option>
-                        <option value="Pacific/Honolulu">Hawaii Time (HST)</option>
-                        <option value="UTC">UTC</option>
-                        <option value="Europe/London">London (GMT)</option>
-                        <option value="Europe/Paris">Paris (CET)</option>
-                        <option value="Asia/Tokyo">Tokyo (JST)</option>
-                        <option value="Asia/Shanghai">Shanghai (CST)</option>
-                        <option value="Australia/Sydney">Sydney (AEST)</option>
-                    </select>
-                </div>
-                
-                <p style="margin: 0; color: var(--text-medium); font-size: 0.9rem; line-height: 1.5;">
-                    Emails will be sent at this time based on your selected timezone.
-                </p>
-            </div>
-            
-            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
-                <button 
-                    class="btn btn-secondary" 
-                    onclick="closeEmailTimeModal()"
-                    style="padding: 0.75rem 1.5rem;"
-                >
-                    Cancel
-                </button>
-                <button 
-                    class="btn btn-primary" 
-                    onclick="saveEmailTimeSettings()"
-                    style="padding: 0.75rem 1.5rem;"
-                >
-                    Save
-                </button>
-            </div>
-        </div>
+<!-- Gmail Label Sync Review Modal -->
+<div id="gmail-label-review-modal" class="modal" onclick="if(event.target===this)closeGmailLabelReviewModal();">
+  <div class="modal-content" style="max-width:800px;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation();">
+    <span class="close-modal" onclick="closeGmailLabelReviewModal()">&times;</span>
+    <h2>Review Emails from Gmail Label</h2>
+    <div id="gmail-label-review-content"><p>Loading emails...</p></div>
+    <div id="gmail-label-review-actions" style="margin-top:2rem;display:none;">
+      <button type="button" class="tb-btn tb-btn-primary" onclick="processGmailLabelEmails()">Process All Emails</button>
+      <button type="button" class="tb-btn tb-btn-outline" onclick="closeGmailLabelReviewModal()" style="margin-left:0.75rem;">Cancel</button>
     </div>
+  </div>
+</div>
 
-    <!-- Tips & Tricks Section -->
-    <section id="tips-tricks" class="section">
-        <div class="container">
-            <h2 class="section-title">Networking Tips & Tricks</h2>
-            <p class="tips-intro">Master the art of networking with these proven strategies and best practices.</p>
-            
-            <div class="tips-accordion">
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Call Structure and Call Hygiene</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li><strong>Take paper notes on every call</strong> so you can reference specifics later and send sharper follow-ups.</li>
-                                <li><strong>Come prepared with questions, but prioritize follow-ups</strong> so the conversation feels natural and you demonstrate active listening.</li>
-                                <li><strong>Start light for 1–3 minutes</strong> (how they are, how they like their city, etc.).</li>
-                                <li><strong>Do not let them take over the entire call</strong>—proactively transition into your background early ("I can tell you a bit about myself, then I'd love to hear about you…").</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Outreach Email Timing and Execution</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li><strong>Do not send first-touch/outreach emails Friday–Sunday.</strong></li>
-                                <li><strong>Do not send emails before 9:00am or after 5:00pm.</strong></li>
-                                <li><strong>Schedule-send emails</strong> and use slightly "random" timestamps (e.g., 9:02 or 3:24).</li>
-                                <li>Only schedule-send when you can <strong>respond quickly</strong> (don't schedule for times you'll be unavailable).</li>
-                                <li><strong>Always attach a typo-free resume</strong>, titled clearly (e.g., "Last, First Resume").</li>
-                                <li>Put <strong>your name in the subject line</strong> so they can search and find your thread easily (e.g., "Boston College IB Chat | Connor Carey").</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Calendar Invite Best Practices</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li><strong>Send the calendar invite immediately</strong> once a time is agreed.</li>
-                                <li>Use <strong>Google Calendar</strong> (not Apple Calendar).</li>
-                                <li>Title format: <strong>"Their Name / Your Name Chat."</strong></li>
-                                <li>Set <strong>Location = their phone number</strong>, add them as a guest, and <strong>remove the Google Meet link</strong> so they don't receive a video link.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Post-Call Follow-Up and Staying Top-of-Mind</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li><strong>Send thank-you emails every time</strong>, ideally within a few hours (or schedule for next morning if it's a late call).</li>
-                                <li><strong>Always end the call by asking for a referral</strong> ("Is there anyone else at X you'd recommend I speak with?"), and <strong>reinforce that ask in the thank-you email</strong>.</li>
-                                <li>Maintain momentum with your <strong>top 2–3 contacts per firm</strong> by sending a brief update <strong>every 1–2 months</strong>.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>No-Response and Rescheduling Etiquette</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li>If you call and they don't pick up, <strong>don't keep calling</strong>—wait 10–15 minutes and email asking if it's still a good time and offering to reschedule.</li>
-                                <li>If you don't get a response to an email, <strong>wait 7–10 days</strong> and follow up; after <strong>two follow-ups</strong>, pause for a few weeks and then try again.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Working Referral Introductions (Email-Thread Mechanics)</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li>When someone introduces you by email, <strong>reply-all</strong>, move the introducer to <strong>BCC</strong>, and keep the referral in <strong>CC</strong>.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-header">
-                        <span>Optional: "Pipeline Expansion" Mindset</span>
-                        <span class="accordion-icon">+</span>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <ul class="tips-list">
-                                <li>Don't limit yourself to one alumni channel—network outside your school pipeline and even across cities; unexpected conversations can lead to introductions at your top targets.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 Weaver. All rights reserved.</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem;">Need help? Contact us at <a href="mailto:info@studentweaver.com" style="color: var(--accent-blue); text-decoration: underline;">info@studentweaver.com</a></p>
-        </div>
-    </footer>
-
-    <!-- Login/Signup Modal -->
-    <div id="auth-modal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <span class="close-modal" onclick="closeAuthModal()">&times;</span>
-            <h2 id="auth-title">Login to Weaver</h2>
-            <form id="auth-form" onsubmit="event.preventDefault(); if(window.handleAuth) window.handleAuth(event); return false;">
-                <div class="form-group">
-                    <label for="auth-email">Email: *</label>
-                    <input type="email" id="auth-email" required placeholder="your.email@example.com">
-                </div>
-                <div class="form-group">
-                    <label for="auth-password">Password: *</label>
-                    <input type="password" id="auth-password" required placeholder="Enter your password">
-                </div>
-                <div id="auth-status" class="upload-status" style="display: none;"></div>
-                <button type="submit" id="auth-submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                    <span id="auth-submit-text">Login</span>
-                </button>
-                <p style="text-align: center; margin-top: 1rem; color: var(--text-medium);">
-                    <a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link" style="color: var(--accent-blue); text-decoration: none;">Don't have an account? Sign up</a>
-                </p>
-            </form>
-        </div>
+<!-- Subscription/Pricing Modal -->
+<div id="subscription-modal" class="modal" onclick="if(event.target===this)closeSubscriptionModal();">
+  <div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation();">
+    <span class="close-modal" onclick="closeSubscriptionModal()">&times;</span>
+    <div id="pricing-sync-note" style="margin-bottom:1rem;padding:0.5rem 1rem;background:var(--blue-ghost);border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-sm);color:var(--navy);font-size:13px;text-align:center;">
+      If your plan still says <strong>Free</strong> under your profile, click <strong>Sync my plan</strong> in the profile menu.
     </div>
-
-    <!-- Gmail Label Sync Review Modal -->
-    <div id="gmail-label-review-modal" class="modal" onclick="if(event.target === this) closeGmailLabelReviewModal();">
-        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation();">
-            <span class="close-modal" onclick="closeGmailLabelReviewModal()">&times;</span>
-            <h2>Review Emails from Gmail Label</h2>
-            <div id="gmail-label-review-content">
-                <p>Loading emails...</p>
-            </div>
-            <div id="gmail-label-review-actions" style="margin-top: 2rem; display: none;">
-                <button type="button" class="btn btn-primary" onclick="processGmailLabelEmails()">Process All Emails</button>
-                <button type="button" class="btn btn-secondary" onclick="closeGmailLabelReviewModal()" style="margin-left: 1rem;">Cancel</button>
-            </div>
-        </div>
+    <div style="text-align:center;margin-bottom:2rem;"><h2 style="margin:0 0 0.5rem;font-size:24px;">Choose Your Plan</h2><p style="margin:0;color:var(--slate);font-size:14px;">Unlock premium features to maximize your networking success</p></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:1.5rem;margin-bottom:2rem;">
+      <!-- Free Plan -->
+      <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;text-align:center;">
+        <h3 style="margin:0 0 0.5rem;font-size:20px;">Free</h3>
+        <div style="margin:1rem 0;"><span style="font-size:2.5rem;font-weight:700;">$0</span><span style="color:var(--slate);">/month</span></div>
+        <ul style="list-style:none;padding:0;margin:1.5rem 0;text-align:left;font-size:13px;">
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Up to 20 contacts</li>
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Contact database</li>
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Call notes (5/month)</li>
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Spreadsheet import</li>
+          <li style="padding:6px 0;color:var(--slate-light);text-decoration:line-through;"><span style="margin-right:8px;">✗</span>AI summarization</li>
+          <li style="padding:6px 0;color:var(--slate-light);text-decoration:line-through;"><span style="margin-right:8px;">✗</span>Email reminders</li>
+        </ul>
+        <button class="tb-btn tb-btn-outline" style="width:100%;" disabled id="subscribe-free-btn">Current Plan</button>
+      </div>
+      <!-- Pro Monthly -->
+      <div style="background:linear-gradient(135deg, var(--blue) 0%, #2563eb 100%);border:2px solid var(--blue);border-radius:var(--radius);padding:2rem;color:white;text-align:center;transform:scale(1.03);position:relative;">
+        <div style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;">POPULAR</div>
+        <h3 style="margin:0 0 0.5rem;font-size:20px;">Weaver Pro</h3>
+        <div style="margin:1rem 0;"><span style="font-size:2.5rem;font-weight:700;">$4.99</span><span style="opacity:0.9;">/month</span></div>
+        <ul style="list-style:none;padding:0;margin:1.5rem 0;text-align:left;font-size:13px;">
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>Unlimited contacts</li>
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>AI call note summarization</li>
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>Email reminders & follow-ups</li>
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>Article recommendations</li>
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>Unlimited call notes</li>
+          <li style="padding:6px 0;"><span style="margin-right:8px;">✓</span>Priority support</li>
+        </ul>
+        <button onclick="handleSubscription('price_1StXttQZZ2GMzWg9cj6s4DXD')" class="tb-btn" style="width:100%;background:white;color:var(--blue);font-weight:600;border:none;padding:10px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);font-size:14px;" id="subscribe-pro-btn">Subscribe Now</button>
+        <p style="font-size:11px;opacity:0.8;margin-top:0.5rem;">Cancel anytime</p>
+      </div>
+      <!-- Pro Yearly -->
+      <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;text-align:center;position:relative;">
+        <div style="position:absolute;top:12px;right:12px;background:var(--green);color:white;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;">SAVE 17%</div>
+        <h3 style="margin:0 0 0.5rem;font-size:20px;">Pro Yearly</h3>
+        <div style="margin:1rem 0;"><span style="font-size:2.5rem;font-weight:700;">$49.99</span><span style="color:var(--slate);">/year</span></div>
+        <p style="color:var(--slate);font-size:12px;margin-bottom:1rem;">($4.17/month)</p>
+        <ul style="list-style:none;padding:0;margin:1.5rem 0;text-align:left;font-size:13px;">
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>All Pro features</li>
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Annual savings</li>
+          <li style="padding:6px 0;"><span style="color:var(--green);margin-right:8px;">✓</span>Priority updates</li>
+        </ul>
+        <button onclick="handleSubscription('price_1StXtnQZZ2GMzWg9YeTAGbIq')" class="tb-btn tb-btn-primary" style="width:100%;" id="subscribe-yearly-btn">Subscribe Yearly</button>
+        <p style="font-size:11px;color:var(--slate-light);margin-top:0.5rem;">Cancel anytime</p>
+      </div>
     </div>
+  </div>
+</div>
 
-    <!-- Subscription/Pricing Modal -->
-    <div id="subscription-modal" class="modal" onclick="if(event.target === this) closeSubscriptionModal();">
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation();">
-            <span class="close-modal" onclick="closeSubscriptionModal()">&times;</span>
-            <!-- Sync-my-plan note: first thing visible at top of pricing popup -->
-            <div id="pricing-sync-note" style="margin-bottom: 1.25rem; padding: 0.6rem 1rem; background: rgba(49, 130, 206, 0.12); border: 1px solid rgba(49, 130, 206, 0.3); border-radius: 8px; color: var(--text-dark); font-size: 0.9rem; text-align: center;">
-                If your plan still says <strong>Free</strong> under your profile, click <strong>Sync my plan</strong> in the profile menu to access Pro features.
-            </div>
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h2 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-size: 2rem;">Choose Your Plan</h2>
-                <p style="margin: 0; color: var(--text-medium); font-size: 1rem;">Unlock premium features to maximize your networking success</p>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                <!-- Free Plan -->
-                <div class="pricing-card" style="background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 2rem; position: relative;">
-                    <div style="text-align: center;">
-                        <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-size: 1.5rem;">Free</h3>
-                        <div style="margin: 1rem 0;">
-                            <span style="font-size: 2.5rem; font-weight: 700; color: var(--text-dark);">$0</span>
-                            <span style="color: var(--text-medium);">/month</span>
-                        </div>
-                        <p style="color: var(--text-medium); font-size: 0.9rem; margin-bottom: 1.5rem;">Perfect for getting started</p>
-                        <ul style="list-style: none; padding: 0; margin: 1.5rem 0; text-align: left;">
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Up to 20 contacts
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Contact database
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Call notes (5 per month)
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Spreadsheet import
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-muted);">
-                                <span style="color: var(--text-muted); margin-right: 0.5rem;">✗</span>
-                                <span style="text-decoration: line-through;">AI call note summarization</span>
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-muted);">
-                                <span style="color: var(--text-muted); margin-right: 0.5rem;">✗</span>
-                                <span style="text-decoration: line-through;">Email reminders</span>
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-muted);">
-                                <span style="color: var(--text-muted); margin-right: 0.5rem;">✗</span>
-                                <span style="text-decoration: line-through;">Personalized articles</span>
-                            </li>
-                        </ul>
-                        <button class="btn btn-secondary" style="width: 100%;" disabled id="subscribe-free-btn">Current Plan</button>
-                    </div>
-                </div>
-
-                <!-- Weaver Pro Monthly Plan -->
-                <div class="pricing-card pricing-card-featured" style="background: linear-gradient(135deg, var(--accent-blue) 0%, var(--light-accent) 100%); border: 2px solid var(--accent-blue); border-radius: 12px; padding: 2rem; position: relative; color: white; transform: scale(1.05);">
-                    <div style="position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">POPULAR</div>
-                    <div style="text-align: center;">
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">Weaver Pro</h3>
-                        <div style="margin: 1rem 0;">
-                            <span style="font-size: 2.5rem; font-weight: 700;">$4.99</span>
-                            <span style="opacity: 0.9;">/month</span>
-                        </div>
-                        <p style="opacity: 0.9; font-size: 0.9rem; margin-bottom: 1.5rem;">Everything you need</p>
-                        <ul style="list-style: none; padding: 0; margin: 1.5rem 0; text-align: left;">
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                Unlimited contacts
-                            </li>
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                AI call note summarization
-                            </li>
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                Email reminders & follow-ups
-                            </li>
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                Personalized article recommendations
-                            </li>
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                Unlimited call notes
-                            </li>
-                            <li style="padding: 0.5rem 0;">
-                                <span style="margin-right: 0.5rem;">✓</span>
-                                Priority support
-                            </li>
-                        </ul>
-                        <button onclick="handleSubscription('price_1StXttQZZ2GMzWg9cj6s4DXD')" class="btn" style="width: 100%; background: white; color: var(--accent-blue); font-weight: 600;" id="subscribe-pro-btn">
-                            Subscribe Now
-                        </button>
-                        <p style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">Cancel anytime</p>
-                    </div>
-                </div>
-
-                <!-- Weaver Pro Yearly Plan -->
-                <div class="pricing-card" style="background: white; border: 2px solid var(--silver-gray); border-radius: 12px; padding: 2rem; position: relative;">
-                    <div style="position: absolute; top: 1rem; right: 1rem; background: var(--success); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">SAVE 17%</div>
-                    <div style="text-align: center;">
-                        <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark); font-size: 1.5rem;">Weaver Pro Yearly</h3>
-                        <div style="margin: 1rem 0;">
-                            <span style="font-size: 2.5rem; font-weight: 700; color: var(--text-dark);">$49.99</span>
-                            <span style="color: var(--text-medium);">/year</span>
-                        </div>
-                        <p style="color: var(--text-medium); font-size: 0.9rem; margin-bottom: 0.5rem;">Save $9.89/year</p>
-                        <p style="color: var(--text-medium); font-size: 0.85rem; margin-bottom: 1.5rem; font-style: italic;">($4.17/month)</p>
-                        <ul style="list-style: none; padding: 0; margin: 1.5rem 0; text-align: left;">
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                All Pro features
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Annual savings
-                            </li>
-                            <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                                <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                                Priority updates
-                            </li>
-                        </ul>
-                        <button onclick="handleSubscription('price_1StXtnQZZ2GMzWg9YeTAGbIq')" class="btn btn-primary" style="width: 100%;" id="subscribe-yearly-btn">
-                            Subscribe Yearly
-                        </button>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Cancel anytime</p>
-                    </div>
-                </div>
-            </div>
-
-            <div style="text-align: center; padding: 1.5rem; background: rgba(49, 130, 206, 0.05); border-radius: 8px; margin-top: 2rem;">
-                <p style="margin: 0; color: var(--text-medium); font-size: 0.9rem;">
-                    <strong>Need help choosing?</strong> All plans include a 14-day free trial. 
-                    <a href="#" onclick="closeSubscriptionModal(); return false;" style="color: var(--accent-blue); text-decoration: none; font-weight: 600;">Contact us</a> for more information.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
-
