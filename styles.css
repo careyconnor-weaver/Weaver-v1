@@ -107,6 +107,8 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 .landing-nav-right { display: flex; align-items: center; gap: 28px; }
 .landing-nav-right a { text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-secondary-landing); transition: color 0.2s; }
 .landing-nav-right a:hover { color: var(--text-landing); }
+.nav-login { font-weight: 600 !important; color: var(--indigo) !important; padding: 10px 22px; border-radius: 8px; border: 1px solid var(--indigo); transition: all 0.2s; }
+.nav-login:hover { background: rgba(74,86,136,0.06); }
 .nav-cta { background: var(--indigo); color: white !important; padding: 10px 22px; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
 .nav-cta:hover { background: var(--indigo-deep); transform: translateY(-1px); }
 
@@ -246,7 +248,7 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
   .trust-inner { grid-template-columns: 1fr; gap: 24px; }
   .hero, .features-landing, .final-cta, .why-section, .pricing-landing { padding-left: 20px; padding-right: 20px; }
   .landing-nav { padding: 14px 20px; }
-  .landing-nav-right a:not(.nav-cta) { display: none; }
+  .landing-nav-right a:not(.nav-cta):not(.nav-login) { display: none; }
   .network-circle { width: 280px; height: 280px; }
   .float-card { display: none; }
   .net-node { width: 28px; height: 28px; font-size: 8px; }

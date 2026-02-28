@@ -385,11 +385,16 @@ function checkAuth() {
     }
 }
 
-// Show auth modal
-function showAuthModal() {
+// Show auth modal, optionally in 'login' or 'signup' mode
+function showAuthModal(mode) {
     const modal = document.getElementById('auth-modal');
     if (modal) {
         modal.classList.add('active');
+    }
+    if (mode === 'login' && isSignupMode) {
+        toggleAuthMode();
+    } else if (mode === 'signup' && !isSignupMode) {
+        toggleAuthMode();
     }
 }
 window.openAuthModal = showAuthModal;
