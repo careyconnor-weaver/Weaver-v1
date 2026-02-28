@@ -141,7 +141,7 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 .net-ring:nth-child(4) { inset: 90px; border-color: rgba(124,109,240,0.12); animation-delay: 1.2s; }
 @keyframes netPulse { 0%, 100% { transform: scale(0.96); opacity: 0.5; } 50% { transform: scale(1.04); opacity: 1; } }
 .net-center { position: absolute; inset: 110px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-pale) 0%, rgba(124,109,240,0.06) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.net-center svg { width: 48px; height: 48px; color: var(--indigo); }
+.net-center-logo { width: 56px; height: 56px; object-fit: contain; }
 .net-center-text { font-family: var(--font-serif-landing); font-size: 14px; color: var(--indigo); font-weight: 500; margin-top: 4px; letter-spacing: 0.05em; }
 .net-node { position: absolute; width: 36px; height: 36px; border-radius: 50%; background: white; border: 2px solid rgba(74,86,136,0.12); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); animation: float 6s ease-in-out infinite; }
 .nn-1 { top: 25px; left: 50%; transform: translateX(-50%); background: #3b82f6; border-color: #3b82f6; animation-delay: 0s; }
