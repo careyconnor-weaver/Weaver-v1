@@ -1029,17 +1029,110 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 /*  RESEARCH QUOTES                                       */
 /* ═══════════════════════════════════════════════════════ */
 
-.research-quotes-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 1px solid var(--blue); background: white; color: var(--blue);
-  font-size: 1.25rem; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: var(--shadow-sm); transition: all 0.2s;
+/* ═══════════════════════════════════════════════════════ */
+/*  FIXED RESEARCH QUOTES CAROUSEL                        */
+/*  Replaces all .research-quotes-* CSS                   */
+/* ═══════════════════════════════════════════════════════ */
+
+.rq-track {
+  position: relative;
+  overflow: hidden;
+  margin: 0 -0.5rem;
+  padding: 0.5rem;
 }
-.research-quotes-arrow:hover { background: var(--blue); color: white; }
-.research-quotes-arrow-left { left: 0; }
-.research-quotes-arrow-right { right: 0; }
+.rq-slider {
+  display: flex;
+  gap: 1rem;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rq-card {
+  flex: 0 0 calc(33.333% - 0.67rem);
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s;
+  min-width: 0;
+}
+.rq-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--blue);
+}
+.rq-card h4 {
+  margin: 0 0 0.5rem;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+}
+.rq-card p {
+  margin: 0 0 0.75rem;
+  color: var(--navy);
+  line-height: 1.5;
+  font-size: 13px;
+  font-style: italic;
+}
+.rq-card a {
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+.rq-card a:hover { text-decoration: underline; }
+
+.rq-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.rq-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s;
+  padding: 0;
+}
+.rq-dot.active {
+  background: var(--blue);
+  width: 24px;
+  border-radius: 4px;
+}
+
+.rq-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--navy);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+.rq-arrow:hover { background: var(--blue); color: white; border-color: var(--blue); }
+.rq-arrow-left { left: -6px; }
+.rq-arrow-right { right: -6px; }
+
+@media (max-width: 768px) {
+  .rq-card { flex: 0 0 calc(100% - 0.5rem); }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+  .rq-card { flex: 0 0 calc(50% - 0.5rem); }
+}
 .research-quotes-scroll {
   overflow-x: auto; overflow-y: hidden;
   mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
