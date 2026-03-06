@@ -2636,167 +2636,66 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // Research Quotes Horizontal Scroll with Manual Control
-    function initResearchQuotesScroll() {
-        const scrollContainer = document.querySelector('.research-quotes-scroll');
-        const quotesContainer = document.querySelector('.research-quotes-container');
-        
-        if (!scrollContainer || !quotesContainer) {
-            return;
-        }
-        
-        // Wait for cards to be rendered to get accurate measurements
-        setTimeout(() => {
-            const cards = quotesContainer.querySelectorAll('.research-quote-card');
-            if (cards.length === 0) return;
-            
-            // Get card width including gap (350px card + 1.5rem gap = 24px)
-            const cardWidth = 350;
-            const gap = 24; // 1.5rem = 24px
-            const singleSetWidth = (cardWidth + gap) * 7; // 7 cards in first set
-            const totalWidth = singleSetWidth * 2; // We have 2 sets (original + duplicate)
-            
-            let isAutoScrolling = true;
-            let scrollPosition = 0;
-            let scrollTimeout;
-            let animationFrame;
-            const scrollSpeed = 0.5; // pixels per frame (slower for smoother scroll)
-            
-            // Calculate initial position to show cards 2, 6, 7 first
-            // Card 2 starts at: (cardWidth + gap) * 1 = 374px
-            // To show cards 2, 6, 7, we want card 2 on the left, so start at card 2 position
-            // This will show: card 2, then 3, 4, 5, 6, 7 as user scrolls right
-            const initialPosition = (cardWidth + gap) * 1; // Start at card 2 position (374px)
-            scrollPosition = initialPosition;
-            quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-            
-            // Function to handle infinite scroll wrapping
-            function wrapScrollPosition(pos) {
-                if (pos < 0) {
-                    // Scrolled left past start, wrap to end
-                    return pos + singleSetWidth;
-                } else if (pos >= singleSetWidth) {
-                    // Scrolled right past end, wrap to start
-                    return pos - singleSetWidth;
-                }
-                return pos;
-            }
-            
-            // Function to update auto-scroll position
-            function updateAutoScroll() {
-                if (isAutoScrolling) {
-                    scrollPosition += scrollSpeed;
-                    scrollPosition = wrapScrollPosition(scrollPosition);
-                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-                }
-                animationFrame = requestAnimationFrame(updateAutoScroll);
-            }
-            updateAutoScroll();
-            
-            // Handle mouse wheel for manual scrolling
-            scrollContainer.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                
-                // Pause auto-scroll
-                isAutoScrolling = false;
-                quotesContainer.classList.remove('auto-scrolling');
-                
-                // Calculate scroll amount (horizontal scrolling)
-                const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-                scrollPosition += delta * 0.5; // Adjust scroll sensitivity
-                
-                // Wrap position for infinite scroll
-                scrollPosition = wrapScrollPosition(scrollPosition);
-                
-                // Apply manual scroll
-                quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-                
-                // Clear existing timeout
-                clearTimeout(scrollTimeout);
-                
-                // Resume auto-scroll after user stops scrolling
-                scrollTimeout = setTimeout(() => {
-                    isAutoScrolling = true;
-                    quotesContainer.classList.add('auto-scrolling');
-                }, 2000); // Resume after 2 seconds of no scrolling
-            }, { passive: false });
-            
-            // Handle touch/swipe for mobile
-            let touchStartX = 0;
-            let touchStartY = 0;
-            let touchStartPosition = 0;
-            
-            scrollContainer.addEventListener('touchstart', (e) => {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                touchStartPosition = scrollPosition;
-            }, { passive: true });
-            
-            scrollContainer.addEventListener('touchmove', (e) => {
-                const touchX = e.touches[0].clientX;
-                const touchY = e.touches[0].clientY;
-                const deltaX = touchStartX - touchX;
-                const deltaY = touchStartY - touchY;
-                
-                // Only handle horizontal swipes
-                if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                    e.preventDefault();
-                    
-                    // Pause auto-scroll
-                    isAutoScrolling = false;
-                    quotesContainer.classList.remove('auto-scrolling');
-                    
-                    // Update scroll position
-                    scrollPosition = touchStartPosition + deltaX;
-                    scrollPosition = wrapScrollPosition(scrollPosition);
-                    
-                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-                    
-                    clearTimeout(scrollTimeout);
-                    scrollTimeout = setTimeout(() => {
-                        isAutoScrolling = true;
-                        quotesContainer.classList.add('auto-scrolling');
-                    }, 2000);
-                }
-            }, { passive: false });
-            
-            // Arrow buttons: step one article at a time
-            const step = cardWidth + gap;
-            const prevBtn = document.getElementById('research-quotes-prev');
-            const nextBtn = document.getElementById('research-quotes-next');
-            if (prevBtn) {
-                prevBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    isAutoScrolling = false;
-                    quotesContainer.classList.remove('auto-scrolling');
-                    scrollPosition -= step;
-                    scrollPosition = wrapScrollPosition(scrollPosition);
-                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-                    clearTimeout(scrollTimeout);
-                    scrollTimeout = setTimeout(() => {
-                        isAutoScrolling = true;
-                        quotesContainer.classList.add('auto-scrolling');
-                    }, 2000);
-                });
-            }
-            if (nextBtn) {
-                nextBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    isAutoScrolling = false;
-                    quotesContainer.classList.remove('auto-scrolling');
-                    scrollPosition += step;
-                    scrollPosition = wrapScrollPosition(scrollPosition);
-                    quotesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-                    clearTimeout(scrollTimeout);
-                    scrollTimeout = setTimeout(() => {
-                        isAutoScrolling = true;
-                        quotesContainer.classList.add('auto-scrolling');
-                    }, 2000);
-                });
-            }
-        }, 100); // Small delay to ensure DOM is ready
+ function initResearchQuotesScroll() {
+    var slider = document.getElementById('rq-slider');
+    var track = document.getElementById('rq-track');
+    var controls = document.getElementById('rq-controls');
+    var prevBtn = document.getElementById('rq-prev');
+    var nextBtn = document.getElementById('rq-next');
+    if (!slider || !track) return;
+    var cards = slider.querySelectorAll('.rq-card');
+    var totalCards = cards.length;
+    function getVisibleCount() {
+        if (window.innerWidth <= 768) return 1;
+        if (window.innerWidth <= 1024) return 2;
+        return 3;
     }
+    var visibleCount = getVisibleCount();
+    var currentIndex = 0;
+    var totalPages = Math.ceil(totalCards / visibleCount);
+    var autoInterval = null;
+    function buildDots() {
+        controls.innerHTML = '';
+        totalPages = Math.ceil(totalCards / visibleCount);
+        for (var i = 0; i < totalPages; i++) {
+            var dot = document.createElement('button');
+            dot.className = 'rq-dot' + (i === currentIndex ? ' active' : '');
+            (function(idx) { dot.addEventListener('click', function() { goTo(idx); }); })(i);
+            controls.appendChild(dot);
+        }
+    }
+    function updateSlider() {
+        var gap = 16;
+        var trackWidth = track.clientWidth;
+        var cardWidth = (trackWidth - (visibleCount - 1) * gap) / visibleCount;
+        for (var c = 0; c < cards.length; c++) { cards[c].style.flex = '0 0 ' + cardWidth + 'px'; }
+        var offset = currentIndex * (cardWidth + gap) * visibleCount;
+        var maxOffset = Math.max(0, (totalCards - visibleCount) * (cardWidth + gap));
+        slider.style.transform = 'translateX(-' + Math.min(offset, maxOffset) + 'px)';
+        var dots = controls.querySelectorAll('.rq-dot');
+        for (var d = 0; d < dots.length; d++) { dots[d].className = 'rq-dot' + (d === currentIndex ? ' active' : ''); }
+    }
+    function goTo(index) { currentIndex = Math.max(0, Math.min(index, totalPages - 1)); updateSlider(); resetAuto(); }
+    function next() { goTo(currentIndex >= totalPages - 1 ? 0 : currentIndex + 1); }
+    function prev() { goTo(currentIndex <= 0 ? totalPages - 1 : currentIndex - 1); }
+    function resetAuto() { if (autoInterval) clearInterval(autoInterval); autoInterval = setInterval(next, 6000); }
+    if (prevBtn) prevBtn.addEventListener('click', prev);
+    if (nextBtn) nextBtn.addEventListener('click', next);
+    track.addEventListener('mouseenter', function() { if (autoInterval) clearInterval(autoInterval); });
+    track.addEventListener('mouseleave', resetAuto);
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            var newVisible = getVisibleCount();
+            if (newVisible !== visibleCount) { visibleCount = newVisible; currentIndex = 0; buildDots(); }
+            updateSlider();
+        }, 150);
+    });
+    buildDots();
+    updateSlider();
+    resetAuto();
+}
     
     // updateEmailTimeDisplay function (defined inside DOMContentLoaded)
     // Uses the global function for consistency
