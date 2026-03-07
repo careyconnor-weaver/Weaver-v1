@@ -192,7 +192,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </a>
-        <a class="sb-item" href="#" onclick="openSubscriptionModal(); return false;">
+        <a class="sb-item nav-link" href="#settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </a>
@@ -557,6 +557,82 @@
         </div>
       </section>
 
+      <!-- ═══ SETTINGS ═══ -->
+      <section id="settings" class="section">
+        <div class="top-bar"><h1>Settings</h1></div>
+        <div class="settings-container">
+
+          <!-- Profile -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">Profile</h3>
+            <div class="settings-profile-photo-row">
+              <div class="settings-avatar" id="settings-avatar">
+                <span id="settings-avatar-text">--</span>
+                <img id="settings-avatar-img" src="" alt="" style="display:none;">
+              </div>
+              <div class="settings-photo-actions">
+                <label for="settings-photo-input" class="tb-btn tb-btn-outline tb-btn-sm">Upload Photo</label>
+                <input type="file" id="settings-photo-input" accept="image/*" style="display:none;">
+                <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" id="settings-remove-photo" style="display:none;color:var(--red);border-color:var(--red);">Remove</button>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label for="settings-first-name">First Name</label>
+              <input type="text" id="settings-first-name" placeholder="Enter your first name">
+            </div>
+            <div class="settings-field">
+              <label for="settings-last-name">Last Name</label>
+              <input type="text" id="settings-last-name" placeholder="Enter your last name">
+            </div>
+            <div class="settings-field">
+              <label>Email</label>
+              <input type="email" id="settings-email" disabled>
+            </div>
+          </div>
+
+          <!-- Subscription -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">Subscription</h3>
+            <div class="settings-field">
+              <label>Current Plan</label>
+              <div class="settings-plan-row">
+                <span id="settings-plan-badge" class="subscription-badge free">FREE</span>
+                <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" id="settings-manage-plan-btn">Upgrade</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gmail Integration -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">Gmail Integration</h3>
+            <div class="settings-field">
+              <label>Status</label>
+              <div class="settings-plan-row">
+                <span id="settings-gmail-status" style="font-size:14px;color:var(--slate);">Not connected</span>
+                <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" id="settings-gmail-btn">Connect</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">Account</h3>
+            <div class="settings-field">
+              <label>Data Export</label>
+              <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" onclick="document.getElementById('export-excel').click();">Export Contacts (.xlsx)</button>
+            </div>
+            <div class="settings-field" style="border-bottom:none;padding-bottom:0;">
+              <label>Session</label>
+              <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" style="color:var(--red);border-color:var(--red);" onclick="if(confirm('Are you sure you want to log out?')) logout();">Log Out</button>
+            </div>
+          </div>
+
+          <button type="button" class="tb-btn tb-btn-primary" id="settings-save-btn" style="margin-top:0.5rem;">Save Changes</button>
+          <div id="settings-status" class="upload-status" style="display:none;margin-top:0.75rem;"></div>
+
+        </div>
+      </section>
+
     </div><!-- end .main-content -->
   </div><!-- end .app-layout -->
 
@@ -645,9 +721,6 @@
 <div id="subscription-modal" class="modal" onclick="if(event.target===this)closeSubscriptionModal();">
   <div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation();">
     <span class="close-modal" onclick="closeSubscriptionModal()">&times;</span>
-    <div id="pricing-sync-note" style="margin-bottom:1rem;padding:0.5rem 1rem;background:var(--blue-ghost);border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-sm);color:var(--navy);font-size:13px;text-align:center;">
-      If your plan still says <strong>Free</strong> under your profile, click <strong>Sync my plan</strong> in the profile menu.
-    </div>
     <div style="text-align:center;margin-bottom:2rem;"><h2 style="margin:0 0 0.5rem;font-size:24px;">Choose Your Plan</h2><p style="margin:0;color:var(--slate);font-size:14px;">Unlock premium features to maximize your networking success</p></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:1.5rem;margin-bottom:2rem;">
       <!-- Free Plan -->

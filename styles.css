@@ -1215,3 +1215,100 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
   box-sizing: border-box;
 }
 .quick-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+
+/* ═══ Settings ═══ */
+.settings-container { max-width: 640px; }
+.settings-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.settings-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.settings-field {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--silver-gray);
+}
+.settings-field:last-child { border-bottom: none; }
+.settings-field > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.settings-field input[type="text"],
+.settings-field input[type="email"] {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font);
+  color: var(--navy);
+  background: white;
+  box-sizing: border-box;
+}
+.settings-field input:focus { outline: none; border-color: var(--blue); }
+.settings-field input:disabled {
+  background: var(--off-white);
+  color: var(--slate);
+  cursor: not-allowed;
+}
+.settings-profile-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+.settings-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+.settings-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.settings-photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tb-btn-sm {
+  font-size: 12px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+.settings-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+@media (max-width: 600px) {
+  .settings-container { max-width: 100%; }
+  .settings-profile-photo-row { flex-direction: column; align-items: flex-start; }
+}

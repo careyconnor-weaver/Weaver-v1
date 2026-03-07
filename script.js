@@ -360,9 +360,18 @@ function updateSidebarUser() {
     var nameEl = document.getElementById('sb-user-name');
     var planEl = document.getElementById('sb-plan-display');
     if (user) {
-        var initials = user.email ? user.email.substring(0, 2).toUpperCase() : '--';
-        if (avatarEl) avatarEl.textContent = initials;
-        if (nameEl) nameEl.textContent = user.email || 'User';
+        var settings = typeof getUserSettings === 'function' ? getUserSettings() : {};
+        var displayName = typeof getUserDisplayName === 'function' ? getUserDisplayName() : (user.email || '').split('@')[0];
+        var initials = typeof getInitials === 'function' ? getInitials() : (user.email || '').substring(0, 2).toUpperCase();
+
+        if (avatarEl) {
+            if (settings.profilePhoto) {
+                avatarEl.innerHTML = '<img src="' + settings.profilePhoto + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+            } else {
+                avatarEl.textContent = initials;
+            }
+        }
+        if (nameEl) nameEl.textContent = displayName || user.email || 'User';
         var isPro = hasActiveSubscription(user);
         if (planEl) planEl.textContent = isPro ? 'Pro Plan' : 'Free Plan';
     } else {
@@ -476,7 +485,7 @@ function updateDashboard() {
     if (greetEl && user) {
         var hour = now.getHours();
         var timeGreet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-        var name = (user.email || '').split('@')[0];
+        var name = typeof getUserDisplayName === 'function' ? getUserDisplayName() : (user.email || '').split('@')[0];
         greetEl.textContent = timeGreet + (name ? ', ' + name : '');
     }
 
@@ -995,7 +1004,6 @@ function toggleProfileMenu() {
                             </p>
                             <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
                         }
-                        <button onclick="window.syncMyPlan()" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem; padding: 0.35rem; margin-top: 0.35rem;">Sync my plan</button>
                     </div>
                     
                     <!-- Gmail Integration Section -->
@@ -1482,6 +1490,160 @@ window.closeAuthModal = closeAuthModal;
 window.toggleAuthMode = toggleAuthMode;
 window.connectGmail = connectGmail;
 window.disconnectGmail = disconnectGmail;
+
+// ═══ Settings ═══
+
+function getSettingsKey(userId) {
+    return `weaver_settings_${userId}`;
+}
+
+function getUserSettings() {
+    var user = getCurrentUser();
+    if (!user) return {};
+    try {
+        return JSON.parse(localStorage.getItem(getSettingsKey(user.id)) || '{}');
+    } catch (e) { return {}; }
+}
+
+function saveUserSettings(settings) {
+    var user = getCurrentUser();
+    if (!user) return;
+    localStorage.setItem(getSettingsKey(user.id), JSON.stringify(settings));
+}
+
+function getUserDisplayName() {
+    var s = getUserSettings();
+    if (s.firstName && s.lastName) return s.firstName + ' ' + s.lastName;
+    if (s.firstName) return s.firstName;
+    var user = getCurrentUser();
+    return user ? (user.email || '').split('@')[0] : '';
+}
+
+function loadSettingsPage() {
+    var user = getCurrentUser();
+    if (!user) return;
+    var s = getUserSettings();
+
+    var fn = document.getElementById('settings-first-name');
+    var ln = document.getElementById('settings-last-name');
+    var em = document.getElementById('settings-email');
+    if (fn) fn.value = s.firstName || '';
+    if (ln) ln.value = s.lastName || '';
+    if (em) em.value = user.email || '';
+
+    var avatarText = document.getElementById('settings-avatar-text');
+    var avatarImg = document.getElementById('settings-avatar-img');
+    var removeBtn = document.getElementById('settings-remove-photo');
+    if (s.profilePhoto) {
+        if (avatarImg) { avatarImg.src = s.profilePhoto; avatarImg.style.display = 'block'; }
+        if (avatarText) avatarText.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = '';
+    } else {
+        if (avatarImg) avatarImg.style.display = 'none';
+        if (avatarText) { avatarText.style.display = ''; avatarText.textContent = getInitials(); }
+        if (removeBtn) removeBtn.style.display = 'none';
+    }
+
+    var planBadge = document.getElementById('settings-plan-badge');
+    var planBtn = document.getElementById('settings-manage-plan-btn');
+    var isPro = hasActiveSubscription(user);
+    if (planBadge) {
+        planBadge.textContent = isPro ? 'PRO' : 'FREE';
+        planBadge.className = 'subscription-badge ' + (isPro ? 'pro' : 'free');
+    }
+    if (planBtn) {
+        planBtn.textContent = isPro ? 'Manage' : 'Upgrade';
+        planBtn.onclick = function() {
+            if (isPro) { openCustomerPortal(); } else { openSubscriptionModal(); }
+        };
+    }
+
+    var gmailStatus = document.getElementById('settings-gmail-status');
+    var gmailBtn = document.getElementById('settings-gmail-btn');
+    var gmailConnected = localStorage.getItem('weaver_gmail_connected_' + user.id) === 'true';
+    if (gmailStatus) gmailStatus.textContent = gmailConnected ? 'Connected' : 'Not connected';
+    if (gmailStatus) gmailStatus.style.color = gmailConnected ? 'var(--success)' : 'var(--slate)';
+    if (gmailBtn) {
+        gmailBtn.textContent = gmailConnected ? 'Disconnect' : 'Connect';
+        gmailBtn.style.color = gmailConnected ? 'var(--red)' : '';
+        gmailBtn.style.borderColor = gmailConnected ? 'var(--red)' : '';
+        gmailBtn.onclick = function() {
+            if (gmailConnected) { disconnectGmail(); } else { connectGmail(); }
+        };
+    }
+
+    var statusEl = document.getElementById('settings-status');
+    if (statusEl) statusEl.style.display = 'none';
+}
+
+function getInitials() {
+    var s = getUserSettings();
+    if (s.firstName && s.lastName) return (s.firstName[0] + s.lastName[0]).toUpperCase();
+    if (s.firstName) return s.firstName.substring(0, 2).toUpperCase();
+    var user = getCurrentUser();
+    return user ? (user.email || '').substring(0, 2).toUpperCase() : '--';
+}
+
+function initSettingsListeners() {
+    var photoInput = document.getElementById('settings-photo-input');
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Photo must be under 2 MB.');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var s = getUserSettings();
+                s.profilePhoto = ev.target.result;
+                saveUserSettings(s);
+                loadSettingsPage();
+                refreshProfileDisplays();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    var removeBtn = document.getElementById('settings-remove-photo');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            var s = getUserSettings();
+            delete s.profilePhoto;
+            saveUserSettings(s);
+            loadSettingsPage();
+            refreshProfileDisplays();
+        });
+    }
+    var saveBtn = document.getElementById('settings-save-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            var s = getUserSettings();
+            var fn = document.getElementById('settings-first-name');
+            var ln = document.getElementById('settings-last-name');
+            s.firstName = (fn ? fn.value : '').trim();
+            s.lastName = (ln ? ln.value : '').trim();
+            saveUserSettings(s);
+            refreshProfileDisplays();
+            var statusEl = document.getElementById('settings-status');
+            if (statusEl) {
+                statusEl.textContent = 'Settings saved.';
+                statusEl.className = 'upload-status success';
+                statusEl.style.display = 'block';
+                setTimeout(function() { statusEl.style.display = 'none'; }, 2500);
+            }
+        });
+    }
+}
+
+function refreshProfileDisplays() {
+    updateSidebarUser();
+    updateDashboard();
+}
+
+window.loadSettingsPage = loadSettingsPage;
+window.getUserDisplayName = getUserDisplayName;
+window.getUserSettings = getUserSettings;
 
 // Gmail Label Sync - Review and Process
 let gmailLabelEmails = [];
@@ -2018,6 +2180,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (targetId === 'tips-tricks') {
                     setTimeout(() => initTipsAccordion(), 100);
                 }
+                
+                if (targetId === 'settings' && typeof loadSettingsPage === 'function') {
+                    loadSettingsPage();
+                }
             }
             
             window.scrollTo(0, 0);
@@ -2133,6 +2299,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (strengtheningVipFilter) {
         strengtheningVipFilter.addEventListener('change', updateStrengtheningNet);
     }
+
+    // Settings page listeners
+    if (typeof initSettingsListeners === 'function') initSettingsListeners();
 
     // Research quotes carousel (arrows + scroll)
     initResearchQuotesScroll();
