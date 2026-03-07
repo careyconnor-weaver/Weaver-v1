@@ -781,6 +781,7 @@ async function handleAuth(e) {
                 showAppView();
                 updateUserDisplay();
                 updateSidebarUser();
+                updateDashboard();
                 filterContacts();
             }, 1000);
         } else {
@@ -900,6 +901,7 @@ async function handleAuth(e) {
                 showAppView();
                 updateUserDisplay();
                 updateSidebarUser();
+                updateDashboard();
                 filterContacts();
             }, 1000);
         }
@@ -2037,6 +2039,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Initial load should show alphabetical sorting
     filterContacts();
+    
+    // Refresh dashboard now that contacts are loaded from the server
+    if (getCurrentUser()) updateDashboard();
     
     // Initialize contact count on page load
     const allContacts = getContacts();
