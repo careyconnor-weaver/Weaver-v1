@@ -506,7 +506,8 @@ app.get('/api/gmail/auth', (req, res) => {
 
         const client = createOAuth2Client();
         const scopes = [
-            'https://www.googleapis.com/auth/gmail.readonly'
+            'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/gmail.send'
         ];
 
         const authUrl = client.generateAuthUrl({
