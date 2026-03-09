@@ -2303,6 +2303,75 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Settings page listeners
     if (typeof initSettingsListeners === 'function') initSettingsListeners();
 
+    // Mobile tab bar navigation
+    (function initMobileTabBar() {
+        var moreBtn = document.getElementById('mobile-more-btn');
+        var moreMenu = document.getElementById('mobile-more-menu');
+        var tabBar = document.getElementById('mobile-tab-bar');
+        if (!tabBar) return;
+
+        var mobileTabs = tabBar.querySelectorAll('.mobile-tab[data-section]');
+        var moreItems = tabBar.querySelectorAll('.mobile-more-item[data-section]');
+        var allMobileNavs = tabBar.querySelectorAll('[data-section]');
+
+        function setMobileActive(sectionId) {
+            mobileTabs.forEach(function(t) {
+                t.classList.toggle('active', t.getAttribute('data-section') === sectionId);
+            });
+            moreItems.forEach(function(t) {
+                t.classList.toggle('active', t.getAttribute('data-section') === sectionId);
+            });
+            var inMore = false;
+            moreItems.forEach(function(t) { if (t.getAttribute('data-section') === sectionId) inMore = true; });
+            if (moreBtn) moreBtn.classList.toggle('active', inMore);
+        }
+
+        function navigateToSection(sectionId) {
+            var sidebarLink = document.querySelector('.nav-link[href="#' + sectionId + '"]');
+            if (sidebarLink) {
+                sidebarLink.click();
+            }
+            setMobileActive(sectionId);
+            if (moreMenu) moreMenu.classList.remove('open');
+        }
+
+        mobileTabs.forEach(function(tab) {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                navigateToSection(tab.getAttribute('data-section'));
+            });
+        });
+
+        moreItems.forEach(function(item) {
+            if (!item.getAttribute('data-section')) return;
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                navigateToSection(item.getAttribute('data-section'));
+            });
+        });
+
+        if (moreBtn) {
+            moreBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (moreMenu) moreMenu.classList.toggle('open');
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (moreMenu && !moreMenu.contains(e.target) && e.target !== moreBtn) {
+                moreMenu.classList.remove('open');
+            }
+        });
+
+        // Keep mobile tabs in sync when sidebar nav is clicked
+        document.querySelectorAll('.nav-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                var href = link.getAttribute('href');
+                if (href) setMobileActive(href.substring(1));
+            });
+        });
+    })();
+
     // Research quotes carousel (arrows + scroll)
     initResearchQuotesScroll();
 

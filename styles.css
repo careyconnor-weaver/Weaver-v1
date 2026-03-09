@@ -548,11 +548,79 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 .app-footer { margin-left: 240px; padding: 20px 32px; text-align: center; font-size: 12px; color: var(--slate); border-top: 1px solid var(--border); background: #eef1f5; }
 .app-footer a { color: var(--blue); text-decoration: none; }
 
+/* Mobile Tab Bar */
+.mobile-tab-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: white;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+  padding: 4px 0 env(safe-area-inset-bottom, 0);
+}
+.mobile-tab-bar > .mobile-tab,
+.mobile-tab-bar > #mobile-more-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0 4px;
+  color: var(--slate);
+  font-size: 10px;
+  font-weight: 500;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-tab-bar > .mobile-tab.active {
+  color: var(--blue);
+}
+.mobile-tab-bar > .mobile-tab:hover,
+.mobile-tab-bar > #mobile-more-btn:hover {
+  color: var(--navy);
+}
+.mobile-more-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  min-width: 200px;
+  padding: 8px 0;
+}
+.mobile-more-menu.open { display: block; }
+.mobile-more-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.mobile-more-item:hover { background: var(--off-white); }
+.mobile-more-item.active { color: var(--blue); }
+
 /* App Responsive */
 @media (max-width: 900px) {
   .sidebar { display: none; }
-  .main-content { margin-left: 0; padding: 20px 16px; }
-  .app-footer { margin-left: 0; }
+  .main-content { margin-left: 0; padding: 20px 16px; padding-bottom: 80px; }
+  .mobile-tab-bar { display: flex; }
+  .app-footer { margin-left: 0; padding-bottom: 70px; }
   .top-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
   .table-toolbar { flex-direction: column; align-items: stretch; }
   .table-search { max-width: none; }
