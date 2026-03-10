@@ -47,7 +47,7 @@ app.use(express.static('.')); // Serve static files
 app.use('/api/stripe', stripeRoutes);
 
 // JSON parsing middleware (after Stripe routes to avoid interfering with webhooks)
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Initialize OpenAI (optional - only if API key is provided)
 let openai = null;
@@ -2509,6 +2509,37 @@ app.get('/api/assistant/settings/:userId', async (req, res) => {
     } catch (error) {
         console.error('Error getting assistant settings:', error);
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ============ USER PROFILE SETTINGS API ENDPOINTS ============
+
+app.get('/api/users/settings/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const settings = await dbAPI.getUserSettingsById(userId);
+        res.json({ success: true, settings: settings || null });
+    } catch (error) {
+        console.error('Error getting user settings:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.post('/api/users/settings', async (req, res) => {
+    try {
+        const { userId, firstName, lastName, profilePhoto } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
+        const saved = await dbAPI.saveUserSettingsToDb(userId, {
+            firstName: firstName || null,
+            lastName: lastName || null,
+            profilePhoto: profilePhoto || null,
+        });
+        res.json({ success: true, settings: saved });
+    } catch (error) {
+        console.error('Error saving user settings:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
     }
 });
 

@@ -901,6 +901,7 @@ async function handleAuth(e) {
                 stripeSubscriptionId: data.user.stripeSubscriptionId || null
             });
             await loadContactsFromAPI();
+            await loadSettingsFromAPI();
             status.textContent = 'Login successful!';
             status.className = 'upload-status success';
             status.style.display = 'block';
@@ -1511,6 +1512,44 @@ function saveUserSettings(settings) {
     localStorage.setItem(getSettingsKey(user.id), JSON.stringify(settings));
 }
 
+function syncSettingsToBackend(settings) {
+    var user = getCurrentUser();
+    if (!user) return;
+    fetch('/api/users/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: user.id,
+            firstName: settings.firstName || null,
+            lastName: settings.lastName || null,
+            profilePhoto: settings.profilePhoto || null,
+        })
+    }).catch(function(err) { console.error('Sync settings to backend failed:', err); });
+}
+
+async function loadSettingsFromAPI() {
+    var user = getCurrentUser();
+    if (!user) return;
+    try {
+        var res = await fetch('/api/users/settings/' + encodeURIComponent(user.id));
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.success && data.settings) {
+            var s = getUserSettings();
+            var serverSettings = data.settings;
+            if (serverSettings.firstName) s.firstName = serverSettings.firstName;
+            if (serverSettings.lastName) s.lastName = serverSettings.lastName;
+            if (serverSettings.profilePhoto) s.profilePhoto = serverSettings.profilePhoto;
+            if (!serverSettings.firstName && !s.firstName) delete s.firstName;
+            if (!serverSettings.lastName && !s.lastName) delete s.lastName;
+            if (!serverSettings.profilePhoto && !s.profilePhoto) delete s.profilePhoto;
+            saveUserSettings(s);
+        }
+    } catch (err) {
+        console.error('Load settings from API failed:', err);
+    }
+}
+
 function getUserDisplayName() {
     var s = getUserSettings();
     if (s.firstName && s.lastName) return s.firstName + ' ' + s.lastName;
@@ -1599,6 +1638,7 @@ function initSettingsListeners() {
                 var s = getUserSettings();
                 s.profilePhoto = ev.target.result;
                 saveUserSettings(s);
+                syncSettingsToBackend(s);
                 loadSettingsPage();
                 refreshProfileDisplays();
             };
@@ -1611,6 +1651,7 @@ function initSettingsListeners() {
             var s = getUserSettings();
             delete s.profilePhoto;
             saveUserSettings(s);
+            syncSettingsToBackend(s);
             loadSettingsPage();
             refreshProfileDisplays();
         });
@@ -1624,6 +1665,7 @@ function initSettingsListeners() {
             s.firstName = (fn ? fn.value : '').trim();
             s.lastName = (ln ? ln.value : '').trim();
             saveUserSettings(s);
+            syncSettingsToBackend(s);
             refreshProfileDisplays();
             var statusEl = document.getElementById('settings-status');
             if (statusEl) {
@@ -1644,6 +1686,7 @@ function refreshProfileDisplays() {
 window.loadSettingsPage = loadSettingsPage;
 window.getUserDisplayName = getUserDisplayName;
 window.getUserSettings = getUserSettings;
+window.loadSettingsFromAPI = loadSettingsFromAPI;
 
 // Gmail Label Sync - Review and Process
 let gmailLabelEmails = [];
@@ -2196,8 +2239,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (link) link.click();
     };
 
-    // Load contacts from backend when user is logged in (so data persists across devices)
-    if (getCurrentUser()) await loadContactsFromAPI();
+    // Load contacts and settings from backend when user is logged in (so data persists across devices)
+    if (getCurrentUser()) {
+        await loadContactsFromAPI();
+        await loadSettingsFromAPI();
+        updateSidebarUser();
+    }
     // Initialize contacts from localStorage
     loadContacts();
     updateContactDropdown();

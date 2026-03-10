@@ -1,5 +1,5 @@
 const { db } = require('./index');
-const { users, contacts, emails, notes, gmailTokens, assistantSettings } = require('./schema');
+const { users, contacts, emails, notes, gmailTokens, assistantSettings, userSettings } = require('./schema');
 const { eq, and, desc } = require('drizzle-orm');
 
 // Check if db is available
@@ -394,6 +394,37 @@ async function getContactsNeedingFollowup(userId, settings) {
     }
 }
 
+// ============ USER SETTINGS ============
+async function getUserSettingsById(userId) {
+    if (!db) return null;
+    try {
+        const result = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+        return result[0] || null;
+    } catch (error) {
+        console.error('Error getting user settings:', error);
+        return null;
+    }
+}
+
+async function saveUserSettingsToDb(userId, settings) {
+    if (!db) throw new Error('Database not initialized');
+    const existing = await getUserSettingsById(userId);
+    if (existing) {
+        const result = await db
+            .update(userSettings)
+            .set({ ...settings, updatedAt: new Date() })
+            .where(eq(userSettings.userId, userId))
+            .returning();
+        return result[0] || null;
+    } else {
+        const result = await db
+            .insert(userSettings)
+            .values({ userId, ...settings })
+            .returning();
+        return result[0] || null;
+    }
+}
+
 // ============ STRIPE SUBSCRIPTIONS ============
 // Update user's Stripe customer ID
 async function updateUserStripeCustomerId(userId, customerId) {
@@ -495,6 +526,10 @@ module.exports = {
     getAllUsersWithAssistantSettings,
     getContactsNeedingFollowup,
     
+    // User Settings
+    getUserSettingsById,
+    saveUserSettingsToDb,
+
     // Stripe Subscriptions
     updateUserStripeCustomerId,
     updateUserSubscription,

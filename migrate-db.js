@@ -61,6 +61,31 @@ async function migrate() {
             }
         }
 
+        // Create user_settings table if it doesn't exist
+        console.log('\n📦 Checking user_settings table...');
+        const tableCheck = await client.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'user_settings'
+            );
+        `);
+        if (!tableCheck.rows[0].exists) {
+            console.log('  ➕ Creating user_settings table...');
+            await client.query(`
+                CREATE TABLE user_settings (
+                    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                    first_name VARCHAR(100),
+                    last_name VARCHAR(100),
+                    profile_photo TEXT,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                );
+            `);
+            console.log('  ✅ Created user_settings table');
+        } else {
+            console.log('  ✓ user_settings table already exists');
+        }
+
         console.log('✅ Database migration completed successfully!');
         process.exit(0);
     } catch (error) {
