@@ -1897,315 +1897,166 @@ app.listen(PORT, async () => {
 
 // Duplicate cron job removed - already scheduled above
 
-// Generate professional HTML email body with Weaver branding
+// Email template- DS
+
 function generateEmailBody(contacts) {
     const sortedContacts = contacts.sort((a, b) => b.daysSinceLastContact - a.daysSinceLastContact);
-    
-    // Get production URL from environment or use localhost
-    const weaverUrl = process.env.WEAVER_URL || 'http://localhost:3000';
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@weaver.app';
-    
-    let html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Weaver Follow-up Reminder</title>
-        <style>
-            /* Reset styles for email clients */
-            body, table, td, p, a, li, blockquote {
-                -webkit-text-size-adjust: 100%;
-                -ms-text-size-adjust: 100%;
-            }
-            table, td {
-                mso-table-lspace: 0pt;
-                mso-table-rspace: 0pt;
-            }
-            img {
-                -ms-interpolation-mode: bicubic;
-                border: 0;
-                outline: none;
-                text-decoration: none;
-            }
-            
-            /* Main styles */
-            body {
-                margin: 0;
-                padding: 0;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                background-color: #f5f5f0;
-                color: #1a2332;
-                line-height: 1.6;
-            }
-            
-            .email-container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: #ffffff;
-            }
-            
-            /* Header with gradient */
-            .email-header {
-                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-                padding: 40px 30px;
-                text-align: center;
-            }
-            
-            .email-header h1 {
-                color: #ffffff;
-                font-size: 28px;
-                font-weight: 600;
-                margin: 0;
-                letter-spacing: -0.5px;
-            }
-            
-            .email-header .subtitle {
-                color: rgba(255, 255, 255, 0.9);
-                font-size: 16px;
-                margin-top: 8px;
-            }
-            
-            /* Content area */
-            .email-content {
-                padding: 40px 30px;
-            }
-            
-            .greeting {
-                font-size: 18px;
-                color: #1a2332;
-                margin-bottom: 20px;
-            }
-            
-            .intro-text {
-                font-size: 16px;
-                color: #4a5568;
-                margin-bottom: 30px;
-                line-height: 1.7;
-            }
-            
-            .contacts-count {
-                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                display: inline-block;
-                font-weight: 600;
-                font-size: 18px;
-                margin-bottom: 30px;
-            }
-            
-            /* Contact cards */
-            .contact-card {
-                background: #f5f5f0;
-                border-left: 4px solid #3182ce;
-                border-radius: 8px;
-                padding: 20px;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-            
-            .contact-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-            }
-            
-            .contact-name {
-                font-size: 20px;
-                font-weight: 600;
-                color: #1a2332;
-                margin: 0;
-            }
-            
-            .days-badge {
-                background: #f56565;
-                color: white;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: 600;
-                white-space: nowrap;
-            }
-            
-            .contact-type {
-                display: inline-block;
-                background: #e2e8f0;
-                color: #3182ce;
-                padding: 4px 10px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-bottom: 12px;
-            }
-            
-            .contact-details {
-                color: #4a5568;
-                font-size: 14px;
-                line-height: 1.8;
-            }
-            
-            .contact-details strong {
-                color: #1a2332;
-                font-weight: 600;
-            }
-            
-            /* CTA Button */
-            .cta-section {
-                text-align: center;
-                margin: 40px 0 30px;
-            }
-            
-            .cta-button {
-                display: inline-block;
-                background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-                color: white !important;
-                padding: 16px 32px;
-                text-decoration: none;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: 16px;
-                box-shadow: 0 4px 6px rgba(49, 130, 206, 0.3);
-                transition: transform 0.2s;
-            }
-            
-            .cta-button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 12px rgba(49, 130, 206, 0.4);
-            }
-            
-            /* Footer */
-            .email-footer {
-                background: #f5f5f0;
-                padding: 30px;
-                text-align: center;
-                border-top: 1px solid #e2e8f0;
-            }
-            
-            .footer-text {
-                color: #718096;
-                font-size: 14px;
-                line-height: 1.6;
-                margin: 8px 0;
-            }
-            
-            .footer-link {
-                color: #3182ce;
-                text-decoration: none;
-            }
-            
-            .footer-link:hover {
-                text-decoration: underline;
-            }
-            
-            /* Responsive */
-            @media only screen and (max-width: 600px) {
-                .email-content {
-                    padding: 30px 20px;
-                }
-                
-                .email-header {
-                    padding: 30px 20px;
-                }
-                
-                .email-header h1 {
-                    font-size: 24px;
-                }
-                
-                .contact-header {
-                    flex-direction: column;
-                    align-items: flex-start;
-                }
-                
-                .days-badge {
-                    margin-top: 8px;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div style="background-color: #f5f5f0; padding: 20px 0;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                    <td align="center">
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container">
-                            <!-- Header -->
-                            <tr>
-                                <td class="email-header">
-                                    <!-- Add your logo here (uncomment and update URL): -->
-                                    <!-- <img src="${weaverUrl}/logo.png" alt="Weaver" style="height: 40px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"> -->
-                                    <h1>Weaver</h1>
-                                    <div class="subtitle">Follow-up Reminder</div>
-                                </td>
-                            </tr>
-                            
-                            <!-- Content -->
-                            <tr>
-                                <td class="email-content">
-                                    <div class="greeting">Hi there!</div>
-                                    <div class="intro-text">
-                                        Don't just expand the net—strengthen it. Here are the contacts that need your attention:
-                                    </div>
-                                    
-                                    <div class="contacts-count">
-                                        ${contacts.length} Contact${contacts.length !== 1 ? 's' : ''} Need Follow-up
-                                    </div>
-    `;
-    
-    sortedContacts.forEach(contact => {
-        const typeLabel = contact.isEstablished ? 'Established Contact' : 'Cold Contact';
-        const typeClass = contact.isEstablished ? 'established' : 'cold';
-        
-        html += `
-                                    <div class="contact-card">
-                                        <div class="contact-header">
-                                            <h2 class="contact-name">${contact.name}</h2>
-                                            <span class="days-badge">${contact.daysSinceLastContact} days</span>
-                                        </div>
-                                        <div class="contact-type">${typeLabel}</div>
-                                        <div class="contact-details">
-                                            ${contact.email ? `<strong>Email:</strong> ${contact.email}<br>` : ''}
-                                            ${contact.firm ? `<strong>Firm:</strong> ${contact.firm}<br>` : ''}
-                                            ${contact.position ? `<strong>Position:</strong> ${contact.position}<br>` : ''}
-                                        </div>
-                                    </div>
-        `;
+    const weaverUrl = process.env.WEAVER_URL || 'https://studentweaver.com';
+    const count = contacts.length;
+
+    // Count urgency levels
+    const urgentCount = contacts.filter(c => c.daysSinceLastContact > 60).length;
+    const warningCount = contacts.filter(c => c.daysSinceLastContact > 30 && c.daysSinceLastContact <= 60).length;
+
+    // Build contact rows
+    let contactRows = '';
+    sortedContacts.forEach((contact, index) => {
+        const isLast = index === sortedContacts.length - 1;
+        const borderBottom = isLast ? '' : 'border-bottom:1px solid #e2e8f0;';
+
+        // Days color
+        let daysBg = '#ecfdf5'; let daysColor = '#10b981';
+        if (contact.daysSinceLastContact > 60) { daysBg = '#fef2f2'; daysColor = '#ef4444'; }
+        else if (contact.daysSinceLastContact > 30) { daysBg = '#fffbeb'; daysColor = '#f59e0b'; }
+
+        // Priority color
+        const priority = contact.priority || 'medium';
+        let priBg = '#fffbeb'; let priColor = '#f59e0b'; let priLabel = 'MED';
+        if (priority === 'high') { priBg = '#fef2f2'; priColor = '#ef4444'; priLabel = 'HIGH'; }
+        else if (priority === 'low') { priBg = '#ecfdf5'; priColor = '#10b981'; priLabel = 'LOW'; }
+
+        // Last contact info
+        const typeLabel = contact.isEstablished ? 'Established' : 'Cold';
+
+        contactRows += `
+              <tr>
+                <td style="padding:14px 16px;${borderBottom}">
+                  <div style="font-weight:600;color:#1a2744;font-size:14px;">${contact.name}</div>
+                  ${contact.firm ? `<div style="color:#64748b;font-size:12px;margin-top:2px;">${contact.firm}</div>` : ''}
+                </td>
+                <td align="center" style="padding:14px 16px;${borderBottom}">
+                  <div style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:700;background-color:${daysBg};color:${daysColor};">${contact.daysSinceLastContact}</div>
+                </td>
+                <td align="center" style="padding:14px 16px;${borderBottom}">
+                  <div style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background-color:${priBg};color:${priColor};">${priLabel}</div>
+                </td>
+                <td style="padding:14px 16px;${borderBottom};color:#64748b;font-size:12px;">
+                  ${typeLabel}
+                </td>
+              </tr>`;
     });
-    
-    html += `
-                                    <div class="cta-section">
-                                        <a href="${weaverUrl}/#contacts" class="cta-button">View in Weaver →</a>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <!-- Footer -->
-                            <tr>
-                                <td class="email-footer">
-                                    <p class="footer-text">
-                                        This email was sent by <strong>Weaver</strong> based on your networking preferences.
-                                    </p>
-                                    <p class="footer-text">
-                                        You can update your settings in the <a href="${weaverUrl}/#strengthening" class="footer-link">"Strengthening the Net"</a> tab.
-                                    </p>
-                                    <p class="footer-text" style="margin-top: 20px; font-size: 12px; color: #a0aec0;">
-                                        © ${new Date().getFullYear()} Weaver. All rights reserved.
-                                    </p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
+
+    // Build urgency badges
+    let badges = '';
+    if (urgentCount > 0) {
+        badges += `<td style="padding-right:8px;"><div style="display:inline-block;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;background-color:#fef2f2;color:#ef4444;">${urgentCount} urgent (60+ days)</div></td>`;
+    }
+    if (warningCount > 0) {
+        badges += `<td style="padding-right:8px;"><div style="display:inline-block;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;background-color:#fffbeb;color:#f59e0b;">${warningCount} warning (30-60 days)</div></td>`;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weaver Follow-up Reminder</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef1f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef1f5;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background-color:#1a2744;padding:28px 36px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Weaver</td>
+                <td align="right" style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:0.03em;">Follow-up Reminder</td>
+              </tr>
             </table>
-        </div>
-    </body>
-    </html>
-    `;
-    
-    return html;
+          </td>
+        </tr>
+
+        <!-- HERO -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1a2744 0%,#243352 100%);padding:40px 36px 36px;text-align:center;">
+            <div style="font-size:56px;font-weight:800;color:#4ea8de;line-height:1;">${count}</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.55);margin-top:6px;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;">contact${count !== 1 ? 's' : ''} need a follow-up</div>
+            <p style="color:rgba(255,255,255,0.7);font-size:15px;line-height:1.6;margin:20px auto 0;max-width:420px;">
+              Don't just expand the net — <span style="color:#4ea8de;font-weight:600;">strengthen it.</span> These people haven't heard from you in a while.
+            </p>
+          </td>
+        </tr>
+
+        <!-- URGENCY BADGES -->
+        ${badges ? `
+        <tr>
+          <td style="padding:24px 36px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>${badges}</tr>
+            </table>
+          </td>
+        </tr>` : ''}
+
+        <!-- CONTACT TABLE -->
+        <tr>
+          <td style="padding:20px 36px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+              <tr style="background-color:#f8fafc;">
+                <th align="left" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Contact</th>
+                <th align="center" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Days</th>
+                <th align="center" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Priority</th>
+                <th align="left" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Type</th>
+              </tr>
+              ${contactRows}
+            </table>
+          </td>
+        </tr>
+
+        <!-- CTA BUTTON -->
+        <tr>
+          <td align="center" style="padding:8px 36px 36px;">
+            <a href="${weaverUrl}" style="display:inline-block;background-color:#3b82f6;color:#ffffff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:-0.2px;">Open Weaver →</a>
+            <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">It takes 2 minutes. Your network will thank you.</p>
+          </td>
+        </tr>
+
+        <!-- PRO TIP -->
+        <tr>
+          <td style="padding:0 36px 28px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eff6ff;border-radius:10px;border-left:4px solid #3b82f6;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <div style="font-size:13px;font-weight:700;color:#1a2744;margin-bottom:4px;">Pro tip</div>
+                  <div style="font-size:13px;color:#475569;line-height:1.55;">The best way to strengthen a relationship is to do someone a favor and expect nothing in return. Send a relevant article — it gives you a reason to reach out.</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="padding:24px 36px;background-color:#f8fafc;border-top:1px solid #e2e8f0;">
+            <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;text-align:center;">
+              You're getting this because you enabled follow-up reminders in <a href="${weaverUrl}" style="color:#3b82f6;text-decoration:none;">Weaver</a>.<br>
+              <a href="${weaverUrl}/#strengthening-net" style="color:#3b82f6;text-decoration:none;">Manage reminder settings</a>
+            </p>
+            <p style="margin:16px 0 0;text-align:center;font-size:11px;color:#cbd5e1;">&copy; ${new Date().getFullYear()} Weaver. All rights reserved.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
 }
 
 // Send reminder email to user using Resend
