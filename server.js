@@ -1876,7 +1876,7 @@ app.listen(PORT, async () => {
         console.warn('   See RESEND_SETUP.md for setup instructions.');
     } else {
         console.log('✅ Resend email service configured');
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <noreply@weaver.app>';
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
         console.log(`   Emails will be sent from: ${fromEmail}`);
     }
     
@@ -2228,7 +2228,7 @@ async function sendReminderEmail(userId, userEmail, contacts) {
         const emailBody = generateEmailBody(contacts);
         
         // Get from email (should be verified domain in Resend)
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <noreply@weaver.app>';
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
         const fromName = process.env.RESEND_FROM_NAME || 'Weaver';
         
         // Send email via Resend
