@@ -39,7 +39,6 @@
   <img class="hero-bg-photo" src="assets/hero-network.jpg" alt="">
   <div class="hero-inner">
     <div class="hero-content">
-      <div class="hero-pill"><span class="dot"></span> Built for students</div>
       <h1>Stop letting great connections <em>go cold</em></h1>
       <p class="hero-sub">Weaver is the networking CRM built for students. Track your contacts, get follow-up reminders, log call notes, and turn coffee chats into real career opportunities.</p>
       <div class="hero-actions">
@@ -166,14 +165,14 @@
     for(i=0;i<N;i++){var near=verts.map(function(v,j){return {j:j,d:verts[i].distanceTo(v)};}).filter(function(o){return o.j!==i;}).sort(function(a,b){return a.d-b.d;}).slice(0,3);near.forEach(function(o){var a=verts[i],b=verts[o.j];lp.push(a.x,a.y,a.z,b.x,b.y,b.z);});}
     var lg=new THREE.BufferGeometry(); lg.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));
     group.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0x4a5688,transparent:true,opacity:0.34})));
-    var colors=[0x7c6df0,0x38bfa0,0x3b82f6,0x4a5688,0x8b5cf6];
+    var colors=[0x38bfa0,0x2fa98d,0x3b82f6,0x4a5688,0x5fd0b6];
     var sg=new THREE.SphereGeometry(0.095,18,18);
     verts.forEach(function(v,k){var m=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({color:colors[k%colors.length]}));m.position.copy(v);group.add(m);});
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(R,32,32),new THREE.MeshBasicMaterial({color:0x7c6df0,transparent:true,opacity:0.045})));
-    new THREE.TextureLoader().load('assets/weaver-badge.png',function(tex){tex.minFilter=THREE.LinearFilter;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sp.scale.set(1.8,1.8,1.8);sp.renderOrder=10;group.add(sp);});
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R,32,32),new THREE.MeshBasicMaterial({color:0x38bfa0,transparent:true,opacity:0.045})));
+    new THREE.TextureLoader().load('assets/weaver-badge.png',function(tex){tex.minFilter=THREE.LinearFilter;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sp.scale.set(1.05,1.05,1.05);sp.renderOrder=10;group.add(sp);});
     var pp=[]; for(i=0;i<46;i++)pp.push((Math.random()-0.5)*11,(Math.random()-0.5)*11,(Math.random()-0.5)*8);
     var pg=new THREE.BufferGeometry(); pg.setAttribute('position',new THREE.Float32BufferAttribute(pp,3));
-    var particles=new THREE.Points(pg,new THREE.PointsMaterial({color:0xb8b2e8,size:0.055,transparent:true,opacity:0.65})); scene.add(particles);
+    var particles=new THREE.Points(pg,new THREE.PointsMaterial({color:0x9fdccb,size:0.055,transparent:true,opacity:0.65})); scene.add(particles);
     var clock=new THREE.Clock();
     (function loop(){requestAnimationFrame(loop);var t=clock.getElapsedTime();group.rotation.y+=0.0016;group.rotation.x=Math.sin(t*0.3)*0.16;group.position.y=Math.sin(t*0.6)*0.12;particles.rotation.y=t*0.02;renderer.render(scene,camera);})();
     window.addEventListener('resize',function(){var w2=mount.clientWidth,h2=mount.clientHeight;if(!w2||!h2)return;camera.aspect=w2/h2;camera.updateProjectionMatrix();renderer.setSize(w2,h2);});
