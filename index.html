@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weaver — Networking for Students</title>
+<title>Student Weaver — Networking for Students</title>
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Poppins:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="api.js"></script>
@@ -22,8 +23,8 @@
 
 <nav class="landing-nav">
   <a href="#" class="nav-brand">
-    <img src="/assets/Shutterstock_2736822973.png" alt="Weaver logo" class="brand-logo">
-    <span>Weaver</span>
+    <img src="assets/weaver-badge.png" alt="Student Weaver logo" class="brand-logo">
+    <span>Student Weaver</span>
   </a>
   <div class="landing-nav-right">
     <a href="#features">Features</a>
@@ -35,6 +36,7 @@
 </nav>
 
 <section class="hero">
+  <img class="hero-bg-photo" src="assets/hero-network.jpg" alt="">
   <div class="hero-inner">
     <div class="hero-content">
       <div class="hero-pill"><span class="dot"></span> Built for students</div>
@@ -61,13 +63,7 @@
     </div>
     <div class="hero-visual">
       <div class="network-circle">
-        <div class="net-ring"></div><div class="net-ring"></div><div class="net-ring"></div><div class="net-ring"></div>
-        <div class="net-center">
-          <img src="/assets/Shutterstock_2736822973.png" alt="Weaver logo" class="net-center-logo">
-          <span class="net-center-text">your network</span>
-        </div>
-        <div class="net-node nn-1">SC</div><div class="net-node nn-2">MR</div><div class="net-node nn-3">EP</div>
-        <div class="net-node nn-4">JL</div><div class="net-node nn-5">AK</div><div class="net-node nn-6">DT</div>
+        <div id="net3d"></div>
         <div class="float-card fc-1"><div class="fc-label">Follow-up Due</div><div class="fc-value">Sarah C.</div><div class="fc-sub">Goldman Sachs · 3 days</div></div>
         <div class="float-card fc-2"><div class="fc-label">Network Size</div><div class="fc-value">47</div><div class="fc-sub">across 12 firms</div></div>
         <div class="float-card fc-3"><div class="fc-label">Call Logged</div><div class="fc-value">25 min</div><div class="fc-sub">AI summary ready</div></div>
@@ -76,10 +72,11 @@
   </div>
 </section>
 
-<section class="why-section" id="research">
+<section class="why-section reveal" id="research">
   <div class="why-inner">
     <h2>Networking isn't optional. <em>It's the job.</em></h2>
     <p class="why-sub">The research is clear: how you maintain relationships matters more than how many you have. Weaver helps you do it systematically.</p>
+    <div class="why-photo"><img src="assets/networking-event.jpg" alt="Students networking at an event"></div>
     <div class="research-grid">
       <div class="rg-item"><div class="rg-num">44%</div><div class="rg-unit">Higher Reply Rate</div><div class="rg-desc">Average reply rate jumps from 9% to 13% when you add even one follow-up email</div></div>
       <div class="rg-item"><div class="rg-num">#1</div><div class="rg-unit">Networking Behavior</div><div class="rg-desc">Maintaining contacts had the highest impact on salary growth among all networking behaviors studied</div></div>
@@ -90,11 +87,15 @@
   </div>
 </section>
 
-<section class="features-landing" id="features">
+<section class="features-landing reveal" id="features">
   <div class="section-center">
     <div class="section-tag">Features</div>
     <h2>Everything a spreadsheet can't do</h2>
     <p>You started networking in a Google Sheet. It worked until it didn't. Weaver picks up where spreadsheets break down.</p>
+  </div>
+  <div class="features-photo">
+    <img src="assets/student-laptop.jpg" alt="Student working on a laptop">
+    <div class="features-photo-caption"><strong>Built for the coffee-chat grind.</strong><span>From first cold email to closed referral — one place to keep every relationship warm.</span></div>
   </div>
   <div class="features-grid-landing">
     <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h3>Contact Database</h3><p>Import your spreadsheet or add contacts one by one. Names, firms, positions, call history — all searchable, all sortable.</p></div>
@@ -106,7 +107,7 @@
   </div>
 </section>
 
-<section class="trust">
+<section class="trust reveal">
   <div class="trust-inner">
     <div class="trust-item"><div class="trust-icon">🔒</div><h3>Your Contacts Stay Private</h3><p>Your network data is encrypted and isolated to your account. We never share, sell, or access your contacts.</p></div>
     <div class="trust-item"><div class="trust-icon">🎓</div><h3>Built by Students, for Students</h3><p>We know the IB/consulting networking grind because we've done it. Every feature solves a real problem we had.</p></div>
@@ -114,7 +115,7 @@
   </div>
 </section>
 
-<section class="pricing-landing" id="pricing">
+<section class="pricing-landing reveal" id="pricing">
   <div class="section-center">
     <div class="section-tag">Pricing</div>
     <h2>Simple, student-friendly pricing</h2>
@@ -127,7 +128,7 @@
   </div>
 </section>
 
-<section class="final-cta">
+<section class="final-cta reveal">
   <h2>Your network is your<br>net worth. Start building.</h2>
   <p>Free to start. No credit card. Import your spreadsheet in 2 minutes and never lose a contact again.</p>
   <a href="#" class="btn-primary-landing" onclick="openAuthModal(); return false;">Create Free Account →</a>
@@ -136,7 +137,7 @@
 
 <footer class="landing-footer">
   <div class="footer-inner">
-    <div class="footer-left">&copy; 2026 <strong>Weaver</strong>. Built for students who network.</div>
+    <div class="footer-left">&copy; 2026 <strong>Student Weaver</strong>. Built for students who network.</div>
     <div class="footer-links">
       <a href="/privacy.html">Privacy Policy</a>
       <a href="/terms.html">Terms of Service</a>
@@ -144,6 +145,61 @@
     </div>
   </div>
 </footer>
+
+<script>
+(function(){
+  function boot(){
+    var mount=document.getElementById('net3d');
+    if(!mount) return;
+    if(!window.THREE){ return setTimeout(boot,80); }
+    var THREE=window.THREE;
+    var w=mount.clientWidth||360,h=mount.clientHeight||360;
+    var scene=new THREE.Scene();
+    var camera=new THREE.PerspectiveCamera(45,w/h,0.1,100); camera.position.z=7.2;
+    var renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    renderer.setSize(w,h); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    mount.appendChild(renderer.domElement);
+    var group=new THREE.Group(); scene.add(group);
+    var N=18,R=2.45,verts=[],i;
+    for(i=0;i<N;i++){var y=1-(i/(N-1))*2;var rr=Math.sqrt(Math.max(0,1-y*y));var phi=i*Math.PI*(3-Math.sqrt(5));verts.push(new THREE.Vector3(Math.cos(phi)*rr*R,y*R,Math.sin(phi)*rr*R));}
+    var lp=[];
+    for(i=0;i<N;i++){var near=verts.map(function(v,j){return {j:j,d:verts[i].distanceTo(v)};}).filter(function(o){return o.j!==i;}).sort(function(a,b){return a.d-b.d;}).slice(0,3);near.forEach(function(o){var a=verts[i],b=verts[o.j];lp.push(a.x,a.y,a.z,b.x,b.y,b.z);});}
+    var lg=new THREE.BufferGeometry(); lg.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));
+    group.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0x4a5688,transparent:true,opacity:0.34})));
+    var colors=[0x7c6df0,0x38bfa0,0x3b82f6,0x4a5688,0x8b5cf6];
+    var sg=new THREE.SphereGeometry(0.095,18,18);
+    verts.forEach(function(v,k){var m=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({color:colors[k%colors.length]}));m.position.copy(v);group.add(m);});
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R,32,32),new THREE.MeshBasicMaterial({color:0x7c6df0,transparent:true,opacity:0.045})));
+    new THREE.TextureLoader().load('assets/weaver-badge.png',function(tex){tex.minFilter=THREE.LinearFilter;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sp.scale.set(1.8,1.8,1.8);sp.renderOrder=10;group.add(sp);});
+    var pp=[]; for(i=0;i<46;i++)pp.push((Math.random()-0.5)*11,(Math.random()-0.5)*11,(Math.random()-0.5)*8);
+    var pg=new THREE.BufferGeometry(); pg.setAttribute('position',new THREE.Float32BufferAttribute(pp,3));
+    var particles=new THREE.Points(pg,new THREE.PointsMaterial({color:0xb8b2e8,size:0.055,transparent:true,opacity:0.65})); scene.add(particles);
+    var clock=new THREE.Clock();
+    (function loop(){requestAnimationFrame(loop);var t=clock.getElapsedTime();group.rotation.y+=0.0016;group.rotation.x=Math.sin(t*0.3)*0.16;group.position.y=Math.sin(t*0.6)*0.12;particles.rotation.y=t*0.02;renderer.render(scene,camera);})();
+    window.addEventListener('resize',function(){var w2=mount.clientWidth,h2=mount.clientHeight;if(!w2||!h2)return;camera.aspect=w2/h2;camera.updateProjectionMatrix();renderer.setSize(w2,h2);});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+
+<script>
+(function(){
+  function initReveal(){
+    var els=document.querySelectorAll('#landing-page .reveal');
+    if(!els.length) return;
+    if(!('IntersectionObserver' in window)){els.forEach(function(el){el.classList.add('in');});return;}
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    },{threshold:0,rootMargin:'0px 0px -12% 0px'});
+    els.forEach(function(el){
+      var r=el.getBoundingClientRect();
+      if(r.top < window.innerHeight*0.88){ el.classList.add('in'); }
+      else { io.observe(el); }
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initReveal);else initReveal();
+})();
+</script>
 
 </div><!-- end #landing-page -->
 
@@ -157,8 +213,8 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="app-sidebar">
       <div class="sb-brand">
-        <img src="/assets/Shutterstock_2736822973.png" alt="Weaver logo" class="brand-logo sidebar-logo">
-        <span>Weaver</span>
+        <img src="assets/weaver-badge.png" alt="Student Weaver logo" class="brand-logo sidebar-logo">
+        <span>Student Weaver</span>
       </div>
       <div class="sb-section">
         <div class="sb-label">Main</div>
