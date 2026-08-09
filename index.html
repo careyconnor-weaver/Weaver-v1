@@ -23,7 +23,7 @@
 
 <nav class="landing-nav">
   <a href="#" class="nav-brand">
-    <img src="assets/weaver-badge.png" alt="Student Weaver logo" class="brand-logo">
+    <img src="weaver-badge.png" alt="Student Weaver logo" class="brand-logo">
     <span>Student Weaver</span>
   </a>
   <div class="landing-nav-right">
@@ -36,7 +36,7 @@
 </nav>
 
 <section class="hero">
-  <img class="hero-bg-photo" src="assets/hero-network.jpg" alt="">
+  <img class="hero-bg-photo" src="hero-network.jpg" alt="">
   <div class="hero-inner">
     <div class="hero-content">
       <h1>Stop letting great connections <em>go cold</em></h1>
@@ -75,7 +75,7 @@
   <div class="why-inner">
     <h2>Networking isn't optional. <em>It's the job.</em></h2>
     <p class="why-sub">The research is clear: how you maintain relationships matters more than how many you have. Weaver helps you do it systematically.</p>
-    <div class="why-photo"><img src="assets/networking-event.jpg" alt="Students networking at an event"></div>
+    <div class="why-photo"><img src="networking-event.jpg" alt="Students networking at an event"></div>
     <div class="research-grid">
       <div class="rg-item"><div class="rg-num">44%</div><div class="rg-unit">Higher Reply Rate</div><div class="rg-desc">Average reply rate jumps from 9% to 13% when you add even one follow-up email</div></div>
       <div class="rg-item"><div class="rg-num">#1</div><div class="rg-unit">Networking Behavior</div><div class="rg-desc">Maintaining contacts had the highest impact on salary growth among all networking behaviors studied</div></div>
@@ -93,7 +93,7 @@
     <p>You started networking in a Google Sheet. It worked until it didn't. Weaver picks up where spreadsheets break down.</p>
   </div>
   <div class="features-photo">
-    <img src="assets/student-laptop.jpg" alt="Student working on a laptop">
+    <img src="student-laptop.jpg" alt="Student working on a laptop">
     <div class="features-photo-caption"><strong>Built for the coffee-chat grind.</strong><span>From first cold email to closed referral — one place to keep every relationship warm.</span></div>
   </div>
   <div class="features-grid-landing">
@@ -169,7 +169,7 @@
     var sg=new THREE.SphereGeometry(0.095,18,18);
     verts.forEach(function(v,k){var m=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({color:colors[k%colors.length]}));m.position.copy(v);group.add(m);});
     group.add(new THREE.Mesh(new THREE.SphereGeometry(R,32,32),new THREE.MeshBasicMaterial({color:0x38bfa0,transparent:true,opacity:0.045})));
-    new THREE.TextureLoader().load('assets/weaver-badge.png',function(tex){tex.minFilter=THREE.LinearFilter;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sp.scale.set(1.05,1.05,1.05);sp.renderOrder=10;group.add(sp);});
+    new THREE.TextureLoader().load('weaver-badge.png',function(tex){tex.minFilter=THREE.LinearFilter;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sp.scale.set(1.05,1.05,1.05);sp.renderOrder=10;group.add(sp);});
     var pp=[]; for(i=0;i<46;i++)pp.push((Math.random()-0.5)*11,(Math.random()-0.5)*11,(Math.random()-0.5)*8);
     var pg=new THREE.BufferGeometry(); pg.setAttribute('position',new THREE.Float32BufferAttribute(pp,3));
     var particles=new THREE.Points(pg,new THREE.PointsMaterial({color:0x9fdccb,size:0.055,transparent:true,opacity:0.65})); scene.add(particles);
@@ -212,7 +212,7 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="app-sidebar">
       <div class="sb-brand">
-        <img src="assets/weaver-badge.png" alt="Student Weaver logo" class="brand-logo sidebar-logo">
+        <img src="weaver-badge.png" alt="Student Weaver logo" class="brand-logo sidebar-logo">
         <span>Student Weaver</span>
       </div>
       <div class="sb-section">
