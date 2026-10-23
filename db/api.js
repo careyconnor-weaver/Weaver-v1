@@ -1,6 +1,6 @@
 const { db } = require('./index');
-const { users, contacts, emails, notes, gmailTokens, assistantSettings, userSettings } = require('./schema');
-const { eq, and, desc } = require('drizzle-orm');
+const { users, contacts, emails, notes, gmailTokens, assistantSettings, userSettings, organizations, orgMembers, orgInvites } = require('./schema');
+const { eq, and, desc, inArray } = require('drizzle-orm');
 
 // Check if db is available
 if (!db) {
@@ -39,6 +39,153 @@ async function getUserById(userId) {
         }
         throw error;
     }
+}
+
+// Set a user's account type (onboarding choice: 'student' | 'org')
+async function setUserAccountType(userId, accountType) {
+    const result = await db.update(users)
+        .set({ accountType, onboardedAt: new Date() })
+        .where(eq(users.id, String(userId)))
+        .returning();
+    return result[0] || null;
+}
+
+// ============ CLUB / ORGANIZATION ============
+
+function generateJoinCode() {
+    // Human-friendly, unambiguous code (no 0/O/1/I), e.g. "WVR-7K4PQX"
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return `WVR-${code}`;
+}
+
+async function createOrganization({ id, name, ownerId, school }) {
+    if (!db) throw new Error('Database not initialized');
+    // Ensure a unique join code
+    let joinCode = generateJoinCode();
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const clash = await db.select().from(organizations).where(eq(organizations.joinCode, joinCode)).limit(1);
+        if (clash.length === 0) break;
+        joinCode = generateJoinCode();
+    }
+
+    const result = await db.insert(organizations).values({
+        id,
+        name,
+        joinCode,
+        ownerId: String(ownerId),
+        school: school || null,
+    }).returning();
+    const org = result[0];
+
+    // Owner is automatically the first member (owner role)
+    await addOrgMember({ orgId: org.id, userId: ownerId, role: 'owner' });
+    return org;
+}
+
+async function getOrganizationById(orgId) {
+    const result = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+    return result[0] || null;
+}
+
+async function getOrganizationByJoinCode(joinCode) {
+    const code = String(joinCode || '').trim().toUpperCase();
+    const result = await db.select().from(organizations).where(eq(organizations.joinCode, code)).limit(1);
+    return result[0] || null;
+}
+
+async function addOrgMember({ orgId, userId, role, displayName }) {
+    // Idempotent: don't create a duplicate membership
+    const existing = await db.select().from(orgMembers)
+        .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, String(userId))))
+        .limit(1);
+    if (existing.length > 0) return existing[0];
+
+    const result = await db.insert(orgMembers).values({
+        id: `${orgId}_${userId}`,
+        orgId,
+        userId: String(userId),
+        role: role || 'member',
+        displayName: displayName || null,
+    }).returning();
+    return result[0];
+}
+
+// All orgs a user belongs to, with their role in each
+async function getOrgsForUser(userId) {
+    const rows = await db.select()
+        .from(orgMembers)
+        .innerJoin(organizations, eq(orgMembers.orgId, organizations.id))
+        .where(eq(orgMembers.userId, String(userId)));
+    return rows.map(r => ({ ...r.organizations, role: r.org_members.role, joinedAt: r.org_members.joinedAt }));
+}
+
+// Compute networking activity for a single user.
+// "Networking calls" = logged call notes; "outreach" = sent emails; plus replies + contacts.
+async function getUserNetworkingStats(userId) {
+    const userContacts = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.userId, String(userId)));
+    const contactIds = userContacts.map(c => c.id);
+
+    let calls = 0, emailsSent = 0, emailsReceived = 0;
+    if (contactIds.length > 0) {
+        const contactEmails = await db.select().from(emails).where(inArray(emails.contactId, contactIds));
+        const contactNotes = await db.select().from(notes).where(inArray(notes.contactId, contactIds));
+        calls = contactNotes.length;
+        emailsSent = contactEmails.filter(e => e.direction === 'sent').length;
+        emailsReceived = contactEmails.filter(e => e.direction === 'received').length;
+    }
+
+    const contactsCount = contactIds.length;
+    const responseRate = emailsSent > 0 ? Math.round((emailsReceived / emailsSent) * 100) : 0;
+    // Composite activity score drives the leaderboard: a call is worth more than an email touch.
+    const activityScore = (calls * 3) + emailsSent + (emailsReceived * 2) + contactsCount;
+
+    return { userId: String(userId), contactsCount, calls, emailsSent, emailsReceived, responseRate, activityScore };
+}
+
+// Roster with per-member networking stats, sorted for the leaderboard (most active first).
+async function getOrgRosterWithStats(orgId) {
+    const members = await db.select()
+        .from(orgMembers)
+        .innerJoin(users, eq(orgMembers.userId, users.id))
+        .where(eq(orgMembers.orgId, orgId));
+
+    const roster = await Promise.all(members.map(async (row) => {
+        const m = row.org_members;
+        const u = row.users;
+        const settings = await getUserSettingsById(u.id).catch(() => null);
+        const stats = await getUserNetworkingStats(u.id);
+        const name = (m.displayName
+            || [settings?.firstName, settings?.lastName].filter(Boolean).join(' ').trim()
+            || (u.email || '').split('@')[0]);
+        return {
+            userId: u.id,
+            email: u.email,
+            name,
+            role: m.role,
+            joinedAt: m.joinedAt,
+            ...stats,
+        };
+    }));
+
+    roster.sort((a, b) => b.activityScore - a.activityScore);
+    roster.forEach((member, i) => { member.rank = i + 1; });
+    return roster;
+}
+
+async function createOrgInvite({ id, orgId, email, invitedBy }) {
+    const result = await db.insert(orgInvites).values({
+        id,
+        orgId,
+        email: String(email).trim().toLowerCase(),
+        invitedBy: invitedBy ? String(invitedBy) : null,
+    }).returning();
+    return result[0];
+}
+
+async function getOrgInvites(orgId) {
+    return await db.select().from(orgInvites).where(eq(orgInvites.orgId, orgId)).orderBy(desc(orgInvites.createdAt));
 }
 
 // ============ CONTACTS ============
@@ -534,5 +681,19 @@ module.exports = {
     updateUserStripeCustomerId,
     updateUserSubscription,
     cancelUserSubscription,
+
+    // Account type / onboarding
+    setUserAccountType,
+
+    // Club / Organization
+    createOrganization,
+    getOrganizationById,
+    getOrganizationByJoinCode,
+    addOrgMember,
+    getOrgsForUser,
+    getUserNetworkingStats,
+    getOrgRosterWithStats,
+    createOrgInvite,
+    getOrgInvites,
 };
 
