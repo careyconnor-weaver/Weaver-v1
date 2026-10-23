@@ -26,6 +26,12 @@ const organizations = pgTable('organizations', {
     joinCode: varchar('join_code', { length: 20 }).notNull().unique(), // shareable code students enter to join
     ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     school: varchar('school', { length: 255 }),
+    // B2B billing: clubs pay per active member per month
+    planStatus: text('plan_status').default('none'), // none | active | trialing | past_due | canceled
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    billingEmail: varchar('billing_email', { length: 255 }),
+    lastBilledSeats: integer('last_billed_seats'),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 

@@ -8,7 +8,9 @@
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Poppins:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app-theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
@@ -27,11 +29,11 @@
     <span>Student Weaver</span>
   </a>
   <div class="landing-nav-right">
-    <a href="#features">Features</a>
-    <a href="#research">Why Network</a>
+    <a href="#features">Product</a>
+    <a href="#clubs">For clubs</a>
     <a href="#pricing">Pricing</a>
-    <a href="#" class="nav-login" onclick="openAuthModal('login'); return false;">Log In</a>
-    <a href="#" class="nav-cta" onclick="openAuthModal(); return false;">Get Started Free</a>
+    <a href="#" class="nav-login" onclick="openAuthModal('login'); return false;">Log in</a>
+    <a href="#" class="nav-cta" onclick="openAuthModal('signup'); return false;">Get started</a>
   </div>
 </nav>
 
@@ -39,24 +41,24 @@
   <img class="hero-bg-photo" src="hero-network.jpg" alt="">
   <div class="hero-inner">
     <div class="hero-content">
-      <h1>Stop letting great connections <em>go cold</em></h1>
-      <p class="hero-sub">Weaver is the networking CRM built for students. Track your contacts, get follow-up reminders, log call notes, and turn coffee chats into real career opportunities.</p>
+      <h1>The recruiting workspace for student clubs and career centers</h1>
+      <p class="hero-sub">Every member gets an AI assistant that logs coffee chats, plans follow-ups and drafts outreach from their own network. Club leaders see who is networking and who has stalled. You only pay for members who actually use it.</p>
       <div class="hero-actions">
-        <a href="#" class="btn-primary-landing" onclick="openAuthModal(); return false;">Start Free →</a>
-        <a href="#features" class="btn-ghost">See features ↓</a>
+        <a href="#" class="btn-primary-landing" onclick="openAuthModal('signup'); return false;">Start your club</a>
+        <a href="#" class="btn-ghost" onclick="openAuthModal('signup'); return false;">I'm a student</a>
       </div>
       <div class="hero-assurance">
         <div class="assurance-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Free to start, no credit card
+          Free for students to start
         </div>
         <div class="assurance-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export your data anytime
+          Billed per active member
         </div>
         <div class="assurance-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Gmail integration
+          Export your data anytime
         </div>
       </div>
     </div>
@@ -64,8 +66,8 @@
       <div class="network-circle">
         <div id="net3d"></div>
         <div class="float-card fc-1"><div class="fc-label">Follow-up Due</div><div class="fc-value">Sarah C.</div><div class="fc-sub">Goldman Sachs · 3 days</div></div>
-        <div class="float-card fc-2"><div class="fc-label">Network Size</div><div class="fc-value">47</div><div class="fc-sub">across 12 firms</div></div>
-        <div class="float-card fc-3"><div class="fc-label">Call Logged</div><div class="fc-value">25 min</div><div class="fc-sub">AI summary ready</div></div>
+        <div class="float-card fc-2"><div class="fc-label">Club activity</div><div class="fc-value">38 of 52</div><div class="fc-sub">members active this month</div></div>
+        <div class="float-card fc-3"><div class="fc-label">Assistant</div><div class="fc-value">3 drafts ready</div><div class="fc-sub">from this week&#39;s follow-ups</div></div>
       </div>
     </div>
   </div>
@@ -89,20 +91,51 @@
 <section class="features-landing reveal" id="features">
   <div class="section-center">
     <div class="section-tag">Features</div>
-    <h2>Everything a spreadsheet can't do</h2>
-    <p>You started networking in a Google Sheet. It worked until it didn't. Weaver picks up where spreadsheets break down.</p>
+    <h2>An assistant that does the busywork of networking</h2>
+    <p>Students describe what happened in plain words. Weaver files it to the right contact, reminds them when it's time, and drafts what to send next.</p>
   </div>
   <div class="features-photo">
     <img src="student-laptop.jpg" alt="Student working on a laptop">
     <div class="features-photo-caption"><strong>Built for the coffee-chat grind.</strong><span>From first cold email to closed referral — one place to keep every relationship warm.</span></div>
   </div>
   <div class="features-grid-landing">
-    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h3>Contact Database</h3><p>Import your spreadsheet or add contacts one by one. Names, firms, positions, call history — all searchable, all sortable.</p></div>
-    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>AI Call Notes</h3><p>Upload a photo of your handwritten notes or type them in. AI summarizes key takeaways and logs them to the right contact.</p></div>
+    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h3>Weaver Assistant</h3><p>Ask in plain words: who to follow up with, who you know at Evercore, how your month went. It answers from your own network and drafts the emails.</p></div>
+    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Log by describing it</h3><p>&ldquo;Coffee chat with Priya at Evercore, she'll refer me.&rdquo; The assistant creates or updates the contact and files the note. Photos of handwritten notes work too.</p></div>
     <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg></div><h3>Smart Reminders</h3><p>Never ghost a contact. Set follow-up intervals for cold vs. warm contacts and get email reminders when it's time to reach out.</p></div>
-    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><h3>Gmail Sync</h3><p>Connect Gmail, label threads "Weaver," and email timelines sync automatically. No manual logging.</p></div>
-    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h3>Article Suggestions</h3><p>Get 3 relevant articles per contact based on their industry, role, and your call notes — perfect for a reason to follow up.</p></div>
+    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><h3>Club insights</h3><p>A live roster and leaderboard of calls logged, outreach sent and replies earned. Ask for a weekly club report or a list of who needs a nudge.</p></div>
+    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h3>Contact database</h3><p>Import a spreadsheet or add contacts one by one. Names, firms, positions and call history, all searchable and sortable.</p></div>
     <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><h3>Export to Excel</h3><p>Your data is yours. Export everything to a clean spreadsheet anytime. No lock-in, no hostage situations.</p></div>
+  </div>
+</section>
+
+<section class="b2b reveal" id="clubs">
+  <div class="b2b-inner">
+    <h2>Built for the people who run recruiting</h2>
+    <p class="b2b-lede">One workspace for your members, with the visibility leaders need and billing that only counts people who show up.</p>
+    <div class="b2b-cols">
+      <div class="b2b-col">
+        <h3>Student clubs</h3>
+        <p>Finance, consulting and tech clubs running a recruiting season together.</p>
+        <ul>
+          <li>Members join with a club code and get Pro on the club's plan</li>
+          <li>Leaderboard of calls, outreach and replies, so members see where they stand</li>
+          <li>Ask the assistant for a weekly club report or who has gone quiet</li>
+          <li>Billed only for members active in the last 30 days</li>
+        </ul>
+        <a href="#" class="b2b-link" onclick="openAuthModal('signup'); return false;">Start your club</a>
+      </div>
+      <div class="b2b-col">
+        <h3>University career centers</h3>
+        <p>Advisors supporting every student and club on campus.</p>
+        <ul>
+          <li>Give every student the assistant and a structured network from day one</li>
+          <li>See which clubs and students are networking, and who needs outreach</li>
+          <li>Volume pricing on the same per-active-student model</li>
+          <li>Onboarding help for your clubs and advisors</li>
+        </ul>
+        <a href="mailto:info@studentweaver.com?subject=Weaver%20for%20our%20career%20center" class="b2b-link">Talk to us about your campus</a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -117,21 +150,38 @@
 <section class="pricing-landing reveal" id="pricing">
   <div class="section-center">
     <div class="section-tag">Pricing</div>
-    <h2>Simple, student-friendly pricing</h2>
-    <p>Start free. Upgrade when your network outgrows 20 contacts.</p>
+    <h2>Pay for members who network</h2>
+    <p>Clubs and career centers are billed only for members active in the last 30 days. Students can also start free on their own.</p>
   </div>
+  <div class="pricing-grid-landing b2b-price-grid">
+    <div class="price-card featured"><div class="price-name">Club plan</div><div class="price-desc">For student clubs</div><div class="price-amount" id="club-seat-price">Per active member<span class="price-period"> / month</span></div><ul class="price-features"><li>Everyone on the roster gets Pro</li><li>Billed only for members active in the last 30 days</li><li>Assistant with club reports</li><li>Roster, invite codes and leaderboard</li><li>Manage or cancel anytime</li></ul><button class="price-btn price-btn-fill" onclick="openAuthModal('signup')">Start your club</button></div>
+    <div class="price-card"><div class="price-name">Career center</div><div class="price-desc">For your whole campus</div><div class="price-amount">Custom</div><ul class="price-features"><li>Every student and club at your school</li><li>Advisor view across clubs</li><li>Volume per-active-student pricing</li><li>Onboarding for clubs and advisors</li><li>Priority support</li></ul><a class="price-btn price-btn-outline" href="mailto:info@studentweaver.com?subject=Weaver%20for%20our%20career%20center">Talk to us</a></div>
+  </div>
+  <h3 class="pricing-sub">For individual students</h3>
   <div class="pricing-grid-landing">
-    <div class="price-card"><div class="price-name">Free</div><div class="price-desc">Get started</div><div class="price-amount">$0<span class="price-period"> /mo</span></div><ul class="price-features"><li>Up to 20 contacts</li><li>Contact database</li><li>Spreadsheet import</li><li>5 call notes/month</li><li class="off">AI summarization</li><li class="off">Email reminders</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal()">Start Free</button></div>
-    <div class="price-card featured"><div class="price-popular">Popular</div><div class="price-name">Pro</div><div class="price-desc">Everything you need</div><div class="price-amount">$5<span class="price-period"> /mo</span></div><ul class="price-features"><li>Unlimited contacts</li><li>AI call note summaries</li><li>Email reminders</li><li>Article suggestions</li><li>Gmail sync</li><li>Priority support</li></ul><button class="price-btn price-btn-fill" onclick="openAuthModal()">Get Pro →</button></div>
-    <div class="price-card"><div class="price-name">Pro Yearly</div><div class="price-desc">Save 17%</div><div class="price-amount">$50<span class="price-period"> /yr</span></div><ul class="price-features"><li>All Pro features</li><li>$4.17/month effective</li><li>Annual savings</li><li>Priority updates</li><li>&nbsp;</li><li>&nbsp;</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal()">Get Yearly</button></div>
+    <div class="price-card"><div class="price-name">Free</div><div class="price-desc">Get started</div><div class="price-amount">$0<span class="price-period"> /mo</span></div><ul class="price-features"><li>Up to 20 contacts</li><li>Contact database</li><li>Spreadsheet import</li><li>Assistant, 30 requests a day</li><li class="off">Unlimited contacts</li><li class="off">Email reminders</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal('signup')">Start free</button></div>
+    <div class="price-card"><div class="price-name">Pro</div><div class="price-desc">Everything you need</div><div class="price-amount">$5<span class="price-period"> /mo</span></div><ul class="price-features"><li>Unlimited contacts</li><li>Unlimited assistant requests</li><li>AI call note summaries</li><li>Email reminders</li><li>Article suggestions</li><li>Priority support</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal('signup')">Get Pro</button></div>
+    <div class="price-card"><div class="price-name">Pro yearly</div><div class="price-desc">Save 17%</div><div class="price-amount">$50<span class="price-period"> /yr</span></div><ul class="price-features"><li>All Pro features</li><li>$4.17/month effective</li><li>Annual savings</li><li>Priority updates</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal('signup')">Get yearly</button></div>
   </div>
+  <script>
+  (function () {
+    try {
+      fetch('/api/stripe/pricing').then(function (r) { return r.json(); }).then(function (p) {
+        if (!p || !p.clubSeat) return;
+        var el = document.getElementById('club-seat-price');
+        var amt = new Intl.NumberFormat(undefined, { style: 'currency', currency: String(p.clubSeat.currency || 'usd').toUpperCase(), maximumFractionDigits: p.clubSeat.amount % 100 ? 2 : 0 }).format(p.clubSeat.amount / 100);
+        if (el) el.innerHTML = amt + '<span class="price-period"> / active member / ' + (p.clubSeat.interval || 'month') + '</span>';
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
 </section>
 
 <section class="final-cta reveal">
-  <h2>Your network is your<br>net worth. Start building.</h2>
-  <p>Free to start. No credit card. Import your spreadsheet in 2 minutes and never lose a contact again.</p>
-  <a href="#" class="btn-primary-landing" onclick="openAuthModal(); return false;">Create Free Account →</a>
-  <div class="cta-note">20 contacts free · Pro from $5/mo · Cancel anytime</div>
+  <h2>Run this recruiting season<br>from one workspace</h2>
+  <p>Set up your club in two minutes and share the code with members, or sign up on your own. No credit card to start.</p>
+  <a href="#" class="btn-primary-landing" onclick="openAuthModal('signup'); return false;">Get started</a>
+  <div class="cta-note">Students free to start. Clubs billed per active member.</div>
 </section>
 
 <footer class="landing-footer">
@@ -213,46 +263,64 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="app-sidebar">
       <div class="sb-brand">
-        <img src="weaver-badge.png" alt="Student Weaver logo" class="brand-logo sidebar-logo">
-        <span>Student Weaver</span>
+        <img src="weaver-badge.png" alt="" class="brand-logo sidebar-logo">
+        <span>Weaver</span>
       </div>
+      <button type="button" class="wv-newchat" onclick="window.wvNewChat && window.wvNewChat()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
       <div class="sb-section">
-        <div class="sb-label">Main</div>
-        <a class="sb-item nav-link active" href="#dashboard">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <a class="sb-item nav-link active" href="#assistant" onclick="window.wvShowHome && setTimeout(window.wvShowHome,0);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8L19 20.6l-.8-2-2-.8 2-.8z"/></svg>
+          Assistant
+        </a>
+        <div class="wv-threads" id="wv-threads"></div>
+        <a class="sb-item nav-link" href="#dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           Dashboard
         </a>
         <a class="sb-item nav-link" href="#contacts">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          My Network
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          My network
         </a>
         <a class="sb-item nav-link" href="#upload-notes">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Contacts
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add contacts
         </a>
         <a class="sb-item nav-link" href="#strengthening-net">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
           Follow-ups
         </a>
         <a class="sb-item nav-link" href="#club" id="nav-club" onclick="if(window.renderClubView) setTimeout(window.renderClubView,0);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M12 2v4"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>
           Club
         </a>
-        <a class="sb-item nav-link" href="#tips-tricks">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          Tips &amp; Tricks
-        </a>
       </div>
-      <div class="sb-section">
-        <div class="sb-label">Tools</div>
+      <div class="sb-section wv-sb-secondary">
+        <a class="sb-item nav-link" href="#library" onclick="window.wvRenderLibrary && setTimeout(window.wvRenderLibrary,0);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Library
+        </a>
+        <a class="sb-item nav-link" href="#tips-tricks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+          Playbook
+        </a>
         <a class="sb-item" href="#" onclick="document.getElementById('export-excel').click(); return false;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </a>
         <a class="sb-item nav-link" href="#settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </a>
+      </div>
+      <div class="wv-workspace" id="wv-workspace" onclick="var l=document.querySelector('.nav-link[href=&quot;#club&quot;]'); if(l) l.click();" title="Open your club">
+        <div class="wv-ws-mark" id="wv-ws-mark">W</div>
+        <div class="wv-ws-text">
+          <div class="wv-ws-name" id="wv-ws-name">Personal workspace</div>
+          <div class="wv-ws-sub" id="wv-ws-sub">Join a club to share a workspace</div>
+        </div>
       </div>
       <div class="sb-bottom">
         <div id="profile-btn" class="sb-user" onclick="toggleProfileMenu()" style="cursor:pointer;">
@@ -271,8 +339,66 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
 
+      <!-- ═══ ASSISTANT (home) ═══ -->
+      <section id="assistant" class="section active">
+        <div class="wv-assist" id="wv-assist">
+
+          <!-- Empty state: greeting + composer + workflows -->
+          <div class="wv-home" id="wv-home">
+            <h1 class="wv-greeting" id="wv-greeting">What should we work on?</h1>
+            <p class="wv-home-sub" id="wv-home-sub">Ask about your network, log a conversation in plain words, or plan this week's outreach.</p>
+          </div>
+
+          <!-- Conversation thread -->
+          <div class="wv-thread" id="wv-thread" aria-live="polite"></div>
+
+          <!-- Composer -->
+          <form class="wv-composer" id="wv-composer" onsubmit="event.preventDefault(); window.wvSend && window.wvSend();">
+            <label for="wv-input" class="wv-sr">Message the Weaver assistant</label>
+            <textarea id="wv-input" rows="3" placeholder="e.g. Had coffee with Sarah Chen at Goldman today — she'll intro me to her VP. Log it and draft a thank-you."></textarea>
+            <div class="wv-composer-bar">
+              <div class="wv-tools">
+                <button type="button" class="wv-tool" onclick="document.getElementById('wv-notes-file').click()" title="Attach a photo of handwritten call notes">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  Notes photo
+                </button>
+                <input type="file" id="wv-notes-file" accept="image/*" hidden onchange="window.wvAttachNotes && window.wvAttachNotes(this)">
+                <button type="button" class="wv-tool" onclick="window.wvToggleSources && window.wvToggleSources()" aria-expanded="true" id="wv-sources-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+                  Sources
+                </button>
+                <button type="button" class="wv-tool" id="wv-improve-btn" onclick="window.wvImprove && window.wvImprove()" title="Rewrite your request so it's specific">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M12.2 6.2L11 5M3 21l9-9"/></svg>
+                  Improve
+                </button>
+              </div>
+              <button type="submit" class="wv-send" id="wv-send" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              </button>
+            </div>
+          </form>
+
+          <!-- Active sources -->
+          <div class="wv-sources" id="wv-sources" role="group" aria-label="Sources the assistant can use"></div>
+
+          <!-- Workflows (shown on empty state) -->
+          <div class="wv-workflows" id="wv-workflows"></div>
+        </div>
+      </section>
+
+      <!-- ═══ LIBRARY (saved workflows) ═══ -->
+      <section id="library" class="section">
+        <div class="top-bar">
+          <div>
+            <h1>Library</h1>
+            <p style="margin:4px 0 0;font-size:14px;color:var(--slate);">Ready-made requests for recruiting season. Pick one to start a chat, or save your own.</p>
+          </div>
+        </div>
+        <div id="wv-library" class="wv-library"></div>
+      </section>
+
       <!-- ═══ DASHBOARD ═══ -->
-      <section id="dashboard" class="section active">
+      <section id="dashboard" class="section">
         <div class="top-bar">
           <div>
             <h1>Dashboard</h1>
@@ -391,28 +517,6 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Contact
             </button>
-          </div>
-        </div>
-
-        <div class="gmail-connection-dropdown" style="margin:0 0 1.5rem;">
-          <button class="gmail-dropdown-header" onclick="toggleGmailInstructions()" style="width:100%;padding:10px 16px;background:white;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--navy);font-family:var(--font);">
-            <span>📧 Want to connect your Gmail account?</span>
-            <span class="gmail-dropdown-icon" style="transition:transform 0.3s;">+</span>
-          </button>
-          <div class="gmail-dropdown-content" id="gmail-instructions-content" style="display:none;padding:16px;background:var(--off-white);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);">
-            <h3 style="margin:0 0 12px;color:var(--blue);font-size:15px;">Step-by-Step Gmail Connection Guide</h3>
-            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
-              <strong>1.</strong> Click your profile in the sidebar, then <strong>"Connect Gmail"</strong>. Follow the prompts to authorize Weaver.
-            </div>
-            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
-              <strong>2.</strong> In Gmail, create a new label called <strong>"Weaver"</strong> (case-sensitive).
-            </div>
-            <div style="margin-bottom:10px;padding:10px;background:white;border-radius:6px;border-left:3px solid var(--blue);font-size:13px;color:var(--navy);line-height:1.6;">
-              <strong>3.</strong> Apply the <strong>"Weaver"</strong> label to email threads you want to sync.
-            </div>
-            <div style="padding:10px;background:white;border-radius:6px;border-left:3px solid var(--green);font-size:13px;color:var(--navy);line-height:1.6;">
-              <strong>4.</strong> Click <strong>"Gmail Sync"</strong> in the sidebar. You can sync as often as you want!
-            </div>
           </div>
         </div>
 
@@ -708,9 +812,9 @@
 
   <!-- Mobile Bottom Tab Bar -->
   <nav class="mobile-tab-bar" id="mobile-tab-bar">
-    <a class="mobile-tab active" href="#dashboard" data-section="dashboard">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span>Dashboard</span>
+    <a class="mobile-tab active" href="#assistant" data-section="assistant">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8L19 20.6l-.8-2-2-.8 2-.8z"/></svg>
+      <span>Assistant</span>
     </a>
     <a class="mobile-tab" href="#contacts" data-section="contacts">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -729,6 +833,14 @@
       <span>More</span>
     </button>
     <div class="mobile-more-menu" id="mobile-more-menu">
+      <a class="mobile-more-item" href="#dashboard" data-section="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="mobile-more-item" href="#library" data-section="library" onclick="window.wvRenderLibrary && setTimeout(window.wvRenderLibrary,0);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Library
+      </a>
       <a class="mobile-more-item" href="#tips-tricks" data-section="tips-tricks">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Tips &amp; Tricks
@@ -1032,5 +1144,6 @@
 </script>
 
 <script src="script.js"></script>
+<script src="assistant.js"></script>
 </body>
 </html>

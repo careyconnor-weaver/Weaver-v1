@@ -1380,16 +1380,9 @@ app.post('/api/users/login', async (req, res) => {
         const storedPassword = cleanPassword(user.password || '');
         const providedPassword = password;
         
-        console.log('DEBUG - Login attempt:');
-        console.log('Email:', email);
-        console.log('Provided password:', JSON.stringify(providedPassword));
-        console.log('Stored password:', JSON.stringify(storedPassword));
-        console.log('Passwords match:', storedPassword === providedPassword);
-        
+        // (Removed debug logging that wrote users' plaintext passwords to the server logs.)
         if (storedPassword !== providedPassword) {
             console.log(`Login attempt: Password mismatch for email: ${email}`);
-            console.log(`Stored password (first 3 chars): ${storedPassword.substring(0, 3)}...`);
-            console.log(`Provided password (first 3 chars): ${providedPassword.substring(0, 3)}...`);
             return res.status(401).json({ error: 'Invalid email or password' });
         }
         
@@ -1399,6 +1392,8 @@ app.post('/api/users/login', async (req, res) => {
         let userToReturn = user;
         if (stripe && user.email) {
             try {
+              // Cap the Stripe refresh so a slow Stripe API can never stall login.
+              await Promise.race([ (async () => {
                 const customers = await stripe.customers.list({ email: user.email.trim(), limit: 10 });
                 for (const customer of customers.data || []) {
                     const subs = await stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 10 });
@@ -1411,14 +1406,18 @@ app.post('/api/users/login', async (req, res) => {
                         break;
                     }
                 }
+              })(), new Promise(resolve => setTimeout(resolve, 3000)) ]);
             } catch (err) {
                 console.error('Login: refresh subscription by email failed:', err.message);
             }
         }
-        
-        // Return full user data (excluding password)
+
+        // Return full user data (excluding password). clubCovered = a club on an active
+        // plan covers this member's seat, so they get Pro features without paying.
         const { password: _, ...userWithoutPassword } = userToReturn;
-        res.json({ success: true, user: userWithoutPassword });
+        let clubCovered = false;
+        try { clubCovered = await dbAPI.userHasClubCoverage(user.id); } catch (e) { /* org tables may not exist yet */ }
+        res.json({ success: true, user: { ...userWithoutPassword, clubCovered } });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Failed to login' });
@@ -1536,7 +1535,8 @@ app.post('/api/contacts/sync', async (req, res) => {
             return res.status(400).json({ error: 'userId and contacts array are required' });
         }
         const user = await dbAPI.getUserById(userId);
-        const isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
+        let isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
+        if (!isPaid) { try { isPaid = await dbAPI.userHasClubCoverage(userId); } catch (e) { /* ignore */ } }
         if (!isPaid && contacts.length > FREE_PLAN_CONTACT_LIMIT) {
             return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to sync more.` });
         }
@@ -1784,6 +1784,37 @@ cron.schedule('*/5 * * * *', () => {
 
 console.log('📅 Email reminder cron job scheduled (runs every 5 minutes)');
 
+// ============ CLUB SEAT SYNC (per-active-member billing) ============
+// Daily: set each paying club's seat quantity to its members active in the trailing
+// 30 days. No proration — the renewal invoice simply bills the current active count,
+// so clubs pay only for members who actually networked.
+async function syncClubSeats() {
+    if (!stripe || !process.env.DATABASE_URL) return;
+    let orgs = [];
+    try { orgs = await dbAPI.getOrgsWithActivePlans(); } catch (e) { console.warn('Seat sync: could not list orgs:', e.message); return; }
+    const since = new Date(Date.now() - 30 * 86400000);
+    for (const org of orgs) {
+        if (!org.stripeSubscriptionId) continue;
+        try {
+            const { active } = await dbAPI.getOrgActiveMemberCount(org.id, since);
+            const seats = Math.max(1, active);
+            const sub = await stripe.subscriptions.retrieve(org.stripeSubscriptionId);
+            const item = sub.items?.data?.[0];
+            if (item && item.quantity !== seats) {
+                await stripe.subscriptionItems.update(item.id, { quantity: seats, proration_behavior: 'none' });
+                console.log(`Seat sync: ${org.name} ${item.quantity} -> ${seats} active seats`);
+            }
+            await dbAPI.setOrgBilling(org.id, { lastBilledSeats: seats });
+        } catch (e) {
+            console.error(`Seat sync failed for org ${org.id}:`, e.message);
+        }
+    }
+}
+cron.schedule('15 3 * * *', () => { syncClubSeats(); });
+// Also sync shortly after every start (idempotent) so a sleeping instance never skips a day entirely.
+setTimeout(() => { syncClubSeats(); }, 2 * 60 * 1000);
+console.log('📅 Club seat sync scheduled (daily 03:15 + 2 min after startup)');
+
 // Check and migrate database schema on startup
 async function checkAndMigrateDatabase() {
     if (!process.env.DATABASE_URL || !pool) {
@@ -1828,6 +1859,19 @@ async function checkAndMigrateDatabase() {
                 console.log('✅ Database schema is up to date');
             }
 
+            // user_settings (name/photo) — previously only created by `npm run migrate`,
+            // so a fresh deploy failed to save profile settings.
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS user_settings (
+                    user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                    first_name varchar(100),
+                    last_name varchar(100),
+                    profile_photo text,
+                    created_at timestamp NOT NULL DEFAULT now(),
+                    updated_at timestamp NOT NULL DEFAULT now()
+                )
+            `);
+
             // --- Club / Organization (enterprise) schema ---
             // Add account_type / onboarded_at columns to users (idempotent)
             await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type text`);
@@ -1854,6 +1898,12 @@ async function checkAndMigrateDatabase() {
                     joined_at timestamp DEFAULT now() NOT NULL
                 )
             `);
+            // B2B billing columns (per active member)
+            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan_status text DEFAULT 'none'`);
+            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_customer_id text`);
+            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_subscription_id text`);
+            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS billing_email varchar(255)`);
+            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS last_billed_seats integer`);
             await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS org_members_org_user_idx ON org_members (org_id, user_id)`);
             await client.query(`
                 CREATE TABLE IF NOT EXISTS org_invites (
@@ -2433,6 +2483,204 @@ app.post('/api/users/settings', async (req, res) => {
     }
 });
 
+// ============ WEAVER AGENT (AI-native assistant) ============
+// The client sends a compact snapshot of the user's network (it is the source of
+// truth for contacts); the server adds club data, asks the model for a grounded
+// reply + structured actions, validates them, and returns them for the client to
+// apply (with undo). The server never writes contacts directly, so local and
+// server state cannot diverge.
+
+const ASSISTANT_MODEL = process.env.OPENAI_ASSISTANT_MODEL || 'gpt-4o';
+
+// Weaver's recruiting playbook — grounding for the "Playbook" source.
+const WEAVER_PLAYBOOK = [
+    'Cold outreach: 4-6 sentences. Who you are (school, year, interest), a specific reason you chose them (shared school, group, deal, article), one ask: a 15-20 minute call. No attachments on first touch.',
+    'Follow up on unanswered cold emails after 5-7 business days, once, briefly. After two unanswered touches, move on for a few months.',
+    'Send a thank-you within 24 hours of every call: reference one specific thing they said and any next step they offered.',
+    'Keep warm contacts warm: a short update every 6-12 weeks (a class, an offer, an article relevant to their group). Never only reach out when you need something.',
+    'Referrals come from relationships: after 2+ good conversations it is appropriate to ask whether they would be comfortable referring you or passing your resume along.',
+    'Prioritize: VIPs and people at target firms first, then warm contacts going cold, then new outreach.',
+    'Coffee chat prep: know their background, the group, 2-3 recent deals/news items, and have 3 thoughtful questions. End by asking who else they suggest you speak with.',
+    'Recruiting timelines move early for banking and consulting — networking should be well underway the year before applications open.',
+].join('\n');
+const ASSISTANT_FREE_DAILY_LIMIT = parseInt(process.env.ASSISTANT_FREE_DAILY_LIMIT || '30', 10);
+const assistantUsage = new Map(); // userId -> { day, count }
+
+function assistantRateLimited(userId, isPaid) {
+    if (isPaid) return false;
+    const day = new Date().toISOString().slice(0, 10);
+    const u = assistantUsage.get(userId);
+    if (!u || u.day !== day) { assistantUsage.set(userId, { day, count: 1 }); return false; }
+    if (u.count >= ASSISTANT_FREE_DAILY_LIMIT) return true;
+    u.count++;
+    return false;
+}
+
+function clip(s, n) { s = (s == null ? '' : String(s)); return s.length > n ? s.slice(0, n) : s; }
+
+// Whitelist + sanitize model-proposed actions before they reach the client.
+function sanitizeAssistantActions(actions) {
+    if (!Array.isArray(actions)) return [];
+    const out = [];
+    const kinds = ['call', 'coffee_chat', 'meeting', 'email_sent', 'email_received'];
+    for (const a of actions.slice(0, 15)) {
+        if (!a || typeof a !== 'object') continue;
+        if (a.type === 'log_interaction' && a.contact_name) {
+            out.push({
+                type: 'log_interaction',
+                contact_name: clip(a.contact_name, 120),
+                firm: a.firm ? clip(a.firm, 120) : null,
+                position: a.position ? clip(a.position, 120) : null,
+                email: a.email ? clip(a.email, 200) : null,
+                kind: kinds.includes(a.kind) ? a.kind : 'meeting',
+                date: /^\d{4}-\d{2}-\d{2}$/.test(a.date || '') ? a.date : new Date().toISOString().slice(0, 10),
+                summary: clip(a.summary, 1200),
+            });
+        } else if (a.type === 'update_contact' && a.contact_name && a.fields && typeof a.fields === 'object') {
+            const f = {};
+            if (['low', 'medium', 'high'].includes(a.fields.priority)) f.priority = a.fields.priority;
+            if (typeof a.fields.vip === 'boolean') f.vip = a.fields.vip;
+            ['firm', 'position', 'email'].forEach(k => { if (a.fields[k]) f[k] = clip(a.fields[k], 200); });
+            if (Object.keys(f).length) out.push({ type: 'update_contact', contact_name: clip(a.contact_name, 120), fields: f });
+        } else if (a.type === 'draft_email' && a.body) {
+            out.push({
+                type: 'draft_email',
+                contact_name: clip(a.contact_name || '', 120),
+                to_email: a.to_email ? clip(a.to_email, 200) : null,
+                subject: clip(a.subject || '', 200),
+                body: clip(a.body, 3000),
+            });
+        }
+    }
+    return out;
+}
+
+async function buildClubContext(userId) {
+    try {
+        const orgs = await dbAPI.getOrgsForUser(userId);
+        if (!orgs.length) return null;
+        const org = orgs[0];
+        const roster = await dbAPI.getOrgRosterWithStats(org.id);
+        const now = Date.now();
+        return {
+            club: org.name,
+            your_role: org.role,
+            member_count: roster.length,
+            members: roster.slice(0, 200).map(m => ({
+                name: m.name, rank: m.rank, calls: m.calls, outreach_sent: m.emailsSent,
+                replies: m.emailsReceived, contacts: m.contactsCount, response_rate: m.responseRate + '%',
+                activity_score: m.activityScore,
+                days_since_active: m.lastActivityAt ? Math.floor((now - new Date(m.lastActivityAt)) / 86400000) : null,
+            })),
+        };
+    } catch (e) {
+        console.warn('Assistant club context unavailable:', e.message);
+        return null;
+    }
+}
+
+app.post('/api/assistant/chat', async (req, res) => {
+    try {
+        if (!openai) return res.status(503).json({ error: 'The assistant is not configured yet (OPENAI_API_KEY missing).' });
+        const { userId, message, history, sources, network, profile } = req.body || {};
+        if (!userId || !message || !String(message).trim()) return res.status(400).json({ error: 'userId and message are required' });
+
+        let isPaid = false;
+        try {
+            const u = await dbAPI.getUserById(userId);
+            isPaid = !!(u && (u.subscriptionStatus === 'active' || u.subscriptionStatus === 'trialing'));
+            if (!isPaid) isPaid = await dbAPI.userHasClubCoverage(userId);
+        } catch (e) { /* DB optional for the assistant */ }
+        if (assistantRateLimited(String(userId), isPaid)) {
+            return res.status(429).json({ error: `You've reached today's free limit of ${ASSISTANT_FREE_DAILY_LIMIT} assistant requests. Upgrade, or ask your club to cover your seat, for unlimited use.` });
+        }
+
+        const src = Array.isArray(sources) ? sources : ['network', 'followups'];
+        const club = src.includes('club') ? await buildClubContext(userId) : null;
+        let web = null;
+        if (src.includes('web')) {
+            try {
+                const results = await Promise.race([searchWeb(clip(message, 300)), new Promise(r => setTimeout(() => r([]), 6000))]);
+                web = (results || []).slice(0, 6).map(r => ({ title: clip(r.title, 200), url: r.url, snippet: clip(r.snippet, 400) }));
+            } catch (e) { web = []; }
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        const name = clip(profile && profile.name, 80) || 'the user';
+
+        const system = `You are the Weaver Agent, the AI assistant inside Weaver — a networking CRM for college students and student clubs recruiting into finance, consulting and tech.
+Today is ${today}. You are helping ${name}${profile && profile.accountType === 'org' ? ', who runs a club on Weaver' : ''}.
+
+Respond ONLY with a JSON object of the form {"reply": string, "actions": array}.
+"reply" is GitHub-flavored markdown shown to the user. "actions" lists changes/drafts for the app to apply:
+1. {"type":"log_interaction","contact_name":str,"firm":str|null,"position":str|null,"email":str|null,"kind":"call"|"coffee_chat"|"meeting"|"email_sent"|"email_received","date":"YYYY-MM-DD","summary":str}
+   Use whenever the user describes a networking interaction that happened (one action per person). The summary captures what was discussed and any next steps in 1-3 sentences.
+2. {"type":"update_contact","contact_name":str,"fields":{"priority":"low"|"medium"|"high","vip":bool,"firm":str,"position":str,"email":str}}
+3. {"type":"draft_email","contact_name":str,"to_email":str|null,"subject":str,"body":str}
+   Use for outreach, follow-ups and thank-you notes: concise (under 150 words), warm but professional student voice, reference specific details from the notes, one clear ask, signed with the user's first name.
+
+Rules:
+- Ground every statement in the provided data. Never invent contacts, meetings, numbers or employers. If data is missing, say so plainly.
+- Follow-up plans: prioritize VIP/high-priority and the most overdue contacts, give a one-line reason for each, and include draft_email actions for the top ones (max 5).
+- Keep replies short and scannable: one-line lead, then bullets or a compact table, then next steps. Do not repeat draft text in the reply — drafts render as cards. When you log something, confirm it in one line.
+- If who/when is ambiguous, make a sensible assumption (e.g. today's date) and state it.
+- "playbook", when present, is Weaver's recruiting guidance; apply it to advice and drafts. "web_results", when present, are web search results; cite them by title/URL and never treat them as the user's own data.
+- Club data, when present, describes members' activity. For club questions, name top performers, flag stalling members (14+ days inactive or near-zero score) and suggest concrete actions for the club leader.
+- Use an empty actions array when nothing should change.`;
+
+        const context = {
+            sources_enabled: src,
+            network: src.includes('network') || src.includes('followups') ? network || null : null,
+            club,
+            playbook: src.includes('playbook') ? WEAVER_PLAYBOOK : null,
+            web_results: web,
+        };
+
+        const msgs = [{ role: 'system', content: system }];
+        (Array.isArray(history) ? history : []).slice(-8).forEach(h => {
+            if (h && (h.role === 'user' || h.role === 'assistant') && h.content) msgs.push({ role: h.role, content: clip(h.content, 4000) });
+        });
+        msgs.push({ role: 'user', content: `DATA:\n${JSON.stringify(context).slice(0, 120000)}\n\nREQUEST:\n${clip(message, 4000)}` });
+
+        const completion = await openai.chat.completions.create({
+            model: ASSISTANT_MODEL,
+            messages: msgs,
+            temperature: 0.3,
+            response_format: { type: 'json_object' },
+        });
+        let parsed = {};
+        try { parsed = JSON.parse(completion.choices[0].message.content || '{}'); } catch (e) { parsed = { reply: completion.choices[0].message.content || '' }; }
+        res.json({
+            success: true,
+            reply: clip(parsed.reply || 'Done.', 20000),
+            actions: sanitizeAssistantActions(parsed.actions),
+        });
+    } catch (error) {
+        console.error('Assistant error:', error);
+        res.status(500).json({ error: 'The assistant hit an error. Please try again.' });
+    }
+});
+
+// "Improve prompt" — rewrite a rough request into a specific, well-scoped one.
+app.post('/api/assistant/improve', async (req, res) => {
+    try {
+        if (!openai) return res.status(503).json({ error: 'Assistant not configured' });
+        const { prompt } = req.body || {};
+        if (!prompt || !String(prompt).trim()) return res.status(400).json({ error: 'prompt is required' });
+        const completion = await openai.chat.completions.create({
+            model: ASSISTANT_MODEL,
+            temperature: 0.4,
+            messages: [
+                { role: 'system', content: 'Rewrite the user\'s request to the Weaver networking assistant so it is specific and actionable: who, what outcome, timeframe, format. Keep their intent and any names. Max 2 sentences. Return only the rewritten request.' },
+                { role: 'user', content: clip(prompt, 2000) },
+            ],
+        });
+        res.json({ success: true, improved: (completion.choices[0].message.content || '').trim() });
+    } catch (error) {
+        console.error('Improve prompt error:', error);
+        res.status(500).json({ error: 'Could not improve the prompt' });
+    }
+});
+
 // ============ ACCOUNT TYPE / ONBOARDING ============
 
 // Persist the onboarding choice: 'student' or 'org'
@@ -2481,10 +2729,32 @@ app.get('/api/orgs/mine', async (req, res) => {
     try {
         const userId = req.query.userId;
         if (!userId) return res.status(400).json({ error: 'userId is required' });
-        const orgs = await dbAPI.getOrgsForUser(userId);
+        const orgs = (await dbAPI.getOrgsForUser(userId)).map(({ stripeCustomerId, stripeSubscriptionId, billingEmail, ...o }) => o);
         res.json({ success: true, orgs });
     } catch (error) {
         console.error('Error listing user orgs:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// Club billing status: plan + how many members count as active (billable) right now
+app.get('/api/orgs/:orgId/billing', async (req, res) => {
+    try {
+        const org = await dbAPI.getOrganizationById(req.params.orgId);
+        if (!org) return res.status(404).json({ error: 'Organization not found' });
+        const since = new Date(Date.now() - 30 * 86400000);
+        const { total, active, activeMembers } = await dbAPI.getOrgActiveMemberCount(org.id, since);
+        res.json({
+            success: true,
+            planStatus: org.planStatus || 'none',
+            totalMembers: total,
+            activeMembers: active,
+            billableSeats: Math.max(1, active),
+            activeWindowDays: 30,
+            active: activeMembers.map(m => ({ name: m.name, lastActivityAt: m.lastActivityAt })),
+        });
+    } catch (error) {
+        console.error('Error getting org billing:', error);
         res.status(500).json({ error: 'Server error', message: error.message });
     }
 });

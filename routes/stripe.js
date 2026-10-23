@@ -207,6 +207,130 @@ router.post('/create-portal-session', express.json(), async (req, res) => {
     }
 });
 
+// ============ CLUB / CAREER-CENTER BILLING (per active member) ============
+// One Stripe subscription per organization on a per-seat price (CLUB_SEAT_PRICE_ID,
+// monthly, per unit). The seat quantity tracks members who were active in the
+// trailing 30 days; a daily job (server.js) re-syncs it without proration, so each
+// monthly invoice bills only the members who actually networked.
+
+const ACTIVE_WINDOW_DAYS = 30;
+function activeSince() { return new Date(Date.now() - ACTIVE_WINDOW_DAYS * 86400000); }
+function appUrl() { return process.env.WEAVER_URL || 'http://localhost:3000'; }
+
+async function requireOrgAdmin(userId, orgId) {
+    const orgs = await dbAPI.getOrgsForUser(String(userId));
+    const org = orgs.find(o => o.id === orgId);
+    if (!org) return { error: 'You are not a member of this organization', status: 403 };
+    if (org.role !== 'owner' && org.role !== 'admin') return { error: 'Only club owners/admins can manage billing', status: 403 };
+    return { org };
+}
+
+// Public pricing info for the landing page / pricing modal
+router.get('/pricing', async (req, res) => {
+    const out = { clubSeat: null, activeWindowDays: ACTIVE_WINDOW_DAYS };
+    try {
+        if (process.env.STRIPE_SECRET_KEY && process.env.CLUB_SEAT_PRICE_ID) {
+            const price = await stripe.prices.retrieve(process.env.CLUB_SEAT_PRICE_ID);
+            out.clubSeat = { amount: price.unit_amount, currency: price.currency, interval: price.recurring?.interval || 'month' };
+        }
+    } catch (e) { console.warn('Pricing lookup failed:', e.message); }
+    res.json(out);
+});
+
+// Start a club subscription (owner/admin only)
+router.post('/club-checkout', express.json(), async (req, res) => {
+    try {
+        const { userId, orgId, billingEmail } = req.body || {};
+        if (!userId || !orgId) return res.status(400).json({ error: 'userId and orgId are required' });
+        if (!process.env.STRIPE_SECRET_KEY || !process.env.CLUB_SEAT_PRICE_ID) {
+            return res.status(503).json({ error: 'Club billing is not configured yet (CLUB_SEAT_PRICE_ID missing).' });
+        }
+        const check = await requireOrgAdmin(userId, orgId);
+        if (check.error) return res.status(check.status).json({ error: check.error });
+        const org = await dbAPI.getOrganizationById(orgId);
+        const user = await dbAPI.getUserById(String(userId));
+
+        let customerId = org.stripeCustomerId;
+        if (!customerId) {
+            const customer = await stripe.customers.create({
+                email: (billingEmail || user?.email || '').trim() || undefined,
+                name: org.name,
+                metadata: { orgId: org.id, type: 'organization' },
+            });
+            customerId = customer.id;
+            await dbAPI.setOrgBilling(org.id, { stripeCustomerId: customerId, billingEmail: billingEmail || user?.email || null });
+        }
+
+        const { active } = await dbAPI.getOrgActiveMemberCount(org.id, activeSince());
+        const seats = Math.max(1, active);
+        const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            mode: 'subscription',
+            payment_method_types: ['card'],
+            allow_promotion_codes: true,
+            line_items: [{ price: process.env.CLUB_SEAT_PRICE_ID, quantity: seats }],
+            subscription_data: { metadata: { orgId: org.id, type: 'organization' } },
+            metadata: { orgId: org.id, type: 'organization' },
+            success_url: `${appUrl()}?club_billing=success&org_id=${encodeURIComponent(org.id)}#club`,
+            cancel_url: `${appUrl()}?club_billing=canceled&org_id=${encodeURIComponent(org.id)}#club`,
+        });
+        res.json({ url: session.url, seats });
+    } catch (error) {
+        console.error('Club checkout error:', error);
+        res.status(500).json({ error: error.message || 'Failed to start club checkout' });
+    }
+});
+
+// Stripe billing portal for the club (invoices, payment method, cancel)
+router.post('/club-portal', express.json(), async (req, res) => {
+    try {
+        const { userId, orgId } = req.body || {};
+        const check = await requireOrgAdmin(userId, orgId);
+        if (check.error) return res.status(check.status).json({ error: check.error });
+        const org = await dbAPI.getOrganizationById(orgId);
+        if (!org?.stripeCustomerId) return res.status(404).json({ error: 'This club has no billing account yet' });
+        const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: `${appUrl()}#club` });
+        res.json({ url: session.url });
+    } catch (error) {
+        console.error('Club portal error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Re-sync a club's plan status straight from Stripe (used after checkout redirect, in case the webhook is late)
+router.post('/club-refresh', express.json(), async (req, res) => {
+    try {
+        const { orgId } = req.body || {};
+        const org = orgId ? await dbAPI.getOrganizationById(orgId) : null;
+        if (!org) return res.status(404).json({ error: 'Organization not found' });
+        if (!org.stripeCustomerId || !process.env.STRIPE_SECRET_KEY) return res.json({ planStatus: org.planStatus || 'none' });
+        const subs = await stripe.subscriptions.list({ customer: org.stripeCustomerId, status: 'all', limit: 5 });
+        const live = (subs.data || []).find(s => ['active', 'trialing', 'past_due'].includes(s.status)) || subs.data?.[0];
+        if (live) await applyOrgSubscription(org.id, live);
+        const updated = await dbAPI.getOrganizationById(org.id);
+        res.json({ planStatus: updated.planStatus || 'none' });
+    } catch (error) {
+        console.error('Club refresh error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+async function applyOrgSubscription(orgId, sub) {
+    const deleted = sub.status === 'canceled' || sub.status === 'incomplete_expired';
+    await dbAPI.setOrgBilling(orgId, {
+        planStatus: deleted ? 'canceled' : sub.status,
+        stripeSubscriptionId: deleted ? null : sub.id,
+        lastBilledSeats: sub.items?.data?.[0]?.quantity ?? null,
+    });
+}
+
+// Is this subscription an organization's? (metadata first, then customer lookup)
+async function orgIdForSubscription(sub) {
+    if (sub.metadata?.orgId) return sub.metadata.orgId;
+    const org = await dbAPI.getOrgByStripeCustomerId(sub.customer);
+    return org ? org.id : null;
+}
+
 // Webhook endpoint (for handling subscription events)
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -223,19 +347,33 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     try {
         switch (event.type) {
             case 'customer.subscription.created':
-            case 'customer.subscription.updated':
+            case 'customer.subscription.updated': {
                 const subscription = event.data.object;
-                // Update user subscription in database
-                await dbAPI.updateUserSubscription(subscription.customer, subscription);
-                console.log(`Subscription ${subscription.id} ${event.type} for customer ${subscription.customer}`);
+                const orgId = await orgIdForSubscription(subscription);
+                if (orgId) {
+                    // Club / career-center subscription
+                    await applyOrgSubscription(orgId, subscription);
+                    console.log(`Org subscription ${subscription.id} ${event.type} for org ${orgId}`);
+                } else {
+                    // Individual Pro subscription
+                    await dbAPI.updateUserSubscription(subscription.customer, subscription);
+                    console.log(`Subscription ${subscription.id} ${event.type} for customer ${subscription.customer}`);
+                }
                 break;
-                
-            case 'customer.subscription.deleted':
+            }
+
+            case 'customer.subscription.deleted': {
                 const deletedSubscription = event.data.object;
-                // Handle subscription cancellation
-                await dbAPI.cancelUserSubscription(deletedSubscription.customer);
-                console.log(`Subscription ${deletedSubscription.id} deleted for customer ${deletedSubscription.customer}`);
+                const orgId = await orgIdForSubscription(deletedSubscription);
+                if (orgId) {
+                    await dbAPI.setOrgBilling(orgId, { planStatus: 'canceled', stripeSubscriptionId: null });
+                    console.log(`Org subscription ${deletedSubscription.id} canceled for org ${orgId}`);
+                } else {
+                    await dbAPI.cancelUserSubscription(deletedSubscription.customer);
+                    console.log(`Subscription ${deletedSubscription.id} deleted for customer ${deletedSubscription.customer}`);
+                }
                 break;
+            }
                 
             case 'invoice.payment_succeeded':
                 const invoice = event.data.object;

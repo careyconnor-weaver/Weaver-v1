@@ -896,27 +896,35 @@ async function handleAuth(e) {
                 id: data.user.id,
                 email: data.user.email,
                 accountType: data.user.accountType || null,
+                clubCovered: data.user.clubCovered === true,
                 subscriptionStatus: data.user.subscriptionStatus || 'free',
                 subscriptionPlan: data.user.subscriptionPlan || null,
                 stripeCustomerId: data.user.stripeCustomerId || null,
                 stripeSubscriptionId: data.user.stripeSubscriptionId || null
             });
-            await loadContactsFromAPI();
-            await loadSettingsFromAPI();
-            status.textContent = 'Login successful!';
-            status.className = 'upload-status success';
-            status.style.display = 'block';
+            // Enter the app immediately — never block the UI on data loading.
+            // (Previously the UI awaited contacts/settings with no timeout, so a slow
+            // server left the login screen frozen until a manual reload.)
+            closeAuthModal();
+            showAppView();
+            updateUserDisplay();
+            updateSidebarUser();
+            updateDashboard();
+            filterContacts();
+            maybeShowOnboarding();
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+            }
 
-            setTimeout(() => {
-                closeAuthModal();
-                showAppView();
+            // Hydrate from the server in the background, then re-render.
+            Promise.allSettled([loadContactsFromAPI(), loadSettingsFromAPI()]).then(() => {
                 updateUserDisplay();
                 updateSidebarUser();
                 updateDashboard();
                 filterContacts();
-                // Returning users who never finished onboarding are prompted now
-                maybeShowOnboarding();
-            }, 1000);
+                if (window.renderAssistantHome) window.renderAssistantHome();
+            });
         }
     } catch (error) {
         console.error('Auth error:', error);
@@ -1179,7 +1187,8 @@ function hasActiveSubscription(user) {
     // Check subscription status from user object
     // This would typically come from the database
     const subscriptionStatus = user.subscriptionStatus || 'free';
-    return subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+    // Members of a club on an active plan are covered by the club's seat.
+    return subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || user.clubCovered === true;
 }
 
 // Get subscription status from user
@@ -1533,7 +1542,7 @@ async function loadSettingsFromAPI() {
     var user = getCurrentUser();
     if (!user) return;
     try {
-        var res = await fetch('/api/users/settings/' + encodeURIComponent(user.id));
+        var res = await fetch('/api/users/settings/' + encodeURIComponent(user.id), { signal: weaverTimeoutSignal(8000) });
         if (!res.ok) return;
         var data = await res.json();
         if (data.success && data.settings) {
@@ -2241,11 +2250,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (link) link.click();
     };
 
-    // Load contacts and settings from backend when user is logged in (so data persists across devices)
+    // Load contacts and settings from the backend in the BACKGROUND (so data persists across
+    // devices). Previously this was awaited here, which delayed every event handler attached
+    // below — the page rendered but buttons were dead until the server answered.
     if (getCurrentUser()) {
-        await loadContactsFromAPI();
-        await loadSettingsFromAPI();
-        updateSidebarUser();
+        Promise.allSettled([loadContactsFromAPI(), loadSettingsFromAPI()]).then(function () {
+            updateSidebarUser();
+            loadContacts();
+            updateContactDropdown();
+            updateFirmFilter();
+            filterContacts();
+            updateDashboard();
+            var all = getContacts();
+            updateContactCount(all.length, all.length);
+            if (window.renderAssistantHome) window.renderAssistantHome();
+        });
     }
     // Initialize contacts from localStorage
     loadContacts();
@@ -2866,7 +2885,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     const subscribeForm = document.getElementById('subscribe-form');
     const subscribeStatus = document.getElementById('subscribe-status');
 
-    subscribeForm.addEventListener('submit', (e) => {
+    // Guarded: this form no longer exists in index.html. Unguarded, the null access threw
+    // here and aborted ALL page initialization below (handlers never attached).
+    if (subscribeForm) subscribeForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('subscriber-email').value;
         const frequency = document.getElementById('reminder-frequency').value;
@@ -3482,6 +3503,16 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Contact management functions
 // User management functions
+// Abort signal that fires after `ms` (prevents fetches from hanging the UI forever)
+function weaverTimeoutSignal(ms) {
+    try {
+        if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+        var ctrl = new AbortController();
+        setTimeout(function () { ctrl.abort(); }, ms);
+        return ctrl.signal;
+    } catch (e) { return undefined; }
+}
+
 function getCurrentUser() {
     try {
         const user = localStorage.getItem('weaver_current_user');
@@ -3524,6 +3555,13 @@ function saveContacts(contacts) {
         console.error('No user logged in');
         return;
     }
+    // Give every email/note a stable id. The server sync skips items without an id,
+    // so notes created in the UI (which had none) never reached the database —
+    // which also zeroed "calls" on the club leaderboard.
+    (contacts || []).forEach(function (c) {
+        (c.emails || []).forEach(function (e) { if (e && e.id == null) e.id = 'e_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9); });
+        (c.notes || []).forEach(function (n) { if (n && n.id == null) n.id = 'n_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9); });
+    });
     localStorage.setItem(getUserKey(currentUser.id), JSON.stringify(contacts));
     syncContactsToBackend(contacts).catch(err => console.error('Sync contacts to backend failed:', err));
 }
@@ -3533,7 +3571,7 @@ async function loadContactsFromAPI() {
     const currentUser = getCurrentUser();
     if (!currentUser) return;
     try {
-        const res = await fetch(`/api/contacts?userId=${encodeURIComponent(currentUser.id)}`);
+        const res = await fetch(`/api/contacts?userId=${encodeURIComponent(currentUser.id)}`, { signal: weaverTimeoutSignal(10000) });
         if (!res.ok) return;
         const data = await res.json();
         if (data.contacts && Array.isArray(data.contacts)) {
@@ -7789,7 +7827,7 @@ window.renderClubView = async function () {
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">';
     html += '<div><h3 class="settings-card-title" style="margin:0;">' + escapeHtmlClub(org.name) + '</h3>';
     html += '<p style="color:var(--slate);font-size:13px;margin:2px 0 0;">' + (org.school ? escapeHtmlClub(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + escapeHtmlClub(org.role) + '</p></div>';
-    html += '<div style="text-align:right;"><div style="font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:0.05em;">Club code</div>';
+    html += '<div style="text-align:right;"><div style="font-size:12px;color:var(--slate);">Club code</div>';
     html += '<div style="font-size:18px;font-weight:700;letter-spacing:1px;color:var(--blue);">' + escapeHtmlClub(org.joinCode || '—') + '</div>';
     html += '<button class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:4px;" onclick="window.copyJoinCode(\'' + escapeHtmlClub(org.joinCode) + '\')">Copy</button></div>';
     html += '</div>';
@@ -7804,13 +7842,16 @@ window.renderClubView = async function () {
     }
     html += '</div>';
 
+    // Billing (owners/admins): per-active-member plan
+    if (isAdmin) html += '<div id="club-billing" class="settings-card" style="margin-bottom:1.25rem;"><p style="color:var(--slate);font-size:13px;margin:0;">Loading billing…</p></div>';
+
     // The user's own standing — the comparison hook that drives engagement
     if (me) {
         html += '<div class="dash-stats-grid" style="margin-bottom:1.25rem;">';
-        html += clubStatCard('Your rank', '#' + me.rank + ' of ' + members.length, 'var(--blue)');
-        html += clubStatCard('Networking calls', me.calls, 'var(--indigo)');
-        html += clubStatCard('Outreach sent', me.emailsSent, 'var(--green)');
-        html += clubStatCard('Response rate', me.responseRate + '%', 'var(--red)');
+        html += clubStatCard('Your rank', me.rank + ' of ' + members.length, 'var(--blue)');
+        html += clubStatCard('Networking calls', me.calls, 'var(--navy)');
+        html += clubStatCard('Outreach sent', me.emailsSent, 'var(--navy)');
+        html += clubStatCard('Response rate', me.responseRate + '%', 'var(--navy)');
         html += '</div>';
     }
 
@@ -7819,7 +7860,7 @@ window.renderClubView = async function () {
     html += '<h3 class="settings-card-title">Leaderboard</h3>';
     html += '<p style="color:var(--slate);font-size:13px;margin:-0.25rem 0 0.75rem;">Ranked by networking activity — calls logged, outreach sent, replies earned, and contacts built.</p>';
     html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">';
-    html += '<thead><tr style="text-align:left;color:var(--slate);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
+    html += '<thead><tr style="text-align:left;color:var(--slate);font-size:12.5px;font-weight:500;">';
     html += '<th style="padding:8px 6px;">#</th><th style="padding:8px 6px;">Member</th><th style="padding:8px 6px;text-align:center;">Calls</th><th style="padding:8px 6px;text-align:center;">Outreach</th><th style="padding:8px 6px;text-align:center;">Replies</th><th style="padding:8px 6px;text-align:center;">Contacts</th><th style="padding:8px 6px;text-align:center;">Resp. rate</th><th style="padding:8px 6px;text-align:center;">Score</th></tr></thead><tbody>';
 
     if (members.length === 0) {
@@ -7827,7 +7868,7 @@ window.renderClubView = async function () {
     } else {
         members.forEach(function (m) {
             const mine = m.userId === u.id;
-            const medal = m.rank === 1 ? '🥇' : m.rank === 2 ? '🥈' : m.rank === 3 ? '🥉' : ('#' + m.rank);
+            const medal = '<span style="color:' + (m.rank <= 3 ? 'var(--navy)' : 'var(--slate)') + ';">' + m.rank + '</span>';
             html += '<tr style="border-top:1px solid var(--border);' + (mine ? 'background:var(--blue-ghost,#eef4ff);' : '') + '">';
             html += '<td style="padding:10px 6px;font-weight:600;">' + medal + '</td>';
             html += '<td style="padding:10px 6px;font-weight:600;color:var(--navy);">' + escapeHtmlClub(m.name) + (mine ? ' <span style="color:var(--blue);font-weight:500;">(you)</span>' : '') + (m.role === 'owner' ? ' <span style="font-size:11px;color:var(--slate);">· owner</span>' : '') + '</td>';
@@ -7843,7 +7884,87 @@ window.renderClubView = async function () {
     html += '</tbody></table></div></div>';
 
     root.innerHTML = html;
+    if (isAdmin) loadClubBilling(org.id);
 };
+
+// Fill the club billing card: plan status, active (billable) members, checkout / portal.
+async function loadClubBilling(orgId) {
+    const box = document.getElementById('club-billing');
+    if (!box) return;
+    let billing = null, pricing = null;
+    try {
+        const [b, p] = await Promise.all([
+            fetch('/api/orgs/' + encodeURIComponent(orgId) + '/billing', { signal: weaverTimeoutSignal(10000) }).then(r => r.json()),
+            fetch('/api/stripe/pricing', { signal: weaverTimeoutSignal(8000) }).then(r => r.json()).catch(() => null),
+        ]);
+        billing = b; pricing = p;
+    } catch (e) { box.innerHTML = '<p style="color:var(--slate);font-size:13px;margin:0;">Billing is unavailable right now.</p>'; return; }
+    if (!billing || !billing.success) { box.innerHTML = '<p style="color:var(--slate);font-size:13px;margin:0;">Billing is unavailable right now.</p>'; return; }
+
+    const status = billing.planStatus || 'none';
+    const live = status === 'active' || status === 'trialing';
+    const seat = pricing && pricing.clubSeat;
+    const fmt = (cents, cur) => { try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: (cur || 'usd').toUpperCase() }).format(cents / 100); } catch (e) { return '$' + (cents / 100).toFixed(2); } };
+    const priceLine = seat ? fmt(seat.amount, seat.currency) + ' per active member / ' + seat.interval : 'Per active member, per month';
+    const estimate = seat ? fmt(seat.amount * billing.billableSeats, seat.currency) : null;
+    const statusLabel = { none: 'No plan', active: 'Active', trialing: 'Trial', past_due: 'Payment due', canceled: 'Canceled' }[status] || status;
+
+    let h = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">';
+    h += '<div style="flex:1 1 320px;min-width:0;"><h3 class="settings-card-title" style="margin:0;">Club plan <span class="wv-pill ' + (live ? 'wv-pill-ok' : '') + '">' + escapeHtmlClub(statusLabel) + '</span></h3>';
+    h += '<p style="color:var(--slate);font-size:13px;margin:4px 0 0;">' + escapeHtmlClub(priceLine) + '. You only pay for members who logged networking activity in the last ' + billing.activeWindowDays + ' days — everyone on the roster gets Pro.</p></div>';
+    h += '<div style="text-align:right;flex:0 0 auto;"><div style="font-size:22px;font-weight:600;color:var(--navy);">' + billing.activeMembers + ' <span style="font-size:13px;font-weight:400;color:var(--slate);">of ' + billing.totalMembers + ' active</span></div>';
+    if (estimate) h += '<div style="font-size:12px;color:var(--slate);">≈ ' + estimate + ' this period (' + billing.billableSeats + ' seat' + (billing.billableSeats === 1 ? '' : 's') + ')</div>';
+    h += '</div></div>';
+    h += '<div style="margin-top:0.9rem;display:flex;gap:0.5rem;flex-wrap:wrap;">';
+    if (live || status === 'past_due') h += '<button class="tb-btn tb-btn-outline tb-btn-sm" onclick="window.clubBillingPortal(\'' + escapeHtmlClub(orgId) + '\')">Manage billing</button>';
+    else h += '<button class="tb-btn tb-btn-primary tb-btn-sm" onclick="window.clubStartPlan(\'' + escapeHtmlClub(orgId) + '\')">Start club plan</button>';
+    h += '</div><div id="club-billing-status" class="upload-status" style="display:none;margin-top:0.5rem;"></div>';
+    box.innerHTML = h;
+}
+window.loadClubBilling = loadClubBilling;
+
+window.clubStartPlan = async function (orgId) {
+    const u = getCurrentUser();
+    const status = document.getElementById('club-billing-status');
+    try {
+        const res = await fetch('/api/stripe/club-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, orgId: orgId }) });
+        const data = await res.json();
+        if (!res.ok || !data.url) { showInlineStatus(status, data.error || 'Could not start checkout.', 'error'); return; }
+        window.location.href = data.url;
+    } catch (e) { showInlineStatus(status, 'Could not start checkout.', 'error'); }
+};
+
+window.clubBillingPortal = async function (orgId) {
+    const u = getCurrentUser();
+    const status = document.getElementById('club-billing-status');
+    try {
+        const res = await fetch('/api/stripe/club-portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, orgId: orgId }) });
+        const data = await res.json();
+        if (!res.ok || !data.url) { showInlineStatus(status, data.error || 'Could not open billing.', 'error'); return; }
+        window.location.href = data.url;
+    } catch (e) { showInlineStatus(status, 'Could not open billing.', 'error'); }
+};
+
+// After returning from club checkout: reconcile with Stripe, then open the Club view.
+(function handleClubBillingReturn() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const result = params.get('club_billing');
+        const orgId = params.get('org_id');
+        if (!result || !orgId) return;
+        history.replaceState(null, '', window.location.pathname + '#club');
+        const go = function () {
+            const link = document.querySelector('.nav-link[href="#club"]');
+            if (link) link.click();
+        };
+        if (result === 'success') {
+            fetch('/api/stripe/club-refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orgId: orgId }) })
+                .catch(function () {}).finally(function () { setTimeout(go, 300); });
+        } else {
+            setTimeout(go, 300);
+        }
+    } catch (e) { /* ignore */ }
+})();
 
 function clubStatCard(label, value, color) {
     return '<div class="dash-stat-card"><div class="dash-stat-info">' +

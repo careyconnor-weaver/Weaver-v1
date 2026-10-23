@@ -110,6 +110,11 @@ async function migrate() {
                 joined_at timestamp DEFAULT now() NOT NULL
             )
         `);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan_status text DEFAULT 'none'`);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_customer_id text`);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_subscription_id text`);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS billing_email varchar(255)`);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS last_billed_seats integer`);
         await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS org_members_org_user_idx ON org_members (org_id, user_id)`);
         await client.query(`
             CREATE TABLE IF NOT EXISTS org_invites (

@@ -128,20 +128,65 @@ async function getUserNetworkingStats(userId) {
     const contactIds = userContacts.map(c => c.id);
 
     let calls = 0, emailsSent = 0, emailsReceived = 0;
+    // Activity dates = the interaction dates the user records + when contacts were added.
+    // (contacts.updatedAt and email/note createdAt are rewritten on every sync, so they
+    // only mean "last sync" and must not be used as activity signals.)
+    const activityDates = [];
     if (contactIds.length > 0) {
+        const contactRows = await db.select({ createdAt: contacts.createdAt }).from(contacts).where(eq(contacts.userId, String(userId)));
         const contactEmails = await db.select().from(emails).where(inArray(emails.contactId, contactIds));
         const contactNotes = await db.select().from(notes).where(inArray(notes.contactId, contactIds));
         calls = contactNotes.length;
         emailsSent = contactEmails.filter(e => e.direction === 'sent').length;
         emailsReceived = contactEmails.filter(e => e.direction === 'received').length;
+        contactRows.forEach(c => c.createdAt && activityDates.push(new Date(c.createdAt)));
+        contactEmails.forEach(e => e.date && activityDates.push(new Date(e.date)));
+        contactNotes.forEach(n => n.date && activityDates.push(new Date(n.date)));
     }
+    const now = new Date();
+    const valid = activityDates.filter(d => !isNaN(d.getTime())).map(d => (d > now ? now : d));
+    const lastActivityAt = valid.length ? new Date(Math.max(...valid.map(d => d.getTime()))) : null;
 
     const contactsCount = contactIds.length;
     const responseRate = emailsSent > 0 ? Math.round((emailsReceived / emailsSent) * 100) : 0;
     // Composite activity score drives the leaderboard: a call is worth more than an email touch.
     const activityScore = (calls * 3) + emailsSent + (emailsReceived * 2) + contactsCount;
 
-    return { userId: String(userId), contactsCount, calls, emailsSent, emailsReceived, responseRate, activityScore };
+    return { userId: String(userId), contactsCount, calls, emailsSent, emailsReceived, responseRate, activityScore, lastActivityAt };
+}
+
+// ============ CLUB BILLING (per active member) ============
+// A member is "active" (billable) in a period if they recorded at least one
+// networking interaction or added a contact during it.
+
+function isActiveSince(stats, since) {
+    return !!(stats.lastActivityAt && new Date(stats.lastActivityAt) >= since);
+}
+
+async function getOrgActiveMemberCount(orgId, since) {
+    const roster = await getOrgRosterWithStats(orgId);
+    const active = roster.filter(m => isActiveSince(m, since));
+    return { total: roster.length, active: active.length, activeMembers: active.map(m => ({ userId: m.userId, name: m.name, lastActivityAt: m.lastActivityAt })) };
+}
+
+async function setOrgBilling(orgId, fields) {
+    const result = await db.update(organizations).set(fields).where(eq(organizations.id, orgId)).returning();
+    return result[0] || null;
+}
+
+async function getOrgByStripeCustomerId(customerId) {
+    const result = await db.select().from(organizations).where(eq(organizations.stripeCustomerId, customerId)).limit(1);
+    return result[0] || null;
+}
+
+async function getOrgsWithActivePlans() {
+    return await db.select().from(organizations).where(inArray(organizations.planStatus, ['active', 'trialing', 'past_due']));
+}
+
+// True if the user belongs to a club whose plan is active (club pays → member gets Pro).
+async function userHasClubCoverage(userId) {
+    const orgs = await getOrgsForUser(userId);
+    return orgs.some(o => o.planStatus === 'active' || o.planStatus === 'trialing');
 }
 
 // Roster with per-member networking stats, sorted for the leaderboard (most active first).
@@ -194,27 +239,24 @@ async function getContactsByUserId(userId) {
         throw new Error('Database not initialized. Check DATABASE_URL environment variable.');
     }
     const contactsList = await db.select().from(contacts).where(eq(contacts.userId, userId));
-    
-    // Get emails and notes for each contact
-    const contactsWithData = await Promise.all(contactsList.map(async (contact) => {
-        const contactEmails = await db.select()
-            .from(emails)
-            .where(eq(emails.contactId, contact.id))
-            .orderBy(emails.date);
-        
-        const contactNotes = await db.select()
-            .from(notes)
-            .where(eq(notes.contactId, contact.id))
-            .orderBy(notes.date);
-        
-        return {
-            ...contact,
-            emails: contactEmails,
-            notes: contactNotes,
-        };
+    if (contactsList.length === 0) return [];
+
+    // Batch-load all emails and notes in 2 queries (was 2 queries PER contact,
+    // which made login/page-load slow enough to hang for users with many contacts).
+    const ids = contactsList.map(c => c.id);
+    const [allEmails, allNotes] = await Promise.all([
+        db.select().from(emails).where(inArray(emails.contactId, ids)).orderBy(emails.date),
+        db.select().from(notes).where(inArray(notes.contactId, ids)).orderBy(notes.date),
+    ]);
+    const emailsBy = {}, notesBy = {};
+    for (const e of allEmails) (emailsBy[e.contactId] = emailsBy[e.contactId] || []).push(e);
+    for (const n of allNotes) (notesBy[n.contactId] = notesBy[n.contactId] || []).push(n);
+
+    return contactsList.map(contact => ({
+        ...contact,
+        emails: emailsBy[contact.id] || [],
+        notes: notesBy[contact.id] || [],
     }));
-    
-    return contactsWithData;
 }
 
 async function getContactById(contactId, userId) {
@@ -695,5 +737,12 @@ module.exports = {
     getOrgRosterWithStats,
     createOrgInvite,
     getOrgInvites,
+
+    // Club billing
+    getOrgActiveMemberCount,
+    setOrgBilling,
+    getOrgByStripeCustomerId,
+    getOrgsWithActivePlans,
+    userHasClubCoverage,
 };
 
