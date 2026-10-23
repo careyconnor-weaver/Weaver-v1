@@ -86,6 +86,43 @@ async function migrate() {
             console.log('  ✓ user_settings table already exists');
         }
 
+        // Club / Organization (enterprise) feature
+        console.log('\n📦 Checking club/organization schema...');
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type text`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at timestamp`);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS organizations (
+                id text PRIMARY KEY,
+                name varchar(255) NOT NULL,
+                join_code varchar(20) NOT NULL UNIQUE,
+                owner_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                school varchar(255),
+                created_at timestamp DEFAULT now() NOT NULL
+            )
+        `);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS org_members (
+                id text PRIMARY KEY,
+                org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                role varchar(20) DEFAULT 'member',
+                display_name varchar(255),
+                joined_at timestamp DEFAULT now() NOT NULL
+            )
+        `);
+        await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS org_members_org_user_idx ON org_members (org_id, user_id)`);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS org_invites (
+                id text PRIMARY KEY,
+                org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                email varchar(255) NOT NULL,
+                invited_by text REFERENCES users(id) ON DELETE SET NULL,
+                status varchar(20) DEFAULT 'pending',
+                created_at timestamp DEFAULT now() NOT NULL
+            )
+        `);
+        console.log('  ✅ Club/organization schema ready');
+
         console.log('✅ Database migration completed successfully!');
         process.exit(0);
     } catch (error) {

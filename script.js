@@ -392,6 +392,8 @@ function checkAuth() {
         updateSidebarUser();
         updateDashboard();
         filterContacts();
+        // Prompt onboarding if the account type was never chosen
+        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
     }
 }
 
@@ -784,15 +786,12 @@ async function handleAuth(e) {
             status.textContent = 'Account created successfully!';
             status.className = 'upload-status success';
             status.style.display = 'block';
-            
+
             setTimeout(() => {
                 closeAuthModal();
-                showAppView();
-                updateUserDisplay();
-                updateSidebarUser();
-                updateDashboard();
-                filterContacts();
-            }, 1000);
+                // New users pick Student vs Club/Organization before entering the app
+                showOnboardingModal();
+            }, 800);
         } else {
             // Login - check database first
             let response = await fetch('/api/users/login', {
@@ -856,6 +855,7 @@ async function handleAuth(e) {
                             updateUserDisplay();
                             updateSidebarUser();
                             filterContacts();
+                            maybeShowOnboarding();
                         }, 1000);
                         return;
                     }
@@ -895,6 +895,7 @@ async function handleAuth(e) {
             setCurrentUser({
                 id: data.user.id,
                 email: data.user.email,
+                accountType: data.user.accountType || null,
                 subscriptionStatus: data.user.subscriptionStatus || 'free',
                 subscriptionPlan: data.user.subscriptionPlan || null,
                 stripeCustomerId: data.user.stripeCustomerId || null,
@@ -905,7 +906,7 @@ async function handleAuth(e) {
             status.textContent = 'Login successful!';
             status.className = 'upload-status success';
             status.style.display = 'block';
-            
+
             setTimeout(() => {
                 closeAuthModal();
                 showAppView();
@@ -913,6 +914,8 @@ async function handleAuth(e) {
                 updateSidebarUser();
                 updateDashboard();
                 filterContacts();
+                // Returning users who never finished onboarding are prompted now
+                maybeShowOnboarding();
             }, 1000);
         }
     } catch (error) {
@@ -1010,9 +1013,8 @@ function toggleProfileMenu() {
                     <!-- Gmail Integration Section -->
                     <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
                         <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Gmail Integration</p>
-                        ${gmailConnected ? 
+                        ${gmailConnected ?
                             `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem; color: var(--success);">✓ Gmail Connected</p>
-                             <button onclick="window.syncGmailLabel()" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem; margin-bottom: 0.5rem;">Sync from "Weaver" Label</button>
                              <button onclick="window.disconnectGmail()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Disconnect Gmail</button>` :
                             `<button onclick="window.connectGmail()" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Connect Gmail</button>`
                         }
@@ -7605,3 +7607,320 @@ function toggleGmailInstructions() {
 
 // Make it globally accessible
 window.toggleGmailInstructions = toggleGmailInstructions;
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLUB / ORGANIZATION (enterprise) — onboarding, roster, leaderboard
+   Added for the club/enterprise feature. Network effects: a student who
+   joins a club contributes to and is ranked on a shared roster, so the
+   club (and peers) can see who is networking most effectively — which
+   raises the cost of leaving as the roster and standing accumulate.
+   ═══════════════════════════════════════════════════════════════════ */
+
+// Merge fields into the stored current user (keeps accountType/org state across reloads)
+function updateCurrentUserFields(fields) {
+    const u = getCurrentUser();
+    if (!u) return;
+    setCurrentUser({ ...u, ...fields });
+}
+
+function showOnboardingModal() {
+    const m = document.getElementById('onboarding-modal');
+    if (!m) return;
+    // Reset to the first step
+    ['choose', 'student', 'org', 'done'].forEach(function (s) {
+        const el = document.getElementById('onboarding-step-' + s);
+        if (el) el.style.display = (s === 'choose') ? '' : 'none';
+    });
+    m.classList.add('active');
+}
+window.showOnboardingModal = showOnboardingModal;
+
+// Decide whether a logged-in user still needs onboarding. Returns true if the modal was shown.
+function maybeShowOnboarding() {
+    const u = getCurrentUser();
+    if (!u) return false;
+    if (u.accountType === 'student' || u.accountType === 'org') return false;
+    showOnboardingModal();
+    return true;
+}
+window.maybeShowOnboarding = maybeShowOnboarding;
+
+function onboardSetStep(step) {
+    ['choose', 'student', 'org', 'done'].forEach(function (s) {
+        const el = document.getElementById('onboarding-step-' + s);
+        if (el) el.style.display = (s === step) ? '' : 'none';
+    });
+}
+
+window.chooseAccountType = async function (type) {
+    const u = getCurrentUser();
+    if (!u) return;
+    // Persist the choice (best-effort; UI proceeds regardless of DB availability)
+    try {
+        await fetch('/api/users/account-type', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: u.id, accountType: type })
+        });
+    } catch (e) { console.warn('account-type save failed (continuing):', e.message); }
+    updateCurrentUserFields({ accountType: type });
+    onboardSetStep(type === 'org' ? 'org' : 'student');
+};
+
+window.onboardBack = function () { onboardSetStep('choose'); };
+
+window.onboardJoinClub = async function () {
+    const u = getCurrentUser();
+    const codeEl = document.getElementById('onboard-join-code');
+    const status = document.getElementById('onboard-join-status');
+    const code = (codeEl?.value || '').trim().toUpperCase();
+    if (!code) { showInlineStatus(status, 'Enter a club code, or skip for now.', 'error'); return; }
+    try {
+        const res = await fetch('/api/orgs/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: u.id, joinCode: code, displayName: (typeof getUserDisplayName === 'function' ? getUserDisplayName() : null) })
+        });
+        const data = await res.json();
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not join that club.', 'error'); return; }
+        updateCurrentUserFields({ accountType: 'student', primaryOrgId: data.org.id });
+        showInlineStatus(status, 'Joined ' + data.org.name + '!', 'success');
+        setTimeout(window.finishOnboarding, 700);
+    } catch (e) {
+        showInlineStatus(status, 'Something went wrong. Please try again.', 'error');
+    }
+};
+
+window.onboardCreateOrg = async function () {
+    const u = getCurrentUser();
+    const nameEl = document.getElementById('onboard-org-name');
+    const schoolEl = document.getElementById('onboard-org-school');
+    const status = document.getElementById('onboard-org-status');
+    const name = (nameEl?.value || '').trim();
+    if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
+    try {
+        const res = await fetch('/api/orgs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: u.id, name: name, school: (schoolEl?.value || '').trim() })
+        });
+        const data = await res.json();
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not create club.', 'error'); return; }
+        updateCurrentUserFields({ accountType: 'org', primaryOrgId: data.org.id });
+        const disp = document.getElementById('onboard-join-code-display');
+        if (disp) disp.textContent = data.org.joinCode;
+        onboardSetStep('done');
+    } catch (e) {
+        showInlineStatus(status, 'Something went wrong. Please try again.', 'error');
+    }
+};
+
+window.finishOnboarding = function () {
+    const m = document.getElementById('onboarding-modal');
+    if (m) m.classList.remove('active');
+    showAppView();
+    if (typeof updateUserDisplay === 'function') updateUserDisplay();
+    if (typeof updateSidebarUser === 'function') updateSidebarUser();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof filterContacts === 'function') filterContacts();
+};
+
+window.copyJoinCode = function (code) {
+    if (!code) return;
+    try {
+        navigator.clipboard.writeText(code);
+        if (typeof showToast === 'function') showToast('Club code copied'); else alert('Copied: ' + code);
+    } catch (e) { alert('Club code: ' + code); }
+};
+
+function showInlineStatus(el, msg, kind) {
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'upload-status ' + (kind === 'success' ? 'success' : 'error');
+    el.style.display = 'block';
+}
+
+function escapeHtmlClub(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+// Render the Club view: roster + leaderboard for the user's org(s), or prompts to join/create.
+window.renderClubView = async function () {
+    const u = getCurrentUser();
+    const root = document.getElementById('club-content');
+    if (!root) return;
+    if (!u) { root.innerHTML = '<p style="color:var(--slate);">Please log in.</p>'; return; }
+    root.innerHTML = '<p style="color:var(--slate);">Loading your club…</p>';
+
+    let orgs = [];
+    try {
+        const res = await fetch('/api/orgs/mine?userId=' + encodeURIComponent(u.id));
+        const data = await res.json();
+        orgs = (data && data.orgs) || [];
+    } catch (e) {
+        root.innerHTML = '<p style="color:var(--slate);">Couldn\'t load your club right now. Please try again.</p>';
+        return;
+    }
+
+    if (orgs.length === 0) {
+        root.innerHTML = clubEmptyStateHtml(u);
+        return;
+    }
+
+    const org = orgs.find(function (o) { return o.id === u.primaryOrgId; }) || orgs[0];
+    const isAdmin = org.role === 'owner' || org.role === 'admin';
+
+    let members = [];
+    try {
+        const res = await fetch('/api/orgs/' + encodeURIComponent(org.id) + '/members');
+        const data = await res.json();
+        members = (data && data.members) || [];
+    } catch (e) { /* roster optional */ }
+
+    const me = members.find(function (m) { return m.userId === u.id; });
+
+    let html = '';
+
+    // Header card: name + join code + (admin) invite
+    html += '<div class="settings-card" style="margin-bottom:1.25rem;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">';
+    html += '<div><h3 class="settings-card-title" style="margin:0;">' + escapeHtmlClub(org.name) + '</h3>';
+    html += '<p style="color:var(--slate);font-size:13px;margin:2px 0 0;">' + (org.school ? escapeHtmlClub(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + escapeHtmlClub(org.role) + '</p></div>';
+    html += '<div style="text-align:right;"><div style="font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:0.05em;">Club code</div>';
+    html += '<div style="font-size:18px;font-weight:700;letter-spacing:1px;color:var(--blue);">' + escapeHtmlClub(org.joinCode || '—') + '</div>';
+    html += '<button class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:4px;" onclick="window.copyJoinCode(\'' + escapeHtmlClub(org.joinCode) + '\')">Copy</button></div>';
+    html += '</div>';
+
+    if (isAdmin) {
+        html += '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">';
+        html += '<label style="font-size:13px;color:var(--slate);">Invite a member by email</label>';
+        html += '<div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;">';
+        html += '<input type="email" id="club-invite-email" placeholder="member@school.edu" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">';
+        html += '<button class="tb-btn tb-btn-primary tb-btn-sm" onclick="window.clubInvite(\'' + escapeHtmlClub(org.id) + '\')">Send invite</button></div>';
+        html += '<div id="club-invite-status" class="upload-status" style="display:none;margin-top:0.5rem;"></div></div>';
+    }
+    html += '</div>';
+
+    // The user's own standing — the comparison hook that drives engagement
+    if (me) {
+        html += '<div class="dash-stats-grid" style="margin-bottom:1.25rem;">';
+        html += clubStatCard('Your rank', '#' + me.rank + ' of ' + members.length, 'var(--blue)');
+        html += clubStatCard('Networking calls', me.calls, 'var(--indigo)');
+        html += clubStatCard('Outreach sent', me.emailsSent, 'var(--green)');
+        html += clubStatCard('Response rate', me.responseRate + '%', 'var(--red)');
+        html += '</div>';
+    }
+
+    // Leaderboard — clubs observe who is working efficiently; members compare themselves
+    html += '<div class="settings-card">';
+    html += '<h3 class="settings-card-title">Leaderboard</h3>';
+    html += '<p style="color:var(--slate);font-size:13px;margin:-0.25rem 0 0.75rem;">Ranked by networking activity — calls logged, outreach sent, replies earned, and contacts built.</p>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">';
+    html += '<thead><tr style="text-align:left;color:var(--slate);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
+    html += '<th style="padding:8px 6px;">#</th><th style="padding:8px 6px;">Member</th><th style="padding:8px 6px;text-align:center;">Calls</th><th style="padding:8px 6px;text-align:center;">Outreach</th><th style="padding:8px 6px;text-align:center;">Replies</th><th style="padding:8px 6px;text-align:center;">Contacts</th><th style="padding:8px 6px;text-align:center;">Resp. rate</th><th style="padding:8px 6px;text-align:center;">Score</th></tr></thead><tbody>';
+
+    if (members.length === 0) {
+        html += '<tr><td colspan="8" style="padding:16px 6px;color:var(--slate);">No activity yet. As members log calls and outreach, they\'ll appear here.</td></tr>';
+    } else {
+        members.forEach(function (m) {
+            const mine = m.userId === u.id;
+            const medal = m.rank === 1 ? '🥇' : m.rank === 2 ? '🥈' : m.rank === 3 ? '🥉' : ('#' + m.rank);
+            html += '<tr style="border-top:1px solid var(--border);' + (mine ? 'background:var(--blue-ghost,#eef4ff);' : '') + '">';
+            html += '<td style="padding:10px 6px;font-weight:600;">' + medal + '</td>';
+            html += '<td style="padding:10px 6px;font-weight:600;color:var(--navy);">' + escapeHtmlClub(m.name) + (mine ? ' <span style="color:var(--blue);font-weight:500;">(you)</span>' : '') + (m.role === 'owner' ? ' <span style="font-size:11px;color:var(--slate);">· owner</span>' : '') + '</td>';
+            html += '<td style="padding:10px 6px;text-align:center;">' + m.calls + '</td>';
+            html += '<td style="padding:10px 6px;text-align:center;">' + m.emailsSent + '</td>';
+            html += '<td style="padding:10px 6px;text-align:center;">' + m.emailsReceived + '</td>';
+            html += '<td style="padding:10px 6px;text-align:center;">' + m.contactsCount + '</td>';
+            html += '<td style="padding:10px 6px;text-align:center;">' + m.responseRate + '%</td>';
+            html += '<td style="padding:10px 6px;text-align:center;font-weight:700;color:var(--blue);">' + m.activityScore + '</td>';
+            html += '</tr>';
+        });
+    }
+    html += '</tbody></table></div></div>';
+
+    root.innerHTML = html;
+};
+
+function clubStatCard(label, value, color) {
+    return '<div class="dash-stat-card"><div class="dash-stat-info">' +
+        '<span class="dash-stat-value" style="color:' + color + ';">' + value + '</span>' +
+        '<span class="dash-stat-label">' + label + '</span></div></div>';
+}
+
+function clubEmptyStateHtml(u) {
+    const isOrg = u.accountType === 'org';
+    let html = '<div class="settings-card" style="max-width:560px;">';
+    if (isOrg) {
+        html += '<h3 class="settings-card-title">Create your club</h3>';
+        html += '<p style="color:var(--slate);font-size:14px;">Set up a shared space and invite members. You\'ll see who\'s networking most effectively.</p>';
+        html += '<div class="form-group" style="margin-top:0.75rem;"><label for="club-create-name">Club name *</label><input type="text" id="club-create-name" placeholder="e.g. BC Finance Society" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"></div>';
+        html += '<div class="form-group"><label for="club-create-school">School (optional)</label><input type="text" id="club-create-school" placeholder="e.g. Boston College" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"></div>';
+        html += '<div id="club-create-status" class="upload-status" style="display:none;margin:0.5rem 0;"></div>';
+        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubCreate()">Create club</button>';
+    } else {
+        html += '<h3 class="settings-card-title">Join your club</h3>';
+        html += '<p style="color:var(--slate);font-size:14px;">Enter your club code to join the roster and see how your networking compares with your peers.</p>';
+        html += '<div class="form-group" style="margin-top:0.75rem;"><label for="club-join-code2">Club code</label><input type="text" id="club-join-code2" placeholder="WVR-XXXXXX" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;text-transform:uppercase;"></div>';
+        html += '<div id="club-join-status2" class="upload-status" style="display:none;margin:0.5rem 0;"></div>';
+        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubJoin()">Join club</button>';
+    }
+    html += '</div>';
+    return html;
+}
+
+window.clubInvite = async function (orgId) {
+    const u = getCurrentUser();
+    const emailEl = document.getElementById('club-invite-email');
+    const status = document.getElementById('club-invite-status');
+    const email = (emailEl?.value || '').trim();
+    if (!email) { showInlineStatus(status, 'Enter an email address.', 'error'); return; }
+    try {
+        const res = await fetch('/api/orgs/' + encodeURIComponent(orgId) + '/invite', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, invitedBy: u.id })
+        });
+        const data = await res.json();
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not send invite.', 'error'); return; }
+        showInlineStatus(status, 'Invite sent to ' + email + '. They can also join with code ' + (data.joinCode || '') + '.', 'success');
+        if (emailEl) emailEl.value = '';
+    } catch (e) { showInlineStatus(status, 'Something went wrong.', 'error'); }
+};
+
+window.clubJoin = async function () {
+    const u = getCurrentUser();
+    const code = (document.getElementById('club-join-code2')?.value || '').trim().toUpperCase();
+    const status = document.getElementById('club-join-status2');
+    if (!code) { showInlineStatus(status, 'Enter a club code.', 'error'); return; }
+    try {
+        const res = await fetch('/api/orgs/join', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: u.id, joinCode: code, displayName: (typeof getUserDisplayName === 'function' ? getUserDisplayName() : null) })
+        });
+        const data = await res.json();
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not join.', 'error'); return; }
+        updateCurrentUserFields({ primaryOrgId: data.org.id });
+        window.renderClubView();
+    } catch (e) { showInlineStatus(status, 'Something went wrong.', 'error'); }
+};
+
+window.clubCreate = async function () {
+    const u = getCurrentUser();
+    const name = (document.getElementById('club-create-name')?.value || '').trim();
+    const school = (document.getElementById('club-create-school')?.value || '').trim();
+    const status = document.getElementById('club-create-status');
+    if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
+    try {
+        const res = await fetch('/api/orgs', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: u.id, name: name, school: school })
+        });
+        const data = await res.json();
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not create club.', 'error'); return; }
+        updateCurrentUserFields({ accountType: 'org', primaryOrgId: data.org.id });
+        window.renderClubView();
+    } catch (e) { showInlineStatus(status, 'Something went wrong.', 'error'); }
+};

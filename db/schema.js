@@ -6,12 +6,48 @@ const users = pgTable('users', {
     email: varchar('email', { length: 255 }).notNull().unique(),
     password: text('password').notNull(), // In production, should be hashed
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    // Onboarding / account type: 'student' or 'org' (club / organization). Null until onboarding is completed.
+    accountType: text('account_type'), // 'student' | 'org'
+    onboardedAt: timestamp('onboarded_at', { mode: 'date' }),
     // Stripe subscription fields
     stripeCustomerId: text('stripe_customer_id'), // Stripe customer ID
     stripeSubscriptionId: text('stripe_subscription_id'), // Stripe subscription ID
     subscriptionStatus: text('subscription_status').default('free'), // free, active, canceled, past_due
     subscriptionPlan: text('subscription_plan'), // monthly, yearly, etc.
     subscriptionCurrentPeriodEnd: timestamp('subscription_current_period_end'),
+});
+
+// ============ CLUB / ORGANIZATION (enterprise) ============
+
+// Organizations (clubs / orgs). Created by an 'org' account; students join via joinCode.
+const organizations = pgTable('organizations', {
+    id: text('id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    joinCode: varchar('join_code', { length: 20 }).notNull().unique(), // shareable code students enter to join
+    ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    school: varchar('school', { length: 255 }),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// Org membership — the roster. One row per (org, user). This is the core network-effect asset:
+// a member's standing, roster and peer comparison all hang off this row, so leaving is costly.
+const orgMembers = pgTable('org_members', {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    role: varchar('role', { length: 20 }).default('member'), // 'owner' | 'admin' | 'member'
+    displayName: varchar('display_name', { length: 255 }),
+    joinedAt: timestamp('joined_at', { mode: 'date' }).defaultNow().notNull(),
+});
+
+// Pending invites sent by an org to an email address.
+const orgInvites = pgTable('org_invites', {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 255 }).notNull(),
+    invitedBy: text('invited_by').references(() => users.id, { onDelete: 'set null' }),
+    status: varchar('status', { length: 20 }).default('pending'), // 'pending' | 'accepted'
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 
 // Contacts table
@@ -102,5 +138,8 @@ module.exports = {
     gmailTokens,
     assistantSettings,
     userSettings,
+    organizations,
+    orgMembers,
+    orgInvites,
 };
 

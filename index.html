@@ -140,6 +140,7 @@
     <div class="footer-links">
       <a href="/privacy.html">Privacy Policy</a>
       <a href="/terms.html">Terms of Service</a>
+      <a href="/cookies.html">Cookie Policy</a>
       <a href="mailto:info@studentweaver.com">Contact</a>
     </div>
   </div>
@@ -233,6 +234,10 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
           Follow-ups
         </a>
+        <a class="sb-item nav-link" href="#club" id="nav-club" onclick="if(window.renderClubView) setTimeout(window.renderClubView,0);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M12 2v4"/></svg>
+          Club
+        </a>
         <a class="sb-item nav-link" href="#tips-tricks">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           Tips &amp; Tricks
@@ -240,10 +245,6 @@
       </div>
       <div class="sb-section">
         <div class="sb-label">Tools</div>
-        <a class="sb-item" href="#" onclick="if(window.syncGmailLabel) syncGmailLabel(); return false;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Gmail Sync
-        </a>
         <a class="sb-item" href="#" onclick="document.getElementById('export-excel').click(); return false;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -689,6 +690,19 @@
         </div>
       </section>
 
+      <!-- ═══ CLUB / ORGANIZATION ═══ -->
+      <section id="club" class="section">
+        <div class="top-bar">
+          <div>
+            <h1>Club</h1>
+            <p style="margin:4px 0 0;font-size:14px;color:var(--slate);">Your organization's shared networking space</p>
+          </div>
+        </div>
+        <div id="club-content" style="max-width:960px;">
+          <p style="color:var(--slate);">Loading…</p>
+        </div>
+      </section>
+
     </div><!-- end .main-content -->
   </div><!-- end .app-layout -->
 
@@ -723,9 +737,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </a>
-      <a class="mobile-more-item" href="#" onclick="if(window.syncGmailLabel) syncGmailLabel(); return false;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        Gmail Sync
+      <a class="mobile-more-item" href="#club" data-section="club" onclick="if(window.renderClubView) setTimeout(window.renderClubView,0);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M12 2v4"/></svg>
+        Club
       </a>
       <a class="mobile-more-item" href="#" onclick="document.getElementById('export-excel').click(); return false;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -739,6 +753,7 @@
     <p style="margin-top:4px;font-size:12px;">
       <a href="/privacy.html">Privacy Policy</a> &middot;
       <a href="/terms.html">Terms of Service</a> &middot;
+      <a href="/cookies.html">Cookie Policy</a> &middot;
       <a href="mailto:info@studentweaver.com">info@studentweaver.com</a>
     </p>
   </footer>
@@ -868,6 +883,153 @@
     </div>
   </div>
 </div>
+
+<!-- ═══ ONBOARDING: Student vs Club/Organization ═══ -->
+<div id="onboarding-modal" class="modal" style="z-index:3000;">
+  <div class="modal-content" style="max-width:560px;" onclick="event.stopPropagation();">
+
+    <!-- Step 1: choose account type -->
+    <div id="onboarding-step-choose">
+      <h2 style="margin-bottom:0.25rem;">Welcome to Weaver</h2>
+      <p style="color:var(--slate);margin-bottom:1.25rem;font-size:14px;">How will you be using Weaver? This tailors your experience.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <button type="button" class="onboard-choice" onclick="window.chooseAccountType('student')" style="text-align:left;padding:1.25rem;border:1.5px solid var(--border);border-radius:var(--radius-sm,10px);background:white;cursor:pointer;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          <div style="font-weight:700;margin-top:0.5rem;color:var(--navy);">I'm a student</div>
+          <div style="font-size:13px;color:var(--slate);margin-top:0.25rem;">Track your own contacts and follow-ups. Optionally join your club to compare notes with peers.</div>
+        </button>
+        <button type="button" class="onboard-choice" onclick="window.chooseAccountType('org')" style="text-align:left;padding:1.25rem;border:1.5px solid var(--border);border-radius:var(--radius-sm,10px);background:white;cursor:pointer;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div style="font-weight:700;margin-top:0.5rem;color:var(--navy);">We're a club / organization</div>
+          <div style="font-size:13px;color:var(--slate);margin-top:0.25rem;">Create a shared space, invite members, and see who's networking most effectively.</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2a: student — optionally join a club -->
+    <div id="onboarding-step-student" style="display:none;">
+      <h2 style="margin-bottom:0.25rem;">Join your club</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Have a club code? Join to appear on your club's roster and see how your networking stacks up against peers. You can always do this later.</p>
+      <div class="form-group"><label for="onboard-join-code">Club code</label><input type="text" id="onboard-join-code" placeholder="WVR-XXXXXX" style="text-transform:uppercase;"></div>
+      <div id="onboard-join-status" class="upload-status" style="display:none;"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardJoinClub()" style="flex:1;">Join club</button>
+        <button type="button" class="tb-btn tb-btn-outline" onclick="window.finishOnboarding()">Skip for now</button>
+      </div>
+    </div>
+
+    <!-- Step 2b: org — create organization -->
+    <div id="onboarding-step-org" style="display:none;">
+      <h2 style="margin-bottom:0.25rem;">Create your club</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Set up your shared space. You'll get a code to invite members.</p>
+      <div class="form-group"><label for="onboard-org-name">Club / organization name *</label><input type="text" id="onboard-org-name" placeholder="e.g. BC Finance Society"></div>
+      <div class="form-group"><label for="onboard-org-school">School (optional)</label><input type="text" id="onboard-org-school" placeholder="e.g. Boston College"></div>
+      <div id="onboard-org-status" class="upload-status" style="display:none;"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardCreateOrg()" style="flex:1;">Create club</button>
+        <button type="button" class="tb-btn tb-btn-outline" onclick="window.onboardBack()">Back</button>
+      </div>
+    </div>
+
+    <!-- Step 3: org created — share code -->
+    <div id="onboarding-step-done" style="display:none;text-align:center;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="margin-bottom:0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h2 style="margin-bottom:0.25rem;">Your club is ready</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Share this code with members. As they join and log their networking, they'll show up on your roster.</p>
+      <div style="font-size:26px;font-weight:700;letter-spacing:2px;color:var(--blue);background:var(--blue-ghost,#eef4ff);padding:14px 18px;border-radius:10px;" id="onboard-join-code-display">WVR-XXXXXX</div>
+      <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:0.75rem;" onclick="window.copyJoinCode(document.getElementById('onboard-join-code-display').textContent)">Copy code</button>
+      <div style="margin-top:1.25rem;"><button type="button" class="tb-btn tb-btn-primary" style="width:100%;" onclick="window.finishOnboarding()">Go to my club</button></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ COOKIE CONSENT ═══ -->
+<div id="cookie-banner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:4000;padding:1rem;">
+  <div style="max-width:860px;margin:0 auto;background:#1a2744;color:#fff;border-radius:12px;padding:1.1rem 1.35rem;box-shadow:0 10px 40px rgba(0,0,0,0.25);display:flex;gap:1.25rem;align-items:center;flex-wrap:wrap;">
+    <div style="flex:1;min-width:240px;font-size:13.5px;line-height:1.55;color:rgba(255,255,255,0.88);">
+      We use strictly necessary cookies to keep you signed in and make Weaver work. With your permission, we'd also use non-essential cookies to understand usage and improve the product. See our
+      <a href="/cookies.html" style="color:#93c5fd;">Cookie Policy</a>.
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button type="button" onclick="window.setCookieConsent(false)" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Reject non-essential</button>
+      <button type="button" onclick="window.openCookieSettings()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Settings</button>
+      <button type="button" onclick="window.setCookieConsent(true)" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Accept all</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cookie settings modal -->
+<div id="cookie-settings-modal" style="display:none;position:fixed;inset:0;z-index:4100;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;color:#1a2744;max-width:460px;width:100%;border-radius:14px;padding:1.5rem;font-family:'Outfit',sans-serif;">
+    <h2 style="font-size:1.25rem;margin:0 0 0.5rem;">Cookie preferences</h2>
+    <p style="font-size:13.5px;color:#64748b;margin:0 0 1rem;">Choose which cookies Weaver may use. You can change this anytime from the <a href="/cookies.html" style="color:#3b82f6;">Cookie Policy</a>.</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.75rem 0;border-top:1px solid #e2e8f0;">
+      <div><div style="font-weight:600;font-size:14px;">Strictly necessary</div><div style="font-size:12.5px;color:#64748b;">Required for login, sessions and storing your data. Always on.</div></div>
+      <input type="checkbox" checked disabled style="margin-top:4px;">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.75rem 0;border-top:1px solid #e2e8f0;">
+      <div><div style="font-weight:600;font-size:14px;">Analytics (non-essential)</div><div style="font-size:12.5px;color:#64748b;">Helps us measure usage and improve Weaver.</div></div>
+      <input type="checkbox" id="cookie-analytics-toggle" style="margin-top:4px;">
+    </div>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+      <button type="button" onclick="window.closeCookieSettings()" style="background:transparent;border:1px solid #e2e8f0;border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Cancel</button>
+      <button type="button" onclick="window.saveCookieSettings()" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Save preferences</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Cookie consent manager — runs independently of the main app script.
+   Strictly necessary storage (auth/session/contacts) always works; this only
+   governs non-essential cookies, and exposes a gate future analytics must check. */
+(function () {
+  var KEY = 'weaver_cookie_consent';
+  function read() {
+    try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
+  }
+  function write(consent) {
+    try { localStorage.setItem(KEY, JSON.stringify(consent)); } catch (e) {}
+  }
+  function hide(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+  function showBanner() { var el = document.getElementById('cookie-banner'); if (el) el.style.display = 'block'; }
+
+  // Public gate: future non-essential scripts/cookies must check this before loading.
+  window.weaverCookieConsent = {
+    get: read,
+    analyticsAllowed: function () { var c = read(); return !!(c && c.analytics); }
+  };
+
+  window.setCookieConsent = function (acceptAll) {
+    write({ necessary: true, analytics: !!acceptAll, ts: new Date().toISOString(), version: 1 });
+    hide('cookie-banner');
+    hide('cookie-settings-modal');
+    // If analytics is granted and a loader exists, start it now.
+    if (acceptAll && typeof window.loadAnalytics === 'function') { try { window.loadAnalytics(); } catch (e) {} }
+  };
+
+  window.openCookieSettings = function () {
+    var c = read();
+    var toggle = document.getElementById('cookie-analytics-toggle');
+    if (toggle) toggle.checked = !!(c && c.analytics);
+    var m = document.getElementById('cookie-settings-modal');
+    if (m) m.style.display = 'flex';
+  };
+  window.closeCookieSettings = function () { hide('cookie-settings-modal'); };
+  window.saveCookieSettings = function () {
+    var toggle = document.getElementById('cookie-analytics-toggle');
+    window.setCookieConsent(!!(toggle && toggle.checked));
+  };
+
+  // Show the banner on first visit (no stored decision yet).
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!read()) showBanner();
+    else if (window.weaverCookieConsent.analyticsAllowed() && typeof window.loadAnalytics === 'function') {
+      try { window.loadAnalytics(); } catch (e) {}
+    }
+  });
+})();
+</script>
 
 <script src="script.js"></script>
 </body>

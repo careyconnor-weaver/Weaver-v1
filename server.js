@@ -1827,6 +1827,45 @@ async function checkAndMigrateDatabase() {
             } else {
                 console.log('✅ Database schema is up to date');
             }
+
+            // --- Club / Organization (enterprise) schema ---
+            // Add account_type / onboarded_at columns to users (idempotent)
+            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type text`);
+            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at timestamp`);
+
+            // Create org tables if they don't exist
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS organizations (
+                    id text PRIMARY KEY,
+                    name varchar(255) NOT NULL,
+                    join_code varchar(20) NOT NULL UNIQUE,
+                    owner_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    school varchar(255),
+                    created_at timestamp DEFAULT now() NOT NULL
+                )
+            `);
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS org_members (
+                    id text PRIMARY KEY,
+                    org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    role varchar(20) DEFAULT 'member',
+                    display_name varchar(255),
+                    joined_at timestamp DEFAULT now() NOT NULL
+                )
+            `);
+            await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS org_members_org_user_idx ON org_members (org_id, user_id)`);
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS org_invites (
+                    id text PRIMARY KEY,
+                    org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                    email varchar(255) NOT NULL,
+                    invited_by text REFERENCES users(id) ON DELETE SET NULL,
+                    status varchar(20) DEFAULT 'pending',
+                    created_at timestamp DEFAULT now() NOT NULL
+                )
+            `);
+            console.log('✅ Club/Organization schema is up to date');
         } finally {
             client.release();
         }
@@ -2391,6 +2430,145 @@ app.post('/api/users/settings', async (req, res) => {
     } catch (error) {
         console.error('Error saving user settings:', error);
         res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// ============ ACCOUNT TYPE / ONBOARDING ============
+
+// Persist the onboarding choice: 'student' or 'org'
+app.post('/api/users/account-type', async (req, res) => {
+    try {
+        const { userId, accountType } = req.body;
+        if (!userId || !['student', 'org'].includes(accountType)) {
+            return res.status(400).json({ error: "userId and accountType ('student' | 'org') are required" });
+        }
+        const user = await dbAPI.setUserAccountType(userId, accountType);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+        console.error('Error setting account type:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// ============ CLUB / ORGANIZATION API ============
+
+// Create an organization (club). The creator becomes the owner + first member.
+app.post('/api/orgs', async (req, res) => {
+    try {
+        const { userId, name, school } = req.body;
+        if (!userId || !name || !String(name).trim()) {
+            return res.status(400).json({ error: 'userId and name are required' });
+        }
+        const org = await dbAPI.createOrganization({
+            id: `org_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name: String(name).trim(),
+            ownerId: userId,
+            school: school || null,
+        });
+        // Creating an org implies an 'org' account type
+        await dbAPI.setUserAccountType(userId, 'org');
+        res.json({ success: true, org });
+    } catch (error) {
+        console.error('Error creating organization:', error);
+        res.status(500).json({ error: 'Failed to create organization', message: error.message });
+    }
+});
+
+// Orgs the current user belongs to (with their role in each)
+app.get('/api/orgs/mine', async (req, res) => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) return res.status(400).json({ error: 'userId is required' });
+        const orgs = await dbAPI.getOrgsForUser(userId);
+        res.json({ success: true, orgs });
+    } catch (error) {
+        console.error('Error listing user orgs:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// Join an organization by its share code
+app.post('/api/orgs/join', async (req, res) => {
+    try {
+        const { userId, joinCode, displayName } = req.body;
+        if (!userId || !joinCode) return res.status(400).json({ error: 'userId and joinCode are required' });
+        const org = await dbAPI.getOrganizationByJoinCode(joinCode);
+        if (!org) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
+        await dbAPI.addOrgMember({ orgId: org.id, userId, role: 'member', displayName });
+        res.json({ success: true, org });
+    } catch (error) {
+        console.error('Error joining organization:', error);
+        res.status(500).json({ error: 'Failed to join organization', message: error.message });
+    }
+});
+
+// Org details + join code
+app.get('/api/orgs/:orgId', async (req, res) => {
+    try {
+        const org = await dbAPI.getOrganizationById(req.params.orgId);
+        if (!org) return res.status(404).json({ error: 'Organization not found' });
+        res.json({ success: true, org });
+    } catch (error) {
+        console.error('Error getting organization:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// Roster + leaderboard: every member with their networking activity, ranked.
+app.get('/api/orgs/:orgId/members', async (req, res) => {
+    try {
+        const roster = await dbAPI.getOrgRosterWithStats(req.params.orgId);
+        res.json({ success: true, members: roster });
+    } catch (error) {
+        console.error('Error getting org roster:', error);
+        res.status(500).json({ error: 'Server error', message: error.message });
+    }
+});
+
+// Invite a member by email (records the invite, and emails them if Resend is configured)
+app.post('/api/orgs/:orgId/invite', async (req, res) => {
+    try {
+        const orgId = req.params.orgId;
+        const { email, invitedBy } = req.body;
+        if (!email) return res.status(400).json({ error: 'email is required' });
+        const org = await dbAPI.getOrganizationById(orgId);
+        if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+        const invite = await dbAPI.createOrgInvite({
+            id: `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            orgId,
+            email,
+            invitedBy: invitedBy || null,
+        });
+
+        // Best-effort email via Resend (same service the reminders use). Never fail the request on email error.
+        if (resend) {
+            try {
+                const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
+                const weaverUrl = process.env.WEAVER_URL || 'https://studentweaver.com';
+                await resend.emails.send({
+                    from: fromEmail,
+                    to: String(email).trim(),
+                    subject: `You're invited to join ${org.name} on Weaver`,
+                    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+                        <h2 style="color:#1a2744;">Join ${org.name} on Weaver</h2>
+                        <p style="color:#334155;">You've been invited to join <strong>${org.name}</strong>'s networking space on Weaver.</p>
+                        <p style="color:#334155;">Sign up (or log in), choose <strong>Student</strong>, and enter this club code:</p>
+                        <p style="font-size:22px;font-weight:700;letter-spacing:2px;color:#3b82f6;background:#f1f5f9;padding:12px 16px;border-radius:8px;text-align:center;">${org.joinCode}</p>
+                        <p><a href="${weaverUrl}" style="display:inline-block;background:#3b82f6;color:white;text-decoration:none;padding:10px 20px;border-radius:8px;">Open Weaver</a></p>
+                    </div>`,
+                });
+            } catch (mailErr) {
+                console.error('Invite email failed (invite still recorded):', mailErr.message);
+            }
+        }
+
+        res.json({ success: true, invite, joinCode: org.joinCode });
+    } catch (error) {
+        console.error('Error inviting member:', error);
+        res.status(500).json({ error: 'Failed to create invite', message: error.message });
     }
 });
 
