@@ -320,3 +320,24 @@ due first; Stripe return pages rebuilt; landing pricing uses drawn check marks.
   the front end's contract and covered by the tests above.
 - Not verified here: live OpenAI, live Stripe, live Gmail, Windows-native demo database
   start. Email verification at signup and password reset are not built yet.
+
+---
+
+# Addendum: local demo mode (commit 4ce93e5, updated in change set 3)
+
+**Requested by:** shindon@bc.edu, to demo unreleased work without touching production
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-23, updated 2026-10-24
+
+- `demo.js` + `npm run demo`: starts a private Postgres (`embedded-postgres`, installed
+  on demand with `--no-save` so production installs are unaffected), applies the schema,
+  starts the server and seeds a sample club (BC Finance Society, 6 members, contacts,
+  emails, call notes). Data lives in `.demo-db/` (git-ignored).
+- Change set 3 updated it to sign up through the real auth endpoints with session
+  cookies, verify the sample club, add shared and private outcomes and a checklist,
+  and upgrade demo databases created by the earlier version in place.
+- Demo logins: `demo@weaver.app` (club manager) and `priya.shah@bc.edu` (student),
+  password `weaver-demo`. These exist only in the local demo database.
+- Verified by running the launcher on Linux with a fresh database and with an existing
+  one. Not verified on Windows or macOS natively.
+- A packaged copy (`Weaver-demo.zip`, built from the committed tree with a
+  START-HERE.txt) was prepared for Carey to run locally.
