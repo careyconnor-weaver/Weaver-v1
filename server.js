@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
 const OpenAI = require('openai');
 const axios = require('axios');
@@ -13,14 +12,36 @@ const { Resend } = require('resend');
 const stripeRoutes = require('./routes/stripe');
 const { pool } = require('./db/index');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
-
-const FREE_PLAN_CONTACT_LIMIT = 20;
+const crypto = require('crypto');
+const auth = require('./lib/auth');
+const { resolvePlan } = require('./lib/plans');
+const usage = require('./lib/usage');
+const { selectRelevant } = require('./lib/context');
+const { PLAYBOOK: WEAVER_PLAYBOOK } = require('./lib/playbook');
+const SCHEMA_SQL = require('./lib/schema-sql');
+const authRoutes = require('./routes/auth');
+const workspaceRoutes = require('./routes/workspace');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Render (and most hosts) sit behind a proxy: trust it so req.ip and https detection work.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// The user's plan (contact limit, AI budget) from their subscription and club memberships.
+async function planForUser(user) {
+    let orgs = [];
+    try { orgs = await dbAPI.getOrgsForUser(user.id); } catch (e) { /* org tables optional */ }
+    return resolvePlan(user, orgs);
+}
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -38,16 +59,85 @@ try {
     console.warn('   File uploads may not work properly.');
 }
 
-// Middleware
-app.use(cors());
-app.use(express.static('.')); // Serve static files
+// ---------- Security headers ----------
+app.use((req, res, next) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (process.env.NODE_ENV === 'production') res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
+// ---------- Public files ----------
+// Only these files are served. (Previously the whole project folder was public, which
+// exposed server code, config files and the Gmail token backup.)
+const PUBLIC_FILES = new Set([
+    'index.html', 'privacy.html', 'terms.html', 'cookies.html', 'success.html', 'cancel.html',
+    'script.js', 'assistant.js', 'workspace-ui.js', 'api.js', 'styles.css', 'app-theme.css',
+    'weaver-badge.png', 'hero-network.jpg', 'networking-event.jpg', 'student-laptop.jpg',
+    'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
+]);
+app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'deny', index: false, maxAge: '7d' }));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/:file', (req, res, next) => {
+    const file = req.params.file;
+    if (!PUBLIC_FILES.has(file)) return next();
+    const isPage = file.endsWith('.html');
+    res.sendFile(path.join(__dirname, file), { headers: { 'Cache-Control': isPage ? 'no-cache' : 'public, max-age=300' } });
+});
+
+// ---------- Sessions ----------
+// Every /api route requires a signed-in user except the few below.
+const PUBLIC_API = new Set([
+    'POST /api/auth/signup', 'POST /api/auth/login', 'POST /api/auth/logout',
+    'POST /api/users/signup', 'POST /api/users/login',
+    'GET /api/auth/me', 'GET /api/health', 'GET /api/stripe/pricing',
+    'POST /api/stripe/webhook', 'GET /api/gmail/callback',
+]);
+app.use('/api', async (req, res, next) => {
+    try {
+        const token = auth.sessionToken(req);
+        if (token && pool) {
+            const userId = await auth.getSessionUserId(pool, token);
+            if (userId) {
+                const u = await dbAPI.getUserById(userId);
+                if (u) { const { password, ...safe } = u; req.user = safe; }
+            }
+        }
+    } catch (e) {
+        console.error('Session lookup failed:', e.message);
+    }
+    const key = `${req.method} ${req.baseUrl}${req.path}`.replace(/\/$/, '');
+    if (PUBLIC_API.has(key)) return next();
+    if (!req.user) return res.status(401).json({ error: 'Please log in again.', code: 'auth_required' });
+    next();
+});
 
 // Stripe routes (must be before express.json() to handle webhooks properly)
 // The webhook endpoint uses express.raw() for body parsing
 app.use('/api/stripe', stripeRoutes);
 
 // JSON parsing middleware (after Stripe routes to avoid interfering with webhooks)
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '2mb' }));
+
+// A signed-in user can only act on their own account. Older client code still sends
+// userId in the query/body; it must match the session, and is then normalized to it.
+app.use('/api', (req, res, next) => {
+    if (!req.user) return next();
+    const claimed = [req.query && req.query.userId, req.body && typeof req.body === 'object' ? req.body.userId : undefined]
+        .filter((v) => v !== undefined && v !== null && v !== '');
+    if (claimed.some((v) => String(v) !== req.user.id)) {
+        return res.status(403).json({ error: 'You can only access your own account.' });
+    }
+    if (req.query) req.query.userId = req.user.id;
+    if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) req.body.userId = req.user.id;
+    next();
+});
+
+// Accounts, plans and workspace features
+app.use('/api', authRoutes({ pool, dbAPI }));
+app.use('/api', workspaceRoutes({ pool, openai: null, dbAPI, getOpenAI: () => openai }));
 
 // Initialize OpenAI (optional - only if API key is provided)
 let openai = null;
@@ -163,20 +253,16 @@ app.post('/api/search', async (req, res) => {
                 : `Please provide relevant information about: ${query}\n\nProvide current and accurate information based on your training data.`;
         }
         
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a helpful assistant that summarizes and provides relevant information from web search results."
-                },
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            max_tokens: 500,
-            temperature: 0.7
+        const completion = await usage.meteredCompletion({
+            pool, openai, user: req.user, plan: await planForUser(req.user), feature: 'search',
+            model: usage.DEFAULT_MODEL, maxTokens: 500,
+            params: {
+                messages: [
+                    { role: 'system', content: 'You are a helpful assistant that summarizes and provides relevant information from web search results.' },
+                    { role: 'user', content: String(prompt).slice(0, 8000) }
+                ],
+                temperature: 0.5
+            }
         });
         
         const summary = completion.choices[0].message.content;
@@ -188,11 +274,9 @@ app.post('/api/search', async (req, res) => {
         });
         
     } catch (error) {
+        if (usage.sendUsageError(res, error)) return;
         console.error('API error:', error);
-        res.status(500).json({ 
-            error: 'Failed to process search request',
-            message: error.message 
-        });
+        res.status(500).json({ error: 'Search failed. Try again.' });
     }
 });
 
@@ -237,108 +321,39 @@ app.post('/api/process-call-notes', upload.single('image'), async (req, res) => 
         
         console.log('Image converted to base64, size:', base64Image.length);
         
-        // Step 1: Use OpenAI Vision API to extract text from image
-        // Try gpt-4o first, fallback to gpt-4-turbo if not available
-        let visionResponse;
-        try {
-            visionResponse = await openai.chat.completions.create({
-                model: "gpt-4o", // GPT-4o has vision capabilities built-in
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a text transcription tool. Your only job is to transcribe all visible text from images. Always provide the transcription, regardless of the content. Do not refuse, decline, or add commentary."
-                    },
-                    {
-                        role: "user",
-                        content: [
-                        {
-                            type: "text",
-                            text: "Transcribe all text visible in this image. Include every word, number, date, name, and piece of information exactly as it appears. Output only the raw transcription."
-                        },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:${imageMimeType};base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 2000
-            });
-        } catch (modelError) {
-            // Fallback to gpt-4-turbo if gpt-4o is not available
-            console.log('gpt-4o not available, trying gpt-4-turbo');
-            visionResponse = await openai.chat.completions.create({
-                model: "gpt-4-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a text transcription tool. Your only job is to transcribe all visible text from images. Always provide the transcription, regardless of the content. Do not refuse, decline, or add commentary."
-                    },
-                    {
-                        role: "user",
-                        content: [
-                        {
-                            type: "text",
-                            text: "Transcribe all text visible in this image. Include every word, number, date, name, and piece of information exactly as it appears. Output only the raw transcription."
-                        },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:${imageMimeType};base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 2000
-            });
+        if (!/^image\/(png|jpe?g|webp|gif|heic|heif)$/i.test(imageMimeType)) {
+            try { fs.unlinkSync(imagePath); } catch (e) { /* ignore */ }
+            return res.status(400).json({ success: false, error: 'Upload a photo (PNG, JPG, WEBP or HEIC).' });
         }
+        const plan = await planForUser(req.user);
 
-        let extractedText = visionResponse.choices[0].message.content;
+        // Step 1: transcribe the photo (vision model), metered against the user's plan.
+        const visionResponse = await usage.meteredCompletion({
+            pool, openai, user: req.user, plan, feature: 'notes_photo', model: usage.VISION_MODEL, maxTokens: 1500,
+            params: {
+                messages: [
+                    { role: 'system', content: 'You are a text transcription tool. Your only job is to transcribe all visible text from images. Always provide the transcription, regardless of the content. Do not refuse, decline, or add commentary.' },
+                    { role: 'user', content: [
+                        { type: 'text', text: 'Transcribe all text visible in this image. Include every word, number, date, name, and piece of information exactly as it appears. Output only the raw transcription.' },
+                        { type: 'image_url', image_url: { url: `data:${imageMimeType};base64,${base64Image}` } }
+                    ] }
+                ]
+            }
+        });
+
+        let extractedText = visionResponse.choices[0].message.content || '';
         console.log('Text extracted from image, length:', extractedText.length);
-        console.log('Extracted text preview:', extractedText.substring(0, 200));
-        
-        // Check if OpenAI refused to process or returned an error message
-        const refusalPhrases = [
-            "i'm unable to assist",
-            "i cannot assist",
-            "i can't assist",
-            "i'm not able to",
-            "i cannot help",
-            "i'm sorry, but i",
-            "i cannot process",
-            "unable to process"
-        ];
-        
-        const extractedTextLower = extractedText.toLowerCase();
-        const isRefusal = refusalPhrases.some(phrase => extractedTextLower.includes(phrase));
-        
-        if (isRefusal) {
-            console.warn('OpenAI refused to process the image or returned an error message');
-            console.warn('Original response:', extractedText);
-            // If it's a refusal, we'll still use it but note it in the summary
-            // The user should see what OpenAI returned
-            extractedText = `[Note: OpenAI returned the following response instead of extracted text]\n\n${extractedText}`;
-        }
-        
-        // Step 2: Use OpenAI to summarize the extracted text
-        console.log('Generating summary...');
-        const summaryResponse = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a helpful assistant that summarizes text content. Provide a clear, concise summary of the key information, main points, and important details from the text."
-                },
-                {
-                    role: "user",
-                    content: `Please provide a clear and concise summary of the following text. Include the main points, key information, and any important details:\n\n${extractedText}`
-                }
-            ],
-            max_tokens: 500,
-            temperature: 0.7
+
+        // Step 2: summarize with the small model.
+        const summaryResponse = await usage.meteredCompletion({
+            pool, openai, user: req.user, plan, feature: 'notes_summary', model: usage.DEFAULT_MODEL, maxTokens: 400,
+            params: {
+                messages: [
+                    { role: 'system', content: 'Summarize networking call notes for a student: who they spoke with, what was discussed, advice given, and any next steps or promises. Plain sentences, no emoji, under 120 words.' },
+                    { role: 'user', content: extractedText.slice(0, 12000) }
+                ],
+                temperature: 0.3
+            }
         });
 
         const summary = summaryResponse.choices[0].message.content;
@@ -360,6 +375,8 @@ app.post('/api/process-call-notes', upload.single('image'), async (req, res) => 
         });
         
     } catch (error) {
+        if (req.file && req.file.path) { try { fs.unlinkSync(req.file.path); } catch (e) { /* already removed */ } }
+        if (usage.sendUsageError(res, error)) return;
         console.error('Error processing call notes image:', error);
         
         // Clean up uploaded file on error
@@ -404,9 +421,11 @@ app.post('/api/process-call-notes', upload.single('image'), async (req, res) => 
     }
 });
 
-// Helper: detect company/firm name from email domain using OpenAI (used by /api/detect-firm and Gmail sync)
-async function detectFirmFromDomain(email, name) {
-    if (!openai) return null;
+// Helper: detect company/firm name from email domain (used by /api/detect-firm and Gmail sync).
+// Metered against the user's AI allowance; results are cached per domain for everyone.
+const firmByDomain = new Map();
+async function detectFirmFromDomain(user, email, name) {
+    if (!openai || !user) return null;
     if (!email || typeof email !== 'string') return null;
     const domain = email.split('@')[1];
     if (!domain) return null;
@@ -416,6 +435,8 @@ async function detectFirmFromDomain(email, name) {
         'zoho.com', 'yandex.com', 'gmx.com', 'inbox.com'
     ];
     if (freeProviders.includes(domain.toLowerCase())) return null;
+    const cacheKey = domain.toLowerCase();
+    if (firmByDomain.has(cacheKey)) return firmByDomain.get(cacheKey);
     const prompt = `Given the email domain "${domain}"${name ? ` and the person's name "${name}"` : ''}, identify the company or organization name.
 
 Rules:
@@ -431,18 +452,22 @@ ${name ? `Person's name: ${name}` : ''}
 
 Company name:`;
     try {
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4',
-            messages: [
-                { role: 'system', content: 'You are a business intelligence assistant that identifies company names from email domains. Always respond with just the company name or \'UNKNOWN\'.' },
-                { role: 'user', content: prompt }
-            ],
-            max_tokens: 100,
-            temperature: 0.3
+        const completion = await usage.meteredCompletion({
+            pool, openai, user, plan: await planForUser(user), feature: 'detect_firm',
+            model: usage.DEFAULT_MODEL, maxTokens: 30,
+            params: {
+                temperature: 0,
+                messages: [
+                    { role: 'system', content: 'You identify company names from email domains. Respond with just the company name or UNKNOWN.' },
+                    { role: 'user', content: prompt }
+                ],
+            },
         });
         let firmName = (completion.choices[0].message.content || '').trim();
-        firmName = firmName.replace(/^["']|["']$/g, '').replace(/\.$/, '');
-        if (firmName.toUpperCase() === 'UNKNOWN' || firmName.toUpperCase() === 'N/A' || firmName.toUpperCase() === 'NONE' || firmName.length < 2) return null;
+        firmName = firmName.replace(/^["']|["']$/g, '').replace(/\.$/, '').slice(0, 120);
+        if (firmName.toUpperCase() === 'UNKNOWN' || firmName.toUpperCase() === 'N/A' || firmName.toUpperCase() === 'NONE' || firmName.length < 2) firmName = null;
+        if (firmByDomain.size > 5000) firmByDomain.clear();
+        firmByDomain.set(cacheKey, firmName);
         return firmName;
     } catch (err) {
         console.error('detectFirmFromDomain error:', err.message);
@@ -460,7 +485,6 @@ app.post('/api/detect-firm', async (req, res) => {
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
         }
-        console.log('Detecting firm for email:', email, 'name:', name);
         const domain = email.split('@')[1];
         if (!domain) {
             return res.json({ firm: null });
@@ -474,8 +498,7 @@ app.post('/api/detect-firm', async (req, res) => {
             console.log('Free email provider detected, no firm');
             return res.json({ firm: null });
         }
-        const firm = await detectFirmFromDomain(email, name);
-        console.log('Detected firm:', firm);
+        const firm = await detectFirmFromDomain(req.user, email, name);
         res.json({ firm: firm });
     } catch (error) {
         console.error('Firm detection error:', error);
@@ -496,6 +519,10 @@ function createOAuth2Client() {
 // In-memory token cache (backed by database for persistence across restarts)
 const userTokensCache = {};
 
+// Pending Gmail connections: state -> { userId, expires }
+const gmailStates = new Map();
+setInterval(() => { const now = Date.now(); for (const [k, v] of gmailStates) if (v.expires < now) gmailStates.delete(k); }, 300000).unref();
+
 // Gmail OAuth: Get authorization URL
 app.get('/api/gmail/auth', (req, res) => {
     try {
@@ -510,10 +537,14 @@ app.get('/api/gmail/auth', (req, res) => {
             'https://www.googleapis.com/auth/gmail.send'
         ];
 
+        // Signed, single-use state: the callback can only attach Gmail to the account that
+        // started the flow (previously the state was the raw user id, which anyone could forge).
+        const state = crypto.randomBytes(24).toString('base64url');
+        gmailStates.set(state, { userId: req.user.id, expires: Date.now() + 10 * 60000 });
         const authUrl = client.generateAuthUrl({
             access_type: 'offline',
             scope: scopes,
-            state: userId,
+            state,
             prompt: 'consent' // Force consent to always get a refresh token
         });
 
@@ -527,11 +558,13 @@ app.get('/api/gmail/auth', (req, res) => {
 // Gmail OAuth: Handle callback - store tokens in database for persistence
 app.get('/api/gmail/callback', async (req, res) => {
     try {
-        const { code, state: userId } = req.query;
-
-        if (!code || !userId) {
-            return res.status(400).json({ error: 'Missing code or user ID' });
+        const { code, state } = req.query;
+        const pending = state ? gmailStates.get(String(state)) : null;
+        if (pending) gmailStates.delete(String(state));
+        if (!code || !pending || pending.expires < Date.now()) {
+            return res.status(400).send('<!doctype html><title>Weaver</title><p style="font-family:system-ui;padding:2rem">This Gmail connection link has expired. Close this window and connect again from Weaver.</p>');
         }
+        const userId = pending.userId;
 
         const client = createOAuth2Client();
         const { tokens } = await client.getToken(code);
@@ -559,26 +592,13 @@ app.get('/api/gmail/callback', async (req, res) => {
         // Also cache in memory for fast access
         userTokensCache[userId] = tokens;
 
-        // Also write to file as backup (in case DB has issues)
-        try {
-            const tokensFile = path.join(__dirname, 'gmail_tokens.json');
-            let allTokens = {};
-            if (fs.existsSync(tokensFile)) {
-                allTokens = JSON.parse(fs.readFileSync(tokensFile, 'utf8'));
-            }
-            allTokens[userId] = tokens;
-            fs.writeFileSync(tokensFile, JSON.stringify(allTokens, null, 2));
-        } catch (fileErr) {
-            console.log('Could not write token file backup (non-critical):', fileErr.message);
-        }
-
         res.send(`
             <html>
                 <head>
                     <title>Gmail Connected</title>
                     <style>
                         body {
-                            font-family: Arial, sans-serif;
+                            font-family: 'IBM Plex Sans', system-ui, sans-serif;
                             display: flex;
                             justify-content: center;
                             align-items: center;
@@ -593,13 +613,13 @@ app.get('/api/gmail/callback', async (req, res) => {
                             border-radius: 8px;
                             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                         }
-                        h1 { color: #3182ce; }
+                        h1 { color: #16203A; font-size: 20px; font-weight: 600; }
                         p { color: #4a5568; }
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <h1>✓ Gmail Connected Successfully!</h1>
+                        <h1>Gmail connected</h1>
                         <p>You can close this window and return to Weaver.</p>
                         <script>
                             setTimeout(() => {
@@ -616,8 +636,8 @@ app.get('/api/gmail/callback', async (req, res) => {
             <html>
                 <head><title>Error</title></head>
                 <body>
-                    <h1>Error connecting Gmail</h1>
-                    <p>${error.message}</p>
+                    <h1>Gmail could not be connected</h1>
+                    <p>Close this window and try again from Weaver.</p>
                 </body>
             </html>
         `);
@@ -1241,7 +1261,7 @@ app.get('/api/gmail/sync-label', async (req, res) => {
                 try {
                     const emailEntry = emailData.find(e => e.email === email);
                     const name = emailEntry ? emailEntry.name : null;
-                    const firm = await detectFirmFromDomain(email, name);
+                    const firm = await detectFirmFromDomain(req.user, email, name);
                     if (firm) {
                         firmDetections[email] = firm;
                         console.log(`Detected firm for ${email}: ${firm}`);
@@ -1292,139 +1312,33 @@ app.get('/api/gmail/sync-label', async (req, res) => {
 });
 
 // Clean password: remove whitespace and invisible characters (fixes cross-browser login)
-function cleanPassword(str) {
-    if (!str || typeof str !== 'string') return '';
-    let s = String(str).replace(/\s/g, ''); // Remove ALL whitespace (including invisible Unicode spaces)
-    s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width characters
-    s = s.replace(/[\x00-\x1F\x7F]/g, ''); // Remove non-printable characters
-    return s;
-}
-
 // ============ DATABASE API ROUTES ============
-
-// Users
-app.post('/api/users/signup', async (req, res) => {
-    try {
-        let { userId, email, password } = req.body;
-        if (!userId || !email || !password) {
-            return res.status(400).json({ error: 'userId, email, and password are required' });
-        }
-        email = String(email).trim().toLowerCase();
-        password = cleanPassword(password);
-        if (!email || !password) {
-            return res.status(400).json({ error: 'userId, email, and password are required' });
-        }
-        
-        console.log('Signup attempt:', { userId, email, passwordLength: password.length });
-        
-        const existing = await dbAPI.getUserByEmail(email);
-        if (existing) {
-            return res.status(400).json({
-                error: 'An account with this email already exists',
-                details: 'Use the Login option to sign in, or use a different email.'
-            });
-        }
-        
-        const user = await dbAPI.createUser(userId, email, password);
-        console.log('User created successfully:', user.id);
-        res.json({ success: true, user: { id: user.id, email: user.email } });
-    } catch (error) {
-        console.error('Signup error:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail,
-            stack: error.stack
-        });
-        
-        if (error.code === '23505') { // Unique constraint violation
-            return res.status(400).json({ 
-                error: 'An account with this email already exists',
-                details: error.detail || 'Email is already registered'
-            });
-        }
-        
-        // Return more detailed error message
-        const errorMessage = error.message || 'Failed to create user';
-        res.status(500).json({ 
-            error: 'Failed to create user',
-            details: errorMessage,
-            code: error.code
-        });
-    }
-});
-
-app.post('/api/users/login', async (req, res) => {
-    try {
-        let { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        email = String(email).trim().toLowerCase();
-        password = cleanPassword(password);
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        
-        console.log(`Login attempt for email: ${email}`);
-        
-        const user = await dbAPI.getUserByEmail(email);
-        
-        if (!user) {
-            console.log(`Login attempt: User not found for email: ${email}`);
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-        
-        console.log(`User found: ${user.id}, checking password...`);
-        
-        const storedPassword = cleanPassword(user.password || '');
-        const providedPassword = password;
-        
-        // (Removed debug logging that wrote users' plaintext passwords to the server logs.)
-        if (storedPassword !== providedPassword) {
-            console.log(`Login attempt: Password mismatch for email: ${email}`);
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-        
-        console.log(`Login successful for user: ${user.id}`);
-        
-        // Refresh subscription from Stripe by email (fixes "paid but still free" when webhook missed or user logged in on different device)
-        let userToReturn = user;
-        if (stripe && user.email) {
-            try {
-              // Cap the Stripe refresh so a slow Stripe API can never stall login.
-              await Promise.race([ (async () => {
-                const customers = await stripe.customers.list({ email: user.email.trim(), limit: 10 });
-                for (const customer of customers.data || []) {
-                    const subs = await stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 10 });
-                    const active = (subs.data || []).find(s => s.status === 'active' || s.status === 'trialing');
-                    if (active) {
-                        await dbAPI.updateUserStripeCustomerId(user.id, customer.id);
-                        await dbAPI.updateUserSubscription(customer.id, active);
-                        const updated = await dbAPI.getUserById(user.id);
-                        if (updated) userToReturn = updated;
-                        break;
-                    }
-                }
-              })(), new Promise(resolve => setTimeout(resolve, 3000)) ]);
-            } catch (err) {
-                console.error('Login: refresh subscription by email failed:', err.message);
-            }
-        }
-
-        // Return full user data (excluding password). clubCovered = a club on an active
-        // plan covers this member's seat, so they get Pro features without paying.
-        const { password: _, ...userWithoutPassword } = userToReturn;
-        let clubCovered = false;
-        try { clubCovered = await dbAPI.userHasClubCoverage(user.id); } catch (e) { /* org tables may not exist yet */ }
-        res.json({ success: true, user: { ...userWithoutPassword, clubCovered } });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Failed to login' });
-    }
-});
+// Signup/login/logout live in routes/auth.js.
 
 // Contacts
+// Whitelisted, length-limited contact fields (column sizes match db/schema.js).
+function contactFields(c, partial) {
+    const str = (v, n) => (v == null || v === '' ? null : String(v).slice(0, n));
+    const out = {
+        name: str(c.name, 255),
+        email: str(c.email, 255),
+        firm: str(c.firm, 255),
+        company: str(c.company, 255),
+        position: str(c.position, 255),
+        phone: str(c.phone, 50),
+        location: str(c.location, 255),
+        priority: ['low', 'medium', 'high'].includes(c.priority) ? c.priority : null,
+        vip: !!c.vip,
+        firstEmailDate: str(c.firstEmailDate, 50),
+        generalNotes: str(c.generalNotes, 20000),
+    };
+    if (partial) {
+        Object.keys(out).forEach((k) => { if (!(k in c)) delete out[k]; });
+        if ('name' in out && !out.name) delete out.name;
+    }
+    return out;
+}
+
 app.get('/api/contacts', async (req, res) => {
     try {
         const userId = req.query.userId;
@@ -1463,15 +1377,12 @@ app.post('/api/contacts', async (req, res) => {
         if (!contactData.userId || !contactData.id || !contactData.name) {
             return res.status(400).json({ error: 'userId, id, and name are required' });
         }
-        const user = await dbAPI.getUserById(contactData.userId);
-        const isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
-        if (!isPaid) {
-            const existing = await dbAPI.getContactsByUserId(contactData.userId);
-            if (existing.length >= FREE_PLAN_CONTACT_LIMIT) {
-                return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to add more.` });
-            }
+        const plan = await planForUser(req.user);
+        const { rows: cnt } = await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE user_id = $1', [req.user.id]);
+        if (cnt[0].n >= plan.contactLimit) {
+            return res.status(403).json({ error: `The ${plan.label} plan includes ${plan.contactLimit} contacts. Upgrade to add more.`, code: 'contact_limit' });
         }
-        const contact = await dbAPI.createContact(contactData);
+        const contact = await dbAPI.createContact({ id: String(contactData.id).slice(0, 100), userId: req.user.id, ...contactFields(contactData, false) });
         res.json({ success: true, contact });
     } catch (error) {
         console.error('Create contact error:', error);
@@ -1482,10 +1393,12 @@ app.post('/api/contacts', async (req, res) => {
 app.put('/api/contacts/:contactId', async (req, res) => {
     try {
         const { contactId } = req.params;
-        const { userId, ...updates } = req.body;
+        const { userId } = req.body;
         if (!userId) {
             return res.status(400).json({ error: 'userId is required' });
         }
+        // Only editable fields; ids, owners and timestamps can't be changed from the client.
+        const updates = contactFields(req.body, true);
         const contact = await dbAPI.updateContact(contactId, userId, updates);
         if (!contact) {
             return res.status(404).json({ error: 'Contact not found' });
@@ -1534,50 +1447,49 @@ app.post('/api/contacts/sync', async (req, res) => {
         if (!userId || !Array.isArray(contacts)) {
             return res.status(400).json({ error: 'userId and contacts array are required' });
         }
-        const user = await dbAPI.getUserById(userId);
-        let isPaid = user && (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing');
-        if (!isPaid) { try { isPaid = await dbAPI.userHasClubCoverage(userId); } catch (e) { /* ignore */ } }
-        if (!isPaid && contacts.length > FREE_PLAN_CONTACT_LIMIT) {
-            return res.status(403).json({ error: `Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts. Upgrade to sync more.` });
+        const plan = await planForUser(req.user);
+        // The limit counts what the user would have after this merge (sync never deletes),
+        // so it can't be bypassed by syncing in small batches.
+        const { rows: ownRows } = await pool.query('SELECT id FROM contacts WHERE user_id = $1', [req.user.id]);
+        const own = new Set(ownRows.map((r) => String(r.id)));
+        const incoming = new Set(contacts.filter((c) => c && c.id && c.name).map((c) => String(c.id)));
+        const added = [...incoming].filter((id) => !own.has(id)).length;
+        if (added > 0 && own.size + added > plan.contactLimit) {
+            return res.status(403).json({ error: `The ${plan.label} plan includes ${plan.contactLimit} contacts. Upgrade to sync more.`, code: 'contact_limit' });
         }
+        let skipped = 0;
         for (const c of contacts) {
             if (!c || !c.id || !c.name) continue;
-            const { emails = [], notes = [] } = c;
-            const existing = await dbAPI.getContactById(c.id, userId);
-            const contactPayload = {
-                name: c.name,
-                email: c.email || null,
-                firm: c.firm || null,
-                company: c.company || null,
-                position: c.position || null,
-                phone: c.phone || null,
-                location: c.location || null,
-                priority: c.priority || null,
-                vip: !!c.vip,
-                firstEmailDate: c.firstEmailDate || null,
-                generalNotes: c.generalNotes || null
-            };
-            if (existing) {
-                await dbAPI.updateContact(c.id, userId, contactPayload);
-                await dbAPI.deleteEmailsByContactId(c.id);
-                await dbAPI.deleteNotesByContactId(c.id);
+            const id = String(c.id).slice(0, 100);
+            const emails = Array.isArray(c.emails) ? c.emails.slice(0, 500) : [];
+            const notes = Array.isArray(c.notes) ? c.notes.slice(0, 500) : [];
+            const contactPayload = contactFields(c, false);
+            if (own.has(id)) {
+                await dbAPI.updateContact(id, userId, contactPayload);
+                await dbAPI.deleteEmailsByContactId(id);
+                await dbAPI.deleteNotesByContactId(id);
             } else {
-                await dbAPI.createContact({
-                    id: c.id, userId, ...contactPayload
-                });
+                try {
+                    await dbAPI.createContact({ id, userId, ...contactPayload });
+                } catch (err) {
+                    // An id already used by another account: skip it rather than fail the whole sync.
+                    skipped++;
+                    continue;
+                }
             }
+            c.id = id;
             for (const e of emails) {
                 if (e && e.id != null && e.date && e.direction) {
-                    try { await dbAPI.addEmail(c.id, e); } catch (err) { console.warn('Sync addEmail skip:', err.message); }
+                    try { await dbAPI.addEmail(c.id, { id: String(e.id).slice(0, 100), date: String(e.date).slice(0, 50), direction: e.direction === 'received' ? 'received' : 'sent', type: e.type ? String(e.type).slice(0, 20) : null, subject: e.subject ? String(e.subject).slice(0, 1000) : null }); } catch (err) { /* duplicate id */ }
                 }
             }
             for (const n of notes) {
                 if (n && n.id != null && n.date && n.summary != null) {
-                    try { await dbAPI.addNote(c.id, n); } catch (err) { console.warn('Sync addNote skip:', err.message); }
+                    try { await dbAPI.addNote(c.id, { id: String(n.id).slice(0, 100), date: String(n.date).slice(0, 50), summary: String(n.summary).slice(0, 20000), extractedText: n.extractedText ? String(n.extractedText).slice(0, 40000) : null, imageUrl: null, isTextNote: !!n.isTextNote }); } catch (err) { /* duplicate id */ }
                 }
             }
         }
-        res.json({ success: true });
+        res.json({ success: true, skipped });
     } catch (error) {
         console.error('Sync contacts error:', error);
         res.status(500).json({ error: 'Failed to sync contacts' });
@@ -1588,6 +1500,7 @@ app.post('/api/contacts/sync', async (req, res) => {
 app.post('/api/contacts/:contactId/emails', async (req, res) => {
     try {
         const { contactId } = req.params;
+        if (!(await dbAPI.getContactById(contactId, req.user.id))) return res.status(404).json({ error: 'Contact not found' });
         const emailData = { ...req.body, contactId };
         if (!emailData.id || !emailData.date || !emailData.direction) {
             return res.status(400).json({ error: 'id, date, and direction are required' });
@@ -1604,6 +1517,7 @@ app.post('/api/contacts/:contactId/emails', async (req, res) => {
 app.post('/api/contacts/:contactId/notes', async (req, res) => {
     try {
         const { contactId } = req.params;
+        if (!(await dbAPI.getContactById(contactId, req.user.id))) return res.status(404).json({ error: 'Contact not found' });
         const noteData = { ...req.body, contactId };
         if (!noteData.id || !noteData.date || !noteData.summary) {
             return res.status(400).json({ error: 'id, date, and summary are required' });
@@ -1623,6 +1537,7 @@ app.get('/api/health', (req, res) => {
 
 // Manual database migration endpoint (for immediate fixes)
 app.get('/api/migrate', async (req, res) => {
+    if (!auth.isAdmin(req.user)) return res.status(404).json({ error: 'Not found' });
     if (!process.env.DATABASE_URL) {
         return res.status(500).json({ error: 'Database not configured', details: 'DATABASE_URL not set' });
     }
@@ -1859,63 +1774,12 @@ async function checkAndMigrateDatabase() {
                 console.log('✅ Database schema is up to date');
             }
 
-            // user_settings (name/photo) — previously only created by `npm run migrate`,
-            // so a fresh deploy failed to save profile settings.
-            await client.query(`
-                CREATE TABLE IF NOT EXISTS user_settings (
-                    user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-                    first_name varchar(100),
-                    last_name varchar(100),
-                    profile_photo text,
-                    created_at timestamp NOT NULL DEFAULT now(),
-                    updated_at timestamp NOT NULL DEFAULT now()
-                )
-            `);
-
-            // --- Club / Organization (enterprise) schema ---
-            // Add account_type / onboarded_at columns to users (idempotent)
-            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type text`);
-            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at timestamp`);
-
-            // Create org tables if they don't exist
-            await client.query(`
-                CREATE TABLE IF NOT EXISTS organizations (
-                    id text PRIMARY KEY,
-                    name varchar(255) NOT NULL,
-                    join_code varchar(20) NOT NULL UNIQUE,
-                    owner_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    school varchar(255),
-                    created_at timestamp DEFAULT now() NOT NULL
-                )
-            `);
-            await client.query(`
-                CREATE TABLE IF NOT EXISTS org_members (
-                    id text PRIMARY KEY,
-                    org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-                    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    role varchar(20) DEFAULT 'member',
-                    display_name varchar(255),
-                    joined_at timestamp DEFAULT now() NOT NULL
-                )
-            `);
-            // B2B billing columns (per active member)
-            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan_status text DEFAULT 'none'`);
-            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_customer_id text`);
-            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_subscription_id text`);
-            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS billing_email varchar(255)`);
-            await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS last_billed_seats integer`);
-            await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS org_members_org_user_idx ON org_members (org_id, user_id)`);
-            await client.query(`
-                CREATE TABLE IF NOT EXISTS org_invites (
-                    id text PRIMARY KEY,
-                    org_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-                    email varchar(255) NOT NULL,
-                    invited_by text REFERENCES users(id) ON DELETE SET NULL,
-                    status varchar(20) DEFAULT 'pending',
-                    created_at timestamp DEFAULT now() NOT NULL
-                )
-            `);
-            console.log('✅ Club/Organization schema is up to date');
+            // Everything added since the original schema (clubs, sessions, usage ledger,
+            // outcomes, reviews, checklists, documents). Idempotent.
+            for (const statement of SCHEMA_SQL) {
+                await client.query(statement);
+            }
+            console.log('Database schema is up to date');
         } finally {
             client.release();
         }
@@ -1924,6 +1788,28 @@ async function checkAndMigrateDatabase() {
         console.warn('   This is okay if migrations run during build. If you see Stripe errors, check migrations.');
     }
 }
+
+// Accounts created before passwords were hashed stored them in plaintext. Hash them
+// once, in the background, a few at a time. (Logins also re-hash on success.)
+async function hashLegacyPasswords() {
+    if (!pool) return;
+    const { rows } = await pool.query("SELECT id, password FROM users WHERE password NOT LIKE 'scrypt$%'");
+    if (!rows.length) return;
+    let done = 0;
+    for (const row of rows) {
+        const plain = authRoutes.cleanPassword(row.password || '');
+        if (!plain) continue;
+        const hash = await auth.hashPassword(plain);
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2 AND password = $3', [hash, row.id, row.password]);
+        done += 1;
+    }
+    console.log(`Hashed ${done} legacy password(s)`);
+}
+
+// Expired sessions are removed daily.
+cron.schedule('40 3 * * *', () => {
+    if (pool) pool.query('DELETE FROM sessions WHERE expires_at < now()').catch(() => {});
+});
 
 // Start server
 app.listen(PORT, async () => {
@@ -1937,6 +1823,7 @@ app.listen(PORT, async () => {
         console.log('✅ Database connection configured');
         // Check and migrate database schema
         await checkAndMigrateDatabase();
+        hashLegacyPasswords().catch((e) => console.error('Password hashing pass failed:', e.message));
     }
     
     // Check if OpenAI is initialized
@@ -1989,166 +1876,58 @@ app.listen(PORT, async () => {
 // Email template- DS
 
 function generateEmailBody(contacts) {
-    const sortedContacts = contacts.sort((a, b) => b.daysSinceLastContact - a.daysSinceLastContact);
+    const sorted = contacts.slice().sort((a, b) => b.daysSinceLastContact - a.daysSinceLastContact);
     const weaverUrl = process.env.WEAVER_URL || 'https://studentweaver.com';
-    const count = contacts.length;
-
-    // Count urgency levels
-    const urgentCount = contacts.filter(c => c.daysSinceLastContact > 60).length;
-    const warningCount = contacts.filter(c => c.daysSinceLastContact > 30 && c.daysSinceLastContact <= 60).length;
-
-    // Build contact rows
-    let contactRows = '';
-    sortedContacts.forEach((contact, index) => {
-        const isLast = index === sortedContacts.length - 1;
-        const borderBottom = isLast ? '' : 'border-bottom:1px solid #e2e8f0;';
-
-        // Days color
-        let daysBg = '#ecfdf5'; let daysColor = '#10b981';
-        if (contact.daysSinceLastContact > 60) { daysBg = '#fef2f2'; daysColor = '#ef4444'; }
-        else if (contact.daysSinceLastContact > 30) { daysBg = '#fffbeb'; daysColor = '#f59e0b'; }
-
-        // Priority color
-        const priority = contact.priority || 'medium';
-        let priBg = '#fffbeb'; let priColor = '#f59e0b'; let priLabel = 'MED';
-        if (priority === 'high') { priBg = '#fef2f2'; priColor = '#ef4444'; priLabel = 'HIGH'; }
-        else if (priority === 'low') { priBg = '#ecfdf5'; priColor = '#10b981'; priLabel = 'LOW'; }
-
-        // Last contact info
-        const typeLabel = contact.isEstablished ? 'Established' : 'Cold';
-
-        contactRows += `
-              <tr>
-                <td style="padding:14px 16px;${borderBottom}">
-                  <div style="font-weight:600;color:#1a2744;font-size:14px;">${contact.name}</div>
-                  ${contact.firm ? `<div style="color:#64748b;font-size:12px;margin-top:2px;">${contact.firm}</div>` : ''}
-                </td>
-                <td align="center" style="padding:14px 16px;${borderBottom}">
-                  <div style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:700;background-color:${daysBg};color:${daysColor};">${contact.daysSinceLastContact}</div>
-                </td>
-                <td align="center" style="padding:14px 16px;${borderBottom}">
-                  <div style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background-color:${priBg};color:${priColor};">${priLabel}</div>
-                </td>
-                <td style="padding:14px 16px;${borderBottom};color:#64748b;font-size:12px;">
-                  ${typeLabel}
-                </td>
-              </tr>`;
-    });
-
-    // Build urgency badges
-    let badges = '';
-    if (urgentCount > 0) {
-        badges += `<td style="padding-right:8px;"><div style="display:inline-block;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;background-color:#fef2f2;color:#ef4444;">${urgentCount} urgent (60+ days)</div></td>`;
-    }
-    if (warningCount > 0) {
-        badges += `<td style="padding-right:8px;"><div style="display:inline-block;padding:5px 14px;border-radius:100px;font-size:12px;font-weight:700;background-color:#fffbeb;color:#f59e0b;">${warningCount} warning (30-60 days)</div></td>`;
-    }
-
+    const count = sorted.length;
+    const rows = sorted.slice(0, 25).map((c, i) => {
+        const border = i === Math.min(sorted.length, 25) - 1 ? '' : 'border-bottom:1px solid #E3E6EB;';
+        const priority = c.priority === 'high' ? 'High' : c.priority === 'low' ? 'Low' : 'Medium';
+        return `<tr>
+            <td style="padding:12px 16px;${border}">
+              <div style="font-weight:600;color:#16203A;font-size:14px;">${escapeHtml(c.name)}${c.vip ? ' <span style="font-weight:500;color:#1E6A55;font-size:12px;">VIP</span>' : ''}</div>
+              ${c.firm ? `<div style="color:#5B6474;font-size:13px;margin-top:2px;">${escapeHtml(c.firm)}</div>` : ''}
+            </td>
+            <td align="right" style="padding:12px 16px;${border}color:#16203A;font-size:14px;white-space:nowrap;">${Number(c.daysSinceLastContact) || 0} days</td>
+            <td align="right" style="padding:12px 16px;${border}color:#5B6474;font-size:13px;white-space:nowrap;">${priority}</td>
+          </tr>`;
+    }).join('');
+    const more = count > 25 ? `<p style="margin:12px 0 0;color:#5B6474;font-size:13px;">And ${count - 25} more in Weaver.</p>` : '';
     return `<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weaver Follow-up Reminder</title>
-</head>
-<body style="margin:0;padding:0;background-color:#eef1f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef1f5;">
-  <tr>
-    <td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-
-        <!-- HEADER -->
-        <tr>
-          <td style="background-color:#1a2744;padding:28px 36px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Weaver</td>
-                <td align="right" style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:0.03em;">Follow-up Reminder</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- HERO -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#1a2744 0%,#243352 100%);padding:40px 36px 36px;text-align:center;">
-            <div style="font-size:56px;font-weight:800;color:#4ea8de;line-height:1;">${count}</div>
-            <div style="font-size:14px;color:rgba(255,255,255,0.55);margin-top:6px;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;">contact${count !== 1 ? 's' : ''} need a follow-up</div>
-            <p style="color:rgba(255,255,255,0.7);font-size:15px;line-height:1.6;margin:20px auto 0;max-width:420px;">
-              Don't just expand the net — <span style="color:#4ea8de;font-weight:600;">strengthen it.</span> These people haven't heard from you in a while.
-            </p>
-          </td>
-        </tr>
-
-        <!-- URGENCY BADGES -->
-        ${badges ? `
-        <tr>
-          <td style="padding:24px 36px 0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>${badges}</tr>
-            </table>
-          </td>
-        </tr>` : ''}
-
-        <!-- CONTACT TABLE -->
-        <tr>
-          <td style="padding:20px 36px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-              <tr style="background-color:#f8fafc;">
-                <th align="left" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Contact</th>
-                <th align="center" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Days</th>
-                <th align="center" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Priority</th>
-                <th align="left" style="padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid #e2e8f0;">Type</th>
-              </tr>
-              ${contactRows}
-            </table>
-          </td>
-        </tr>
-
-        <!-- CTA BUTTON -->
-        <tr>
-          <td align="center" style="padding:8px 36px 36px;">
-            <a href="${weaverUrl}" style="display:inline-block;background-color:#3b82f6;color:#ffffff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:-0.2px;">Open Weaver →</a>
-            <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">It takes 2 minutes. Your network will thank you.</p>
-          </td>
-        </tr>
-
-        <!-- PRO TIP -->
-        <tr>
-          <td style="padding:0 36px 28px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eff6ff;border-radius:10px;border-left:4px solid #3b82f6;">
-              <tr>
-                <td style="padding:16px 20px;">
-                  <div style="font-size:13px;font-weight:700;color:#1a2744;margin-bottom:4px;">Pro tip</div>
-                  <div style="font-size:13px;color:#475569;line-height:1.55;">The best way to strengthen a relationship is to do someone a favor and expect nothing in return. Send a relevant article — it gives you a reason to reach out.</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- FOOTER -->
-        <tr>
-          <td style="padding:24px 36px;background-color:#f8fafc;border-top:1px solid #e2e8f0;">
-            <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;text-align:center;">
-              You're getting this because you enabled follow-up reminders in <a href="${weaverUrl}" style="color:#3b82f6;text-decoration:none;">Weaver</a>.<br>
-              <a href="${weaverUrl}/#strengthening-net" style="color:#3b82f6;text-decoration:none;">Manage reminder settings</a>
-            </p>
-            <p style="margin:16px 0 0;text-align:center;font-size:11px;color:#cbd5e1;">&copy; ${new Date().getFullYear()} Weaver. All rights reserved.</p>
-          </td>
-        </tr>
-
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Follow-ups due</title></head>
+<body style="margin:0;padding:0;background:#F6F7F9;font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#16203A;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F7F9;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border:1px solid #E3E6EB;border-radius:8px;">
+        <tr><td style="padding:24px 24px 8px;">
+          <div style="font-size:13px;color:#5B6474;">Weaver</div>
+          <h1 style="margin:6px 0 4px;font-size:20px;font-weight:600;line-height:1.3;color:#16203A;">${count} ${count === 1 ? 'contact is' : 'contacts are'} due for a follow-up</h1>
+          <p style="margin:0;color:#5B6474;font-size:14px;line-height:1.5;">Sorted by time since your last touch. Open Weaver to draft each follow-up in a click.</p>
+        </td></tr>
+        <tr><td style="padding:16px 24px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E3E6EB;border-radius:6px;">
+            <tr>
+              <th align="left" style="padding:10px 16px;border-bottom:1px solid #E3E6EB;font-size:12px;font-weight:500;color:#5B6474;">Contact</th>
+              <th align="right" style="padding:10px 16px;border-bottom:1px solid #E3E6EB;font-size:12px;font-weight:500;color:#5B6474;">Since last touch</th>
+              <th align="right" style="padding:10px 16px;border-bottom:1px solid #E3E6EB;font-size:12px;font-weight:500;color:#5B6474;">Priority</th>
+            </tr>
+            ${rows}
+          </table>
+          ${more}
+        </td></tr>
+        <tr><td style="padding:24px;">
+          <a href="${escapeHtml(weaverUrl)}/#strengthening-net" style="display:inline-block;background:#1E6A55;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open follow-ups</a>
+        </td></tr>
+        <tr><td style="padding:16px 24px;border-top:1px solid #E3E6EB;color:#5B6474;font-size:12px;line-height:1.5;">
+          You get these reminders because they are turned on in Weaver. Change the time or turn them off in Settings.
+        </td></tr>
       </table>
-    </td>
-  </tr>
-</table>
-
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
 
-// Send reminder email to user using Resend
 async function sendReminderEmail(userId, userEmail, contacts) {
     try {
         // Check if Resend is initialized
@@ -2164,7 +1943,7 @@ async function sendReminderEmail(userId, userEmail, contacts) {
         }
         
         // Generate email content
-        const emailSubject = `Weaver: ${contacts.length} Contact${contacts.length !== 1 ? 's' : ''} Need Your Follow-up`;
+        const emailSubject = `${contacts.length} ${contacts.length === 1 ? 'contact is' : 'contacts are'} due for a follow-up`;
         const emailBody = generateEmailBody(contacts);
         
         // Get from email (should be verified domain in Resend)
@@ -2334,41 +2113,6 @@ app.post('/api/assistant/settings', async (req, res) => {
             return res.status(400).json({ error: 'User ID required' });
         }
         
-        // Check if user exists, if not create a placeholder user
-        let user = null;
-        try {
-            user = await dbAPI.getUserById(userId);
-        } catch (getUserError) {
-            console.error('Error getting user:', getUserError);
-            // Continue to try creating user
-        }
-        
-        if (!user) {
-            console.log(`User ${userId} not found, creating placeholder user`);
-            // Create a placeholder user so we can save settings
-            // Email will be set when Gmail is connected
-            try {
-                // Ensure userId is a string
-                const userIdString = String(userId);
-                await dbAPI.createUser(userIdString, `user-${userIdString}@placeholder.weaver`, 'placeholder-password');
-                user = await dbAPI.getUserById(userIdString);
-                console.log('Placeholder user created successfully');
-            } catch (createError) {
-                console.error('Error creating placeholder user:', createError);
-                console.error('Create error details:', {
-                    message: createError.message,
-                    code: createError.code,
-                    stack: createError.stack
-                });
-                // Return a more helpful error message
-                return res.status(500).json({ 
-                    error: 'Failed to create user account', 
-                    message: 'Unable to save settings. Please try logging out and logging back in, or contact support if the issue persists.',
-                    details: createError.message
-                });
-            }
-        }
-        
         const settings = {
             coldContactDays: req.body.coldContactDays || 12,
             establishedContactDays: req.body.establishedContactDays || 90,
@@ -2394,43 +2138,6 @@ app.post('/api/assistant/settings', async (req, res) => {
     } catch (error) {
         console.error('Error saving assistant settings:', error);
         
-        // Check for foreign key constraint violation
-        if (error.code === '23503' || error.message?.includes('violates foreign key constraint')) {
-            // Try to create user and retry
-            try {
-                const userId = String(req.body.userId); // Ensure it's a string
-                await dbAPI.createUser(userId, `user-${userId}@placeholder.weaver`, 'placeholder-password');
-                // Retry saving settings
-                const settings = {
-                    coldContactDays: req.body.coldContactDays || 12,
-                    establishedContactDays: req.body.establishedContactDays || 90,
-                    reminderColdContacts: req.body.reminderColdContacts !== undefined ? req.body.reminderColdContacts : true,
-                    reminderEstablishedContacts: req.body.reminderEstablishedContacts !== undefined ? req.body.reminderEstablishedContacts : true,
-                    vipOnly: req.body.vipOnly || false,
-                    emailFrequency: req.body.emailFrequency || 'realtime',
-                    emailTime: req.body.emailTime || '09:00',
-                    emailTimezone: req.body.emailTimezone || 'America/New_York',
-                    enabled: req.body.enabled !== undefined ? req.body.enabled : true
-                };
-                const saved = await dbAPI.saveAssistantSettings(userId, settings);
-                if (saved) {
-                    return res.json({ success: true, settings: saved });
-                }
-            } catch (retryError) {
-                console.error('Error retrying after user creation:', retryError);
-                console.error('Retry error details:', {
-                    message: retryError.message,
-                    code: retryError.code,
-                    stack: retryError.stack
-                });
-            }
-            
-            return res.status(400).json({ 
-                error: 'Database error', 
-                message: 'Unable to save settings. Please try logging out and logging back in, or contact support if the issue persists.' 
-            });
-        }
-        
         res.status(500).json({ error: 'Server error', message: error.message });
     }
 });
@@ -2438,7 +2145,7 @@ app.post('/api/assistant/settings', async (req, res) => {
 // Get assistant settings
 app.get('/api/assistant/settings/:userId', async (req, res) => {
     try {
-        const userId = req.params.userId;
+        const userId = req.user.id;
         const settings = await dbAPI.getAssistantSettings(userId);
         
         if (settings) {
@@ -2456,7 +2163,7 @@ app.get('/api/assistant/settings/:userId', async (req, res) => {
 
 app.get('/api/users/settings/:userId', async (req, res) => {
     try {
-        const userId = req.params.userId;
+        const userId = req.user.id;
         const settings = await dbAPI.getUserSettingsById(userId);
         res.json({ success: true, settings: settings || null });
     } catch (error) {
@@ -2489,32 +2196,6 @@ app.post('/api/users/settings', async (req, res) => {
 // reply + structured actions, validates them, and returns them for the client to
 // apply (with undo). The server never writes contacts directly, so local and
 // server state cannot diverge.
-
-const ASSISTANT_MODEL = process.env.OPENAI_ASSISTANT_MODEL || 'gpt-4o';
-
-// Weaver's recruiting playbook — grounding for the "Playbook" source.
-const WEAVER_PLAYBOOK = [
-    'Cold outreach: 4-6 sentences. Who you are (school, year, interest), a specific reason you chose them (shared school, group, deal, article), one ask: a 15-20 minute call. No attachments on first touch.',
-    'Follow up on unanswered cold emails after 5-7 business days, once, briefly. After two unanswered touches, move on for a few months.',
-    'Send a thank-you within 24 hours of every call: reference one specific thing they said and any next step they offered.',
-    'Keep warm contacts warm: a short update every 6-12 weeks (a class, an offer, an article relevant to their group). Never only reach out when you need something.',
-    'Referrals come from relationships: after 2+ good conversations it is appropriate to ask whether they would be comfortable referring you or passing your resume along.',
-    'Prioritize: VIPs and people at target firms first, then warm contacts going cold, then new outreach.',
-    'Coffee chat prep: know their background, the group, 2-3 recent deals/news items, and have 3 thoughtful questions. End by asking who else they suggest you speak with.',
-    'Recruiting timelines move early for banking and consulting — networking should be well underway the year before applications open.',
-].join('\n');
-const ASSISTANT_FREE_DAILY_LIMIT = parseInt(process.env.ASSISTANT_FREE_DAILY_LIMIT || '30', 10);
-const assistantUsage = new Map(); // userId -> { day, count }
-
-function assistantRateLimited(userId, isPaid) {
-    if (isPaid) return false;
-    const day = new Date().toISOString().slice(0, 10);
-    const u = assistantUsage.get(userId);
-    if (!u || u.day !== day) { assistantUsage.set(userId, { day, count: 1 }); return false; }
-    if (u.count >= ASSISTANT_FREE_DAILY_LIMIT) return true;
-    u.count++;
-    return false;
-}
 
 function clip(s, n) { s = (s == null ? '' : String(s)); return s.length > n ? s.slice(0, n) : s; }
 
@@ -2581,19 +2262,11 @@ async function buildClubContext(userId) {
 
 app.post('/api/assistant/chat', async (req, res) => {
     try {
-        if (!openai) return res.status(503).json({ error: 'The assistant is not configured yet (OPENAI_API_KEY missing).' });
-        const { userId, message, history, sources, network, profile } = req.body || {};
-        if (!userId || !message || !String(message).trim()) return res.status(400).json({ error: 'userId and message are required' });
-
-        let isPaid = false;
-        try {
-            const u = await dbAPI.getUserById(userId);
-            isPaid = !!(u && (u.subscriptionStatus === 'active' || u.subscriptionStatus === 'trialing'));
-            if (!isPaid) isPaid = await dbAPI.userHasClubCoverage(userId);
-        } catch (e) { /* DB optional for the assistant */ }
-        if (assistantRateLimited(String(userId), isPaid)) {
-            return res.status(429).json({ error: `You've reached today's free limit of ${ASSISTANT_FREE_DAILY_LIMIT} assistant requests. Upgrade, or ask your club to cover your seat, for unlimited use.` });
-        }
+        if (!openai) return res.status(503).json({ error: 'The assistant is not available right now.' });
+        const { message, history, sources, network, profile } = req.body || {};
+        const userId = req.user.id;
+        if (!message || !String(message).trim()) return res.status(400).json({ error: 'Type a request first.' });
+        const plan = await planForUser(req.user);
 
         const src = Array.isArray(sources) ? sources : ['network', 'followups'];
         const club = src.includes('club') ? await buildClubContext(userId) : null;
@@ -2629,23 +2302,21 @@ Rules:
 
         const context = {
             sources_enabled: src,
-            network: src.includes('network') || src.includes('followups') ? network || null : null,
+            network: src.includes('network') || src.includes('followups') ? selectRelevant(network, message, plan.key === 'starter' ? 15 : 40) : null,
             club,
             playbook: src.includes('playbook') ? WEAVER_PLAYBOOK : null,
             web_results: web,
         };
 
         const msgs = [{ role: 'system', content: system }];
-        (Array.isArray(history) ? history : []).slice(-8).forEach(h => {
-            if (h && (h.role === 'user' || h.role === 'assistant') && h.content) msgs.push({ role: h.role, content: clip(h.content, 4000) });
+        (Array.isArray(history) ? history : []).slice(-6).forEach(h => {
+            if (h && (h.role === 'user' || h.role === 'assistant') && h.content) msgs.push({ role: h.role, content: clip(h.content, 2000) });
         });
-        msgs.push({ role: 'user', content: `DATA:\n${JSON.stringify(context).slice(0, 120000)}\n\nREQUEST:\n${clip(message, 4000)}` });
+        msgs.push({ role: 'user', content: `DATA:\n${JSON.stringify(context).slice(0, 40000)}\n\nREQUEST:\n${clip(message, 4000)}` });
 
-        const completion = await openai.chat.completions.create({
-            model: ASSISTANT_MODEL,
-            messages: msgs,
-            temperature: 0.3,
-            response_format: { type: 'json_object' },
+        const completion = await usage.meteredCompletion({
+            pool, openai, user: req.user, plan, feature: 'assistant', model: usage.DEFAULT_MODEL, maxTokens: 1400,
+            params: { messages: msgs, temperature: 0.3, response_format: { type: 'json_object' } },
         });
         let parsed = {};
         try { parsed = JSON.parse(completion.choices[0].message.content || '{}'); } catch (e) { parsed = { reply: completion.choices[0].message.content || '' }; }
@@ -2655,8 +2326,9 @@ Rules:
             actions: sanitizeAssistantActions(parsed.actions),
         });
     } catch (error) {
-        console.error('Assistant error:', error);
-        res.status(500).json({ error: 'The assistant hit an error. Please try again.' });
+        if (usage.sendUsageError(res, error)) return;
+        console.error('Assistant error:', error.message);
+        res.status(500).json({ error: 'The assistant hit an error. Try again.' });
     }
 });
 
@@ -2666,17 +2338,20 @@ app.post('/api/assistant/improve', async (req, res) => {
         if (!openai) return res.status(503).json({ error: 'Assistant not configured' });
         const { prompt } = req.body || {};
         if (!prompt || !String(prompt).trim()) return res.status(400).json({ error: 'prompt is required' });
-        const completion = await openai.chat.completions.create({
-            model: ASSISTANT_MODEL,
-            temperature: 0.4,
-            messages: [
-                { role: 'system', content: 'Rewrite the user\'s request to the Weaver networking assistant so it is specific and actionable: who, what outcome, timeframe, format. Keep their intent and any names. Max 2 sentences. Return only the rewritten request.' },
-                { role: 'user', content: clip(prompt, 2000) },
-            ],
+        const completion = await usage.meteredCompletion({
+            pool, openai, user: req.user, plan: await planForUser(req.user), feature: 'improve', model: usage.DEFAULT_MODEL, maxTokens: 160,
+            params: {
+                temperature: 0.4,
+                messages: [
+                    { role: 'system', content: 'Rewrite the user\'s request to the Weaver networking assistant so it is specific and actionable: who, what outcome, timeframe, format. Keep their intent and any names. Max 2 sentences. Return only the rewritten request.' },
+                    { role: 'user', content: clip(prompt, 2000) },
+                ],
+            },
         });
         res.json({ success: true, improved: (completion.choices[0].message.content || '').trim() });
     } catch (error) {
-        console.error('Improve prompt error:', error);
+        if (usage.sendUsageError(res, error)) return;
+        console.error('Improve prompt error:', error.message);
         res.status(500).json({ error: 'Could not improve the prompt' });
     }
 });
@@ -2701,52 +2376,72 @@ app.post('/api/users/account-type', async (req, res) => {
 });
 
 // ============ CLUB / ORGANIZATION API ============
+// Owners and admins are "managers". Members can see the roster and leaderboard;
+// only managers see member emails, billing and invites.
 
-// Create an organization (club). The creator becomes the owner + first member.
+function stripOrg(o) {
+    const { stripeCustomerId, stripeSubscriptionId, billingEmail, ...rest } = o;
+    return rest;
+}
+
+async function membershipFor(userId, orgId) {
+    const orgs = await dbAPI.getOrgsForUser(userId);
+    return orgs.find((o) => o.id === orgId) || null;
+}
+
+function isManagerRole(role) {
+    return role === 'owner' || role === 'admin';
+}
+
+// Create a club or career-center workspace. The creator becomes the owner.
 app.post('/api/orgs', async (req, res) => {
     try {
-        const { userId, name, school } = req.body;
-        if (!userId || !name || !String(name).trim()) {
-            return res.status(400).json({ error: 'userId and name are required' });
-        }
+        const name = String((req.body && req.body.name) || '').trim().slice(0, 120);
+        const school = String((req.body && req.body.school) || '').trim().slice(0, 120) || null;
+        const orgType = req.body && req.body.orgType === 'career_center' ? 'career_center' : 'club';
+        if (!name) return res.status(400).json({ error: 'Enter your club’s name.' });
+        const owned = (await dbAPI.getOrgsForUser(req.user.id)).filter((o) => o.role === 'owner');
+        if (owned.length >= 3) return res.status(400).json({ error: 'You can run up to 3 clubs. Contact us if you need more.' });
         const org = await dbAPI.createOrganization({
-            id: `org_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            name: String(name).trim(),
-            ownerId: userId,
-            school: school || null,
+            id: 'org_' + crypto.randomBytes(9).toString('base64url'),
+            name,
+            ownerId: req.user.id,
+            school,
         });
-        // Creating an org implies an 'org' account type
-        await dbAPI.setUserAccountType(userId, 'org');
-        res.json({ success: true, org });
+        if (orgType === 'career_center') await dbAPI.setOrgBilling(org.id, { orgType });
+        await dbAPI.setUserAccountType(req.user.id, 'org');
+        res.json({ success: true, org: stripOrg({ ...org, orgType, role: 'owner' }) });
     } catch (error) {
-        console.error('Error creating organization:', error);
-        res.status(500).json({ error: 'Failed to create organization', message: error.message });
+        console.error('Error creating organization:', error.message);
+        res.status(500).json({ error: 'Could not create the club. Try again.' });
     }
 });
 
 // Orgs the current user belongs to (with their role in each)
 app.get('/api/orgs/mine', async (req, res) => {
     try {
-        const userId = req.query.userId;
-        if (!userId) return res.status(400).json({ error: 'userId is required' });
-        const orgs = (await dbAPI.getOrgsForUser(userId)).map(({ stripeCustomerId, stripeSubscriptionId, billingEmail, ...o }) => o);
+        const orgs = (await dbAPI.getOrgsForUser(req.user.id)).map(stripOrg);
         res.json({ success: true, orgs });
     } catch (error) {
-        console.error('Error listing user orgs:', error);
-        res.status(500).json({ error: 'Server error', message: error.message });
+        console.error('Error listing user orgs:', error.message);
+        res.status(500).json({ error: 'Could not load your clubs.' });
     }
 });
 
 // Club billing status: plan + how many members count as active (billable) right now
 app.get('/api/orgs/:orgId/billing', async (req, res) => {
     try {
-        const org = await dbAPI.getOrganizationById(req.params.orgId);
-        if (!org) return res.status(404).json({ error: 'Organization not found' });
+        const me = await membershipFor(req.user.id, req.params.orgId);
+        if (!me) return res.status(404).json({ error: 'Club not found.' });
+        if (!isManagerRole(me.role)) return res.status(403).json({ error: 'Only club owners and admins can see billing.' });
         const since = new Date(Date.now() - 30 * 86400000);
-        const { total, active, activeMembers } = await dbAPI.getOrgActiveMemberCount(org.id, since);
+        const { total, active, activeMembers } = await dbAPI.getOrgActiveMemberCount(me.id, since);
         res.json({
             success: true,
-            planStatus: org.planStatus || 'none',
+            planStatus: me.planStatus || 'none',
+            license: me.license || 'none',
+            licenseExpiresAt: me.licenseExpiresAt || null,
+            verified: !!me.verified,
             totalMembers: total,
             activeMembers: active,
             billableSeats: Math.max(1, active),
@@ -2754,98 +2449,110 @@ app.get('/api/orgs/:orgId/billing', async (req, res) => {
             active: activeMembers.map(m => ({ name: m.name, lastActivityAt: m.lastActivityAt })),
         });
     } catch (error) {
-        console.error('Error getting org billing:', error);
-        res.status(500).json({ error: 'Server error', message: error.message });
+        console.error('Error getting org billing:', error.message);
+        res.status(500).json({ error: 'Could not load billing.' });
     }
 });
 
-// Join an organization by its share code
+// Join an organization by its share code. Attempts are rate limited so codes can't be guessed.
 app.post('/api/orgs/join', async (req, res) => {
     try {
-        const { userId, joinCode, displayName } = req.body;
-        if (!userId || !joinCode) return res.status(400).json({ error: 'userId and joinCode are required' });
+        const joinCode = String((req.body && req.body.joinCode) || '').trim();
+        const displayName = String((req.body && req.body.displayName) || '').trim().slice(0, 80) || null;
+        if (!joinCode) return res.status(400).json({ error: 'Enter your club code.' });
+        const limit = auth.hit('join:' + req.user.id, 10, 3600000);
+        if (!limit.allowed) return res.status(429).json({ error: 'Too many attempts. Try again in an hour, or ask your club leader for the code.' });
         const org = await dbAPI.getOrganizationByJoinCode(joinCode);
         if (!org) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
-        await dbAPI.addOrgMember({ orgId: org.id, userId, role: 'member', displayName });
-        res.json({ success: true, org });
+        await dbAPI.addOrgMember({ orgId: org.id, userId: req.user.id, role: 'member', displayName });
+        try { await pool.query("UPDATE org_invites SET status = 'accepted' WHERE org_id = $1 AND email = $2", [org.id, req.user.email]); } catch (e) { /* invites optional */ }
+        res.json({ success: true, org: stripOrg(org) });
     } catch (error) {
-        console.error('Error joining organization:', error);
-        res.status(500).json({ error: 'Failed to join organization', message: error.message });
+        console.error('Error joining organization:', error.message);
+        res.status(500).json({ error: 'Could not join the club. Try again.' });
     }
 });
 
-// Org details + join code
+// Org details (members only)
 app.get('/api/orgs/:orgId', async (req, res) => {
     try {
-        const org = await dbAPI.getOrganizationById(req.params.orgId);
-        if (!org) return res.status(404).json({ error: 'Organization not found' });
-        res.json({ success: true, org });
+        const me = await membershipFor(req.user.id, req.params.orgId);
+        if (!me) return res.status(404).json({ error: 'Club not found.' });
+        res.json({ success: true, org: stripOrg(me) });
     } catch (error) {
-        console.error('Error getting organization:', error);
-        res.status(500).json({ error: 'Server error', message: error.message });
+        console.error('Error getting organization:', error.message);
+        res.status(500).json({ error: 'Could not load the club.' });
     }
 });
 
-// Roster + leaderboard: every member with their networking activity, ranked.
+// Roster + leaderboard (members only). Emails are visible to managers only.
 app.get('/api/orgs/:orgId/members', async (req, res) => {
     try {
-        const roster = await dbAPI.getOrgRosterWithStats(req.params.orgId);
-        res.json({ success: true, members: roster });
+        const me = await membershipFor(req.user.id, req.params.orgId);
+        if (!me) return res.status(404).json({ error: 'Club not found.' });
+        const roster = await dbAPI.getOrgRosterWithStats(me.id);
+        const manager = isManagerRole(me.role);
+        res.json({ success: true, members: roster.map((m) => (manager ? m : { ...m, email: undefined })) });
     } catch (error) {
-        console.error('Error getting org roster:', error);
-        res.status(500).json({ error: 'Server error', message: error.message });
+        console.error('Error getting org roster:', error.message);
+        res.status(500).json({ error: 'Could not load the roster.' });
     }
 });
 
-// Invite a member by email (records the invite, and emails them if Resend is configured)
+// Invite a member by email (managers only). Records the invite and emails it if Resend is configured.
 app.post('/api/orgs/:orgId/invite', async (req, res) => {
     try {
-        const orgId = req.params.orgId;
-        const { email, invitedBy } = req.body;
-        if (!email) return res.status(400).json({ error: 'email is required' });
-        const org = await dbAPI.getOrganizationById(orgId);
-        if (!org) return res.status(404).json({ error: 'Organization not found' });
+        const me = await membershipFor(req.user.id, req.params.orgId);
+        if (!me) return res.status(404).json({ error: 'Club not found.' });
+        if (!isManagerRole(me.role)) return res.status(403).json({ error: 'Only club owners and admins can invite members.' });
+        const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+        if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+        const limit = auth.hit('invite:' + me.id, 200, 86400000);
+        if (!limit.allowed) return res.status(429).json({ error: 'Your club has sent 200 invites today. Try again tomorrow.' });
 
         const invite = await dbAPI.createOrgInvite({
-            id: `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            orgId,
+            id: 'inv_' + crypto.randomBytes(9).toString('base64url'),
+            orgId: me.id,
             email,
-            invitedBy: invitedBy || null,
+            invitedBy: req.user.id,
         });
 
-        // Best-effort email via Resend (same service the reminders use). Never fail the request on email error.
+        let emailed = false;
         if (resend) {
             try {
                 const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
                 const weaverUrl = process.env.WEAVER_URL || 'https://studentweaver.com';
+                const orgName = escapeHtml(me.name);
                 await resend.emails.send({
                     from: fromEmail,
-                    to: String(email).trim(),
-                    subject: `You're invited to join ${org.name} on Weaver`,
-                    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
-                        <h2 style="color:#1a2744;">Join ${org.name} on Weaver</h2>
-                        <p style="color:#334155;">You've been invited to join <strong>${org.name}</strong>'s networking space on Weaver.</p>
-                        <p style="color:#334155;">Sign up (or log in), choose <strong>Student</strong>, and enter this club code:</p>
-                        <p style="font-size:22px;font-weight:700;letter-spacing:2px;color:#3b82f6;background:#f1f5f9;padding:12px 16px;border-radius:8px;text-align:center;">${org.joinCode}</p>
-                        <p><a href="${weaverUrl}" style="display:inline-block;background:#3b82f6;color:white;text-decoration:none;padding:10px 20px;border-radius:8px;">Open Weaver</a></p>
+                    to: email,
+                    subject: `Join ${me.name} on Weaver`,
+                    html: `<div style="font-family:'IBM Plex Sans',Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#16203A;">
+                        <p style="font-size:16px;margin:0 0 16px;">You’ve been invited to join <strong>${orgName}</strong> on Weaver, the recruiting workspace your club uses to track networking and share progress.</p>
+                        <p style="font-size:15px;margin:0 0 8px;">Create an account, choose <strong>Student</strong>, and enter this club code:</p>
+                        <p style="font-size:20px;font-weight:600;letter-spacing:2px;background:#F6F7F9;border:1px solid #E3E6EB;padding:12px 16px;border-radius:6px;text-align:center;margin:0 0 20px;">${escapeHtml(me.joinCode)}</p>
+                        <p style="margin:0 0 24px;"><a href="${escapeHtml(weaverUrl)}" style="display:inline-block;background:#1E6A55;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;">Open Weaver</a></p>
+                        <p style="font-size:12px;color:#5B6474;margin:0;">You received this because a leader of ${orgName} invited this address. If you weren’t expecting it, you can ignore this email.</p>
                     </div>`,
                 });
+                emailed = true;
             } catch (mailErr) {
                 console.error('Invite email failed (invite still recorded):', mailErr.message);
             }
         }
 
-        res.json({ success: true, invite, joinCode: org.joinCode });
+        res.json({ success: true, invite: { email: invite.email, createdAt: invite.createdAt }, emailed, joinCode: me.joinCode });
     } catch (error) {
-        console.error('Error inviting member:', error);
-        res.status(500).json({ error: 'Failed to create invite', message: error.message });
+        console.error('Error inviting member:', error.message);
+        res.status(500).json({ error: 'Could not send the invite. Try again.' });
     }
 });
 
 // Test endpoint to manually trigger reminder email
 app.get('/api/test/send-reminder/:userId', async (req, res) => {
     try {
-        const userId = req.params.userId;
+        if (!auth.isAdmin(req.user)) return res.status(404).json({ error: 'Not found' });
+        const userId = req.user.id;
         const settings = await dbAPI.getAssistantSettings(userId);
         
         if (!settings) {
@@ -2884,7 +2591,8 @@ app.post('/api/users/refresh-subscription', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        // Refresh subscription from Stripe by customer ID or email
+        // Refresh from the Stripe customer saved on this account only. (Matching by email
+        // would let someone claim another person's subscription by signing up with their address.)
         if (stripe) {
             try {
                 // Try by customer ID first
@@ -2903,28 +2611,6 @@ app.post('/api/users/refresh-subscription', async (req, res) => {
                     }
                 }
                 
-                // If no active subscription found by customer ID, try by email
-                if (user.email) {
-                    const customers = await stripe.customers.list({ 
-                        email: user.email.trim(), 
-                        limit: 10 
-                    });
-                    for (const customer of customers.data || []) {
-                        const subs = await stripe.subscriptions.list({ 
-                            customer: customer.id, 
-                            status: 'all', 
-                            limit: 10 
-                        });
-                        const active = (subs.data || []).find(s => s.status === 'active' || s.status === 'trialing');
-                        if (active) {
-                            await dbAPI.updateUserStripeCustomerId(user.id, customer.id);
-                            await dbAPI.updateUserSubscription(customer.id, active);
-                            const updated = await dbAPI.getUserById(userId);
-                            const { password: _, ...userWithoutPassword } = updated;
-                            return res.json({ success: true, user: userWithoutPassword });
-                        }
-                    }
-                }
             } catch (stripeError) {
                 console.error('Error refreshing subscription from Stripe:', stripeError);
                 // Continue to return current user data even if Stripe refresh fails

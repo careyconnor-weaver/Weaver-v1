@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════════
    WEAVER ASSISTANT — AI-native home (prompt-first, like Harvey/Legora,
    mapped onto Weaver's own data):
-     Sources  → My network, Follow-ups, Club data, Playbook, Web search
-     Files    → "Notes photo" (handwritten call notes → text)
-     Improve  → rewrites a rough request into a specific one
-     Library  → ready-made recruiting workflows
-     Threads  → recent chats in the sidebar
+     Sources: My network, Follow-ups, Club data, Playbook, Web search
+     Files:   "Notes photo" (handwritten call notes to text)
+     Improve: rewrites a rough request into a specific one
+     Library: ready-made recruiting workflows
+     Threads: recent chats in the sidebar
    The model returns structured actions; logging/updating contacts is
    applied locally (the client is the source of truth for contacts and
    syncs to the server) with Undo. Drafts are never sent automatically.
@@ -75,6 +75,9 @@
         { group: 'Outreach', title: 'Write a cold email', desc: 'First outreach to someone at a target firm.', prompt: "Write a cold email to [name], [role] at [firm]. I'm a [year] at [school] interested in [group]. Ask for a 15-minute call.", sources: ['playbook'] },
         { group: 'Logging', title: 'Log a conversation', desc: 'Describe it in plain words; Weaver files it to the right contact.', prompt: 'Log this: I had a [call / coffee chat] with [name] at [firm] today. We talked about [topics]. Next step: [next step].' },
         { group: 'Prep', title: 'Prep for a coffee chat', desc: 'What you already know about them, plus sharp questions to ask.', prompt: 'Help me prepare for my coffee chat with [name] at [firm]: summarize what I know from my notes, and give me 3 sharp questions to ask.', sources: ['web'] },
+        { group: 'Prep', title: 'Mock interview', desc: 'Practice one question at a time, with feedback after each answer.', prompt: 'Run a mock [investment banking / consulting] interview for [firm]. Ask one question at a time, mixing technical and behavioral. After each of my answers, give short feedback on structure and accuracy, then ask the next question.', sources: ['playbook'] },
+        { group: 'Prep', title: 'Technicals drill', desc: 'Five questions on one topic, with model answers.', prompt: 'Give me 5 [accounting / valuation / DCF / LBO / merger model] technical questions, one at a time. Wait for my answer, then show a concise model answer and what I missed.', sources: ['playbook'] },
+        { group: 'Prep', title: 'Why this firm', desc: 'A specific answer built from the people you have spoken to.', prompt: 'Help me write a 60-second "Why [firm]?" answer using the conversations in my notes with people at [firm]. Name the people and what they said that stood out.' },
         { group: 'Insights', title: 'Who do I know at a firm?', desc: 'Every relationship at one firm and where it stands.', prompt: 'Who do I know at [firm]? Summarize where each relationship stands and what I should do next with each.' },
         { group: 'Insights', title: 'My recruiting pulse', desc: 'Outreach, replies and calls this month, and what to change.', prompt: 'How is my networking going this month? Cover outreach sent, reply rate, calls, and the one thing I should change.', send: true },
         { group: 'Club', title: 'Club weekly report', desc: "Top performers, who's stalling, and what to do as club leader.", prompt: "Summarize our club's networking activity: top performers, members who are stalling, and three concrete actions I should take as club leader.", send: true, club: true },
@@ -163,6 +166,9 @@
         return out.join('');
     }
 
+    // Shared with the Documents view.
+    window.wvMarkdown = md;
+
     // ---------- applying actions to contacts (with undo) ----------
     function findContact(contacts, name) {
         var n = String(name || '').trim().toLowerCase();
@@ -208,7 +214,7 @@
                 var u = findContact(contacts, a.contact_name);
                 if (!u) { results.push({ idx: idx, text: 'Could not find ' + a.contact_name + ' in your network — nothing changed.', skipped: true }); return; }
                 Object.keys(a.fields).forEach(function (k) { u[k] = a.fields[k]; });
-                var desc = Object.keys(a.fields).map(function (k) { return k === 'vip' ? (a.fields.vip ? 'marked VIP' : 'removed VIP') : k + ' → ' + a.fields[k]; }).join(', ');
+                var desc = Object.keys(a.fields).map(function (k) { return k === 'vip' ? (a.fields.vip ? 'marked VIP' : 'removed VIP') : k + ' set to ' + a.fields[k]; }).join(', ');
                 results.push({ idx: idx, text: 'Updated ' + u.name + ': ' + desc });
             }
         });
@@ -264,8 +270,11 @@
         if (btn) btn.setAttribute('aria-expanded', state.sourcesOpen ? 'true' : 'false');
     }
 
+    // Club-leader workflows (club reports, nudging members) are for managers only.
     function workflowsFor(includeClub) {
-        return WORKFLOWS.filter(function (w) { return !w.club || includeClub; });
+        var u = user();
+        var manager = !!(u && u.role === 'manager');
+        return WORKFLOWS.filter(function (w) { return !w.club || (includeClub && manager); });
     }
 
     function renderWorkflows() {
@@ -331,7 +340,7 @@
         if (!has && !state.busy) { box.innerHTML = ''; return; }
         var html = (th ? th.messages : []).map(function (m, mi) {
             if (m.role === 'user') return '<div class="wv-msg wv-user"><div class="wv-bubble">' + esc(m.content).replace(/\n/g, '<br>') + '</div></div>';
-            if (m.error) return '<div class="wv-msg wv-ai wv-error"><p>' + esc(m.content) + '</p></div>';
+            if (m.error) return '<div class="wv-msg wv-ai wv-error"><p>' + esc(m.content) + (m.upgrade ? ' <button type="button" class="wv-linkbtn wv-inline" onclick="window.openSubscriptionModal && openSubscriptionModal()">See plans</button>' : '') + '</p></div>';
             return '<div class="wv-msg wv-ai"><div class="wv-ai-body">' + md(m.content) + '</div>' + renderActions(m, mi) + '</div>';
         }).join('');
         if (state.busy) html += '<div class="wv-msg wv-ai wv-pending"><span class="wv-dots" aria-label="Working"><i></i><i></i><i></i></span><span>Reading your network…</span></div>';
@@ -395,7 +404,7 @@
                 (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
                     b.textContent = 'Copied';
                     setTimeout(function () { b.textContent = 'Copy'; }, 1600);
-                }).catch(function () { window.prompt('Copy this draft:', text); });
+                }).catch(function () { if (window.wvToast) wvToast('Could not copy automatically. Select the text and copy it.', 'error'); });
             };
         });
         box.querySelectorAll('[data-mailto]').forEach(function (b) {
@@ -455,7 +464,10 @@
                 body: JSON.stringify({ userId: u.id, message: text, history: history, sources: src, network: (src.indexOf('network') !== -1 || src.indexOf('followups') !== -1) ? buildNetwork() : null, profile: { name: firstName(), accountType: u.accountType || null } })
             });
             var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) reply = { role: 'assistant', error: true, content: data.error || 'The assistant could not answer that. Try again in a moment.' };
+            if (!res.ok) {
+                reply = { role: 'assistant', error: true, content: data.error || 'The assistant could not answer that. Try again in a moment.' };
+                if (res.status === 402) reply.upgrade = true;
+            }
             else {
                 var actions = data.actions || [];
                 var applied = applyActions(actions.filter(function (a) { return a.type === 'log_interaction' || a.type === 'update_contact'; }));
@@ -488,6 +500,7 @@
             var res = await fetch('/api/assistant/improve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: text }), signal: timeout(30000) });
             var data = await res.json();
             if (res.ok && data.improved) { input.value = data.improved; autoGrow(); }
+            else if (!res.ok && window.wvToast) wvToast(data.error || 'Could not improve the request.', 'error');
         } catch (e) { /* keep the original text */ }
         if (btn) { btn.disabled = false; btn.classList.remove('is-busy'); }
         input.focus();
@@ -506,14 +519,14 @@
             var res = await fetch('/api/process-call-notes', { method: 'POST', body: fd, signal: timeout(90000) });
             var data = await res.json();
             input.disabled = false;
-            if (!res.ok) { input.value = prev; alert(data.error || 'Could not read that photo.'); return; }
+            if (!res.ok) { input.value = prev; if (window.wvToast) wvToast(data.error || 'Could not read that photo.', 'error'); return; }
             input.value = (prev ? prev + '\n\n' : 'Log this call with [name] at [firm] on ' + today() + '. My notes:\n') + (data.summary || data.extractedText || '');
             autoGrow(); input.focus();
             var s = input.value.indexOf('[name]');
             if (s !== -1) input.setSelectionRange(s, s + 6);
         } catch (e) {
             input.disabled = false; input.value = prev;
-            alert('Could not read that photo. Try again.');
+            if (window.wvToast) wvToast('Could not read that photo. Try again.', 'error');
         }
     };
 

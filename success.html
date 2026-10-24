@@ -1,147 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscription Successful - Weaver</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment received · Weaver</title>
+<meta http-equiv="refresh" content="2;url=/?checkout=success#settings">
+<style>
+  :root { --paper:#F6F7F9; --ink:#16203A; --graphite:#5B6474; --hair:#E3E6EB; --ledger:#1E6A55; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { background:#fff; border:1px solid var(--hair); border-radius:10px; padding:32px 36px; max-width:420px; margin:16px; }
+  h1 { font-size:20px; font-weight:600; margin:0 0 8px; }
+  p { color:var(--graphite); font-size:15px; line-height:1.55; margin:0 0 18px; }
+  a { color:var(--ledger); font-weight:500; }
+</style>
 </head>
 <body>
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--eggshell-white); padding: 2rem;">
-        <div style="max-width: 600px; text-align: center; background: white; padding: 3rem; border-radius: 12px; border: 2px solid var(--silver-gray); box-shadow: 0 4px 16px rgba(26, 35, 50, 0.1);">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
-            <h1 style="margin: 0 0 1rem 0; color: var(--text-dark); font-size: 2rem;">Subscription Successful!</h1>
-            <p style="margin: 0 0 2rem 0; color: var(--text-medium); font-size: 1.1rem;">
-                Thank you for subscribing to Weaver Pro! Your subscription is now active and you have access to all premium features.
-            </p>
-            <div style="margin: 2rem 0; padding: 1.5rem; background: rgba(49, 130, 206, 0.05); border-radius: 8px; border-left: 4px solid var(--accent-blue);">
-                <h3 style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-size: 1.2rem;">What's Next?</h3>
-                <ul style="list-style: none; padding: 0; margin: 0; text-align: left; color: var(--text-dark);">
-                    <li style="padding: 0.5rem 0;">✓ Unlimited contacts</li>
-                    <li style="padding: 0.5rem 0;">✓ AI call notes summarization</li>
-                    <li style="padding: 0.5rem 0;">✓ Email reminders & follow-ups</li>
-                    <li style="padding: 0.5rem 0;">✓ Personalized article recommendations</li>
-                </ul>
-            </div>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="/" class="btn btn-primary" style="text-decoration: none;">Go to Dashboard</a>
-                <button onclick="openCustomerPortal()" class="btn btn-secondary">Manage Subscription</button>
-            </div>
-        </div>
-    </div>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        // Get session ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('session_id');
-        
-        // Store session ID for portal access
-        if (sessionId) {
-            sessionStorage.setItem('stripe_session_id', sessionId);
-        }
-        
-        // Refresh user subscription status after successful payment
-        async function refreshUserSubscription() {
-            try {
-                // Get current user from localStorage
-                const currentUserStr = localStorage.getItem('weaver_current_user');
-                if (!currentUserStr) {
-                    console.log('No user found in localStorage, skipping subscription refresh');
-                    return;
-                }
-                
-                const currentUser = JSON.parse(currentUserStr);
-                if (!currentUser || !currentUser.id) {
-                    console.log('Invalid user data, skipping subscription refresh');
-                    return;
-                }
-                
-                console.log('Refreshing subscription status for user:', currentUser.id);
-                
-                // Call API to refresh subscription status from Stripe
-                const response = await fetch('/api/users/refresh-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.id })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                    console.error('Failed to refresh subscription:', errorData);
-                    // Don't show error to user, just log it - webhook will update it eventually
-                    return;
-                }
-                
-                const data = await response.json();
-                if (data.success && data.user) {
-                    // Update user in localStorage with refreshed subscription data
-                    const updatedUser = {
-                        id: data.user.id,
-                        email: data.user.email,
-                        subscriptionStatus: data.user.subscriptionStatus || 'free',
-                        subscriptionPlan: data.user.subscriptionPlan || null,
-                        stripeCustomerId: data.user.stripeCustomerId || null,
-                        stripeSubscriptionId: data.user.stripeSubscriptionId || null
-                    };
-                    
-                    localStorage.setItem('weaver_current_user', JSON.stringify(updatedUser));
-                    console.log('Subscription status refreshed:', updatedUser.subscriptionStatus);
-                    
-                    // Also reload contacts from API to ensure data persistence
-                    if (updatedUser.id) {
-                        try {
-                            const contactsResponse = await fetch(`/api/contacts?userId=${encodeURIComponent(updatedUser.id)}`);
-                            if (contactsResponse.ok) {
-                                const contactsData = await contactsResponse.json();
-                                if (contactsData.contacts && Array.isArray(contactsData.contacts)) {
-                                    localStorage.setItem(`weaver_contacts_${updatedUser.id}`, JSON.stringify(contactsData.contacts));
-                                    console.log('Contacts reloaded from API:', contactsData.contacts.length);
-                                }
-                            }
-                        } catch (contactsError) {
-                            console.error('Error reloading contacts:', contactsError);
-                            // Non-critical error, continue
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error refreshing subscription:', error);
-                // Don't show error to user - webhook will update it eventually
-            }
-        }
-        
-        // Refresh subscription status when page loads
-        refreshUserSubscription();
-        
-        // Customer portal function
-        async function openCustomerPortal() {
-            const userStr = localStorage.getItem('weaver_current_user');
-            if (!userStr) {
-                alert('Please log in to manage your subscription');
-                window.location.href = '/';
-                return;
-            }
-            
-            const user = JSON.parse(userStr);
-            
-            try {
-                const response = await fetch('/api/stripe/create-portal-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to create portal session');
-                }
-                
-                const { url } = await response.json();
-                window.location.href = url;
-            } catch (error) {
-                console.error('Portal error:', error);
-                alert('Error opening customer portal. Please try again.');
-            }
-        }
-    </script>
+<main>
+  <h1>Payment received</h1>
+  <p>Your plan is being activated. Taking you back to Weaver…</p>
+  <a href="/?checkout=success#settings">Go to Weaver now</a>
+</main>
 </body>
 </html>

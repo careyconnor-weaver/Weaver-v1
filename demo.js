@@ -5,7 +5,9 @@
  *
  *   npm install
  *   npm run demo
- *   open http://localhost:3000   (log in: demo@weaver.app / weaver-demo)
+ *   open http://localhost:3000
+ *     club manager: demo@weaver.app / weaver-demo
+ *     student:      priya.shah@bc.edu / weaver-demo
  *
  * Data lives in ./.demo-db next to this file. Delete that folder to start fresh.
  * Optional: put OPENAI_API_KEY=... in a .env file to turn on the assistant.
@@ -25,18 +27,19 @@ const DEMO_PASSWORD = 'weaver-demo';
 
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
-function call(method, urlPath, payload) {
+function call(method, urlPath, payload, cookie) {
     return new Promise((resolve, reject) => {
         const data = payload ? JSON.stringify(payload) : null;
-        const req = http.request({
-            host: '127.0.0.1', port: APP_PORT, method, path: urlPath,
-            headers: { 'Content-Type': 'application/json', ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}) },
-        }, (res) => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (data) headers['Content-Length'] = Buffer.byteLength(data);
+        if (cookie) headers.Cookie = cookie;
+        const req = http.request({ host: '127.0.0.1', port: APP_PORT, method, path: urlPath, headers }, (res) => {
             let body = '';
             res.on('data', (c) => (body += c));
             res.on('end', () => {
                 let json = null; try { json = JSON.parse(body); } catch (e) { /* not json */ }
-                resolve({ status: res.statusCode, body: json, raw: body });
+                const set = (res.headers['set-cookie'] || []).map((h) => h.split(';')[0]).find((h) => h.startsWith('weaver_session='));
+                resolve({ status: res.statusCode, body: json, raw: body, cookie: set || null });
             });
         });
         req.on('error', reject);
@@ -45,10 +48,10 @@ function call(method, urlPath, payload) {
     });
 }
 
-async function must(method, urlPath, payload) {
-    const r = await call(method, urlPath, payload);
+async function must(method, urlPath, payload, cookie) {
+    const r = await call(method, urlPath, payload, cookie);
     if (r.status >= 400) throw new Error(`${method} ${urlPath} failed (${r.status}): ${r.raw.slice(0, 300)}`);
-    return r.body;
+    return r;
 }
 
 // ---- Sample data -----------------------------------------------------------
@@ -188,36 +191,83 @@ async function waitFor(check, label, tries = 80) {
     throw new Error('Timed out waiting for ' + label);
 }
 
+// Every demo account uses the same password so any of them can be shown.
 async function seed() {
     const { Client } = require('pg');
     const c = new Client({ connectionString: DB_URL });
     await c.connect();
     try {
         const already = (await c.query('select 1 from users where email = $1', [DEMO_EMAIL])).rowCount > 0;
-        if (already) return false;
-
-        console.log('Adding a sample club and contacts...');
-        for (const m of MEMBERS) {
-            const password = m.email === DEMO_EMAIL ? DEMO_PASSWORD : 'demo-member-' + m.id;
-            await must('POST', '/api/users/signup', { userId: m.id, email: m.email, password });
-            await must('POST', '/api/users/account-type', { userId: m.id, accountType: m.type });
-            await must('POST', '/api/users/settings', { userId: m.id, firstName: m.first, lastName: m.last });
+        if (!already) {
+            console.log('Adding a sample club and contacts...');
+            const accounts = {};
+            for (const m of MEMBERS) {
+                const r = await must('POST', '/api/auth/signup', { email: m.email, password: DEMO_PASSWORD });
+                accounts[m.id] = { userId: r.body.user.id, cookie: r.cookie };
+                await must('POST', '/api/users/account-type', { accountType: m.type }, r.cookie);
+                await must('POST', '/api/users/settings', { firstName: m.first, lastName: m.last }, r.cookie);
+            }
+            const owner = accounts['demo-owner'];
+            const org = (await must('POST', '/api/orgs', { name: 'BC Finance Society', school: 'Boston College' }, owner.cookie)).body.org;
+            for (const m of MEMBERS.slice(1)) {
+                await must('POST', '/api/orgs/join', { joinCode: org.joinCode, displayName: `${m.first} ${m.last}` }, accounts[m.id].cookie);
+            }
+            // Verify the club now so members get the club allowance during the sync below.
+            await c.query('update organizations set verified = true where id = $1', [org.id]);
+            await must('POST', '/api/contacts/sync', { contacts: ownerContacts(owner.userId) }, owner.cookie);
+            for (const [key, make] of Object.entries(MEMBER_CONTACTS)) {
+                await must('POST', '/api/contacts/sync', { contacts: make(accounts[key].userId) }, accounts[key].cookie);
+            }
+            // Two members' activity is older than 30 days, so "active members" is realistic.
+            const quiet = [accounts['demo-m4'].userId, accounts['demo-m5'].userId];
+            await c.query("update contacts set created_at = now() - interval '45 days' where user_id = any($1)", [quiet]);
         }
-        const org = (await must('POST', '/api/orgs', { userId: 'demo-owner', name: 'BC Finance Society', school: 'Boston College' })).org;
-        for (const m of MEMBERS.slice(1)) {
-            await must('POST', '/api/orgs/join', { userId: m.id, joinCode: org.joinCode, displayName: `${m.first} ${m.last}` });
-        }
-        await must('POST', '/api/contacts/sync', { userId: 'demo-owner', contacts: ownerContacts('demo-owner') });
-        for (const [userId, make] of Object.entries(MEMBER_CONTACTS)) {
-            await must('POST', '/api/contacts/sync', { userId, contacts: make(userId) });
-        }
-        // Make two members' activity older than 30 days so the "active members" count is realistic.
-        await c.query("update contacts set created_at = now() - interval '45 days' where user_id in ('demo-m4', 'demo-m5')");
-        // Show the club as already on a plan (no real Stripe subscription in demo mode).
-        await c.query("update organizations set plan_status = 'active' where id = $1", [org.id]);
-        return true;
+        await topUp(c);
+        return !already;
     } finally {
         await c.end();
+    }
+}
+
+// Brings any demo database (including one created by an older version) up to date:
+// verified club on a plan, shared outcomes for the console, and a checklist.
+async function topUp(c) {
+    const ids = {};
+    for (const m of MEMBERS) {
+        const r = await c.query('select id from users where email = $1', [m.email]);
+        if (r.rowCount) ids[m.id] = r.rows[0].id;
+    }
+    if (!ids['demo-owner']) return;
+    const { hashPassword } = require('./lib/auth');
+    for (const id of Object.values(ids)) {
+        await c.query('update users set password = $1 where id = $2', [await hashPassword(DEMO_PASSWORD), id]);
+    }
+    await c.query("update organizations set verified = true, plan_status = 'active' where owner_id = $1", [ids['demo-owner']]);
+    const has = await c.query('select 1 from outcomes where user_id = any($1) limit 1', [Object.values(ids)]);
+    if (!has.rowCount) {
+        const rows = [
+            ['demo-owner', 'Goldman Sachs', 'TMT summer analyst', 'superday', 5, true],
+            ['demo-owner', 'Evercore', 'Restructuring summer analyst', 'first_round', 12, true],
+            ['demo-m1', 'Moelis & Company', 'Summer analyst', 'offer', 3, true],
+            ['demo-m1', 'Guggenheim', 'Summer analyst', 'superday', 9, true],
+            ['demo-m2', 'Blackstone', 'Private equity summer analyst', 'first_round', 6, true],
+            ['demo-m3', 'McKinsey & Company', 'Business analyst intern', 'superday', 4, true],
+            ['demo-m3', 'BCG', 'Associate intern', 'applied', 14, false],
+        ];
+        let n = 0;
+        for (const [who, firm, role, stage, ago, share] of rows) {
+            if (!ids[who]) continue;
+            await c.query('insert into outcomes (id, user_id, firm, role, stage, stage_date, share_with_club) values ($1,$2,$3,$4,$5,$6,$7)',
+                ['oc_demo_' + (n++), ids[who], firm, role, stage, daysAgo(ago), share]);
+        }
+    }
+    const ck = await c.query('select 1 from checklists where user_id = $1 limit 1', [ids['demo-owner']]);
+    if (!ck.rowCount) {
+        const { CHECKLISTS } = require('./routes/workspace');
+        const t = CHECKLISTS.superday;
+        const items = t.items.map((it, i) => ({ id: 'i' + i, section: it.section, text: it.text, done: i < 4 }));
+        await c.query('insert into checklists (id, user_id, title, template_key, items) values ($1,$2,$3,$4,$5)',
+            ['ck_demo_superday', ids['demo-owner'], 'Goldman Sachs Superday', 'superday', JSON.stringify(items)]);
     }
 }
 
@@ -253,7 +303,7 @@ async function seed() {
         const c = new Client({ connectionString: DB_URL });
         await c.connect();
         try {
-            const r = await c.query("select to_regclass('public.org_invites') as a, to_regclass('public.user_settings') as b");
+            const r = await c.query("select to_regclass('public.sessions') as a, to_regclass('public.documents') as b");
             return r.rows[0].a && r.rows[0].b;
         } finally { await c.end(); }
     }, 'the database schema');
@@ -266,7 +316,8 @@ async function seed() {
 
     console.log('\n------------------------------------------------------------');
     console.log(`  Weaver demo is running:  http://localhost:${APP_PORT}`);
-    console.log(`  Log in with:             ${DEMO_EMAIL}  /  ${DEMO_PASSWORD}`);
+    console.log(`  Club manager login:      ${DEMO_EMAIL}  /  ${DEMO_PASSWORD}`);
+    console.log(`  Student login:           ${MEMBERS[1].email}  /  ${DEMO_PASSWORD}`);
     if (!process.env.OPENAI_API_KEY) {
         console.log('  Assistant is off: add OPENAI_API_KEY=... to a .env file to turn it on.');
     }

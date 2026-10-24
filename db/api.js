@@ -637,9 +637,11 @@ async function updateUserSubscription(customerId, subscriptionData) {
     }
     
     const userId = userResult[0].id;
-    const planName = subscriptionData.items?.data?.[0]?.price?.nickname || 
-                    subscriptionData.items?.data?.[0]?.price?.recurring?.interval || 
-                    'monthly';
+    const rec = subscriptionData.items?.data?.[0]?.price?.recurring;
+    const fromInterval = rec
+        ? (rec.interval === 'year' ? 'annual' : rec.interval === 'month' && rec.interval_count === 3 ? 'quarterly' : rec.interval === 'month' ? 'monthly' : rec.interval)
+        : null;
+    const planName = subscriptionData.metadata?.plan || fromInterval || 'monthly';
     
     const result = await db.update(users)
         .set({

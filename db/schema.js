@@ -4,7 +4,7 @@ const { pgTable, text, timestamp, boolean, jsonb, varchar, integer } = require('
 const users = pgTable('users', {
     id: text('id').primaryKey(),
     email: varchar('email', { length: 255 }).notNull().unique(),
-    password: text('password').notNull(), // In production, should be hashed
+    password: text('password').notNull(), // scrypt hash (see lib/auth.js)
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
     // Onboarding / account type: 'student' or 'org' (club / organization). Null until onboarding is completed.
     accountType: text('account_type'), // 'student' | 'org'
@@ -32,6 +32,14 @@ const organizations = pgTable('organizations', {
     stripeSubscriptionId: text('stripe_subscription_id'),
     billingEmail: varchar('billing_email', { length: 255 }),
     lastBilledSeats: integer('last_billed_seats'),
+    // Verification: members only get the free club allowance once Weaver has verified the
+    // club (prevents people creating fake clubs to get free AI usage).
+    verified: boolean('verified').default(false),
+    // 'club' or 'career_center'
+    orgType: text('org_type').default('club'),
+    // 'none' or 'campus' (a career-center contract that sponsors every member)
+    license: text('license').default('none'),
+    licenseExpiresAt: timestamp('license_expires_at', { mode: 'date' }),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
 

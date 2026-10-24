@@ -232,3 +232,91 @@ code → leaderboard.
 - Passwords are still stored in plaintext (pre-existing) — hash before launch.
 - Assistant chats are stored per device (localStorage), not synced across devices.
 - Members who were already logged in see club-covered Pro after their next login.
+
+---
+
+# Change set 3: Security, metering, plans and roles, outcomes, Legora-style workspace, polish
+
+**Author (requested & directed by):** shindon@bc.edu
+**Implemented by:** Claude (claude-opus-5-5, with a brief claude-haiku-4-5 stretch for deployment support), via Claude Code
+**Session:** https://claude.ai/code/session_01J5PZc2FvLyEJ462zYpKyzQ
+**Date:** 2026-10-24
+**Branch:** `feature/ai-native` · **Base:** `4ce93e5`
+
+## Requests
+
+Professional-grade product modeled on Legora's workflow; the four builds (accounts and
+security, usage metering with hard caps, plan structure, opt-in outcome tracking);
+manager vs student account types; and a polish pass (type, distracting bugs,
+animations, emoji). Reference products: Legora, AskStanley.
+
+## Security (lib/auth.js, routes/auth.js, server.js)
+
+| Problem found | Fix |
+| --- | --- |
+| The whole project folder was served publicly, including server code, `render.yaml` (which held the production database URL) and `gmail_tokens.json` (every connected user's Gmail read/send keys) | Only an allowlist of page, script, style and image files is served; the Gmail token file is no longer written |
+| No server-side authentication: every API trusted the user id the browser sent | Server sessions in an HttpOnly, SameSite=Lax, Secure (in production) cookie; only a SHA-256 of each token is stored; every `/api` route requires a session except sign-in, pricing, webhook, health; any `userId` sent must match the session (403 otherwise) |
+| Plaintext passwords | scrypt hashes; legacy passwords hashed in the background at startup and on next sign-in; 8-character minimum for new passwords; change-password signs out other devices |
+| Anyone could add notes/emails to another user's contact; edits could overwrite ids | Ownership checks; whitelisted, length-limited contact fields |
+| Gmail OAuth `state` was the raw user id | Single-use random state bound to the signed-in user, 10-minute expiry |
+| Stripe checkout accepted any price id; plan refresh matched Stripe customers by (unverified) email | Only the configured Pro prices can be bought; refresh uses the customer id saved on the account |
+| `/api/migrate`, test and diagnostic endpoints open to anyone | Admin-only (`ADMIN_EMAILS`) |
+| Org routes didn't check membership; members could see each other's emails | Members-only; emails, billing and invites manager-only |
+| Contact names, firms and notes inserted into the page unescaped (Gmail sync made this reachable by any email sender) | Escaped in the network table, contact detail, notes and pickers |
+| Sign-in brute force, join-code guessing, invite spam | Rate limits per IP and per account |
+
+## Metering and cost control (lib/usage.js, lib/context.js)
+
+Every OpenAI call goes through `meteredCompletion`: global monthly kill switch, one
+request at a time per user, per-minute limit per plan, then the **worst-case** cost of
+the request is checked against the monthly allowance before sending. Actual token cost
+is written to `ai_usage`. Default model moved to gpt-4o-mini (the legacy `gpt-4` and
+`gpt-4-turbo` calls, ~100× the price, are gone). The assistant now sends the ≤40 most
+relevant contacts instead of up to 400. Firm detection is cached per domain.
+
+## Plans and roles (lib/plans.js)
+
+Starter / Club (verified club) / Club sponsored (paid club plan or campus license) /
+Pro (monthly, quarterly, annual; prices read live from Stripe; promotion codes on).
+Clubs must be verified by Weaver before members get the free allowance. Users are
+`manager` (club/career-center account or owner/admin) or `student`; managers land in
+the Club console and see manager-only workflows.
+
+## Workspace features (routes/workspace.js, workspace-ui.js)
+
+- **Club console** (managers): KPIs, sortable member table with status, role changes
+  (owner-only) and removal, invites, consented outcomes, billing, club report.
+- **Review tables** (Legora's Tabular Review): contacts × questions; computed columns
+  free, AI columns cite the interaction they came from; only empty cells are re-filled;
+  CSV export.
+- **Documents**: coffee-chat brief, thank-you, follow-up, referral request, firm brief,
+  weekly report, club report; edit, copy, open in email, print/PDF.
+- **Checklists**: expert templates (coffee chat, Superday, IB timeline, consulting case
+  prep, offer decision, club season kickoff) plus blank.
+- **Outcomes**: applications through offers; private by default, shared per outcome.
+
+## Polish
+
+Emoji and browser pop-ups removed app-wide (toasts and in-app dialogs instead);
+sentence case throughout; My network rebuilt as a table; contact detail, Club,
+Settings and Follow-ups restyled to the shared components; ALL-CAPS labels, monospace
+email, full-width badges and mismatched button styles removed; Follow-ups shows who is
+due first; Stripe return pages rebuilt; landing pricing uses drawn check marks.
+
+## Verification
+
+- 18 end-to-end checks against a real Postgres (public files, 401/403 rules, hashing,
+  cookie flags, roles, console visibility, outcome consent, contact limits incl.
+  batch-sync bypass, unverified-club loophole, admin lockout, rate limits, logout).
+- 6 metering checks with a fake OpenAI endpoint (model choice, context trimming, exact
+  cost ledger, cached re-runs, per-minute limit, hard monthly cap refusing before sending).
+- 25 screens rendered in Chromium (desktop and phone) with zero page errors, console
+  errors or native dialogs; each reviewed visually.
+
+## Notes
+
+- During this session, work from an interrupted turn kept running and an early version
+  of `routes/workspace.js` was overwritten by a rewrite. The rewrite was then aligned to
+  the front end's contract and covered by the tests above.
+- Not verified here: live OpenAI, live Stripe, live Gmail, Windows-native demo database
+  start. Email verification at signup and password reset are not built yet.

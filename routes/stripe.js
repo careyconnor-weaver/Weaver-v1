@@ -1,264 +1,134 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_not_configured');
 const dbAPI = require('../db/api');
 
-// Create checkout session for subscription
-// This endpoint needs JSON parsing, so we add it here
+// All Stripe routes except /pricing and /webhook require a signed-in user (server.js);
+// they always act for req.user, never for an id sent by the browser.
+
+function appUrl() { return process.env.WEAVER_URL || 'http://localhost:3000'; }
+function configured() { return !!process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('not_configured') && !process.env.STRIPE_SECRET_KEY.includes('demo_placeholder'); }
+
+// Pro prices. The browser sends a plan key; only these prices can be bought.
+// (Previously any price id from the browser was accepted, so a cheaper price in the
+// same Stripe account could be used to unlock Pro.)
+const PRO_PRICES = {
+    monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || 'price_1StXttQZZ2GMzWg9cj6s4DXD',
+    quarterly: process.env.STRIPE_PRICE_PRO_QUARTERLY || null,
+    annual: process.env.STRIPE_PRICE_PRO_ANNUAL || 'price_1StXtnQZZ2GMzWg9YeTAGbIq',
+};
+// Older clients sent these ids directly; map them to plan keys.
+const LEGACY_IDS = { price_1StXttQZZ2GMzWg9cj6s4DXD: 'monthly', price_1StXtnQZZ2GMzWg9YeTAGbIq: 'annual' };
+
+function planFromRequest(body) {
+    const b = body || {};
+    if (PRO_PRICES[b.plan]) return b.plan;
+    if (b.priceId && LEGACY_IDS[b.priceId]) return LEGACY_IDS[b.priceId];
+    return null;
+}
+
 router.post('/create-checkout-session', express.json(), async (req, res) => {
     try {
-        console.log('Received checkout request:', req.body);
-        let { userId, priceId, email } = req.body;
-        
-        if (!userId || !priceId) {
-            console.error('Missing required fields:', { userId: !!userId, priceId: !!priceId });
-            return res.status(400).json({ error: 'userId and priceId are required' });
-        }
-        
-        // Ensure userId is a string (important for database queries)
-        userId = String(userId);
-        
-        // Check if Stripe is configured
-        if (!process.env.STRIPE_SECRET_KEY) {
-            console.error('STRIPE_SECRET_KEY not configured');
-            return res.status(500).json({ error: 'Stripe is not configured. Please check server settings.' });
-        }
-        
-        // Get user email
-        console.log('Fetching user:', userId, '(type:', typeof userId, ')');
-        let user;
-        try {
-            user = await dbAPI.getUserById(userId);
-        } catch (dbError) {
-            console.error('Database error fetching user:', dbError);
-            // Check if it's a schema/column error - try to auto-migrate
-            if (dbError.message && (
-                dbError.message.includes('column') && dbError.message.includes('does not exist') ||
-                dbError.message.includes('Database schema error')
-            )) {
-                console.log('🔄 Detected schema error, attempting automatic migration...');
-                try {
-                    // Try to run migration automatically using existing pool
-                    const { pool } = require('../db/index');
-                    
-                    if (!pool) {
-                        throw new Error('Database pool not available');
-                    }
-                    
-                    const client = await pool.connect();
-                    try {
-                        const columnsToAdd = [
-                            { name: 'stripe_customer_id', type: 'text' },
-                            { name: 'stripe_subscription_id', type: 'text' },
-                            { name: 'subscription_status', type: 'text DEFAULT \'free\'' },
-                            { name: 'subscription_plan', type: 'text' },
-                            { name: 'subscription_current_period_end', type: 'timestamp' }
-                        ];
-
-                        for (const column of columnsToAdd) {
-                            await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
-                            console.log(`  ✅ Added column: ${column.name}`);
-                        }
-                        console.log('✅ Auto-migration completed, retrying user fetch...');
-                        
-                        // Retry fetching user
-                        user = await dbAPI.getUserById(userId);
-                    } finally {
-                        client.release();
-                    }
-                } catch (migrationError) {
-                    console.error('Auto-migration failed:', migrationError);
-                    console.error('Migration error details:', {
-                        message: migrationError.message,
-                        stack: migrationError.stack,
-                        code: migrationError.code
-                    });
-                    return res.status(500).json({ 
-                        error: 'Database schema error. Please visit /api/migrate to fix this.',
-                        details: 'The Stripe columns may not exist in the database.',
-                        fixUrl: `${process.env.WEAVER_URL || 'https://weaver-kuwd.onrender.com'}/api/migrate`,
-                        instructions: 'Visit the URL above in your browser to automatically add the missing columns.'
-                    });
-                }
-            } else {
-                throw dbError; // Re-throw other errors
-            }
-        }
-        
-        // If user doesn't exist in database but we have email, create them
-        if (!user && email) {
-            console.log('User not found in database, creating user with email:', email);
-            try {
-                // Create user in database with placeholder password (they'll need to set it properly later)
-                user = await dbAPI.createUser(userId, email, 'placeholder-password-needs-update');
-                console.log('✅ Created user in database:', user.id);
-            } catch (createError) {
-                console.error('Failed to create user in database:', createError);
-                // If it's a duplicate, try to fetch again
-                if (createError.code === '23505') {
-                    user = await dbAPI.getUserById(userId);
-                } else {
-                    return res.status(500).json({ 
-                        error: 'Failed to create user account. Please log out and log back in.',
-                        details: createError.message
-                    });
-                }
-            }
-        }
-        
-        if (!user) {
-            console.error('User not found and no email provided:', userId);
-            return res.status(404).json({ 
-                error: 'User not found. Please log out and log back in to sync your account with the database.',
-                details: 'Your account needs to be synced with the database. Please log out and log back in.'
-            });
-        }
-        
-        console.log('User found:', user.email);
-
-        // Create or get Stripe customer
+        if (!configured()) return res.status(503).json({ error: 'Payments are not set up on this server.' });
+        const plan = planFromRequest(req.body);
+        if (!plan) return res.status(400).json({ error: 'Choose monthly, quarterly or annual.' });
+        const user = await dbAPI.getUserById(req.user.id);
         let customerId = user.stripeCustomerId;
         if (!customerId) {
-            const customer = await stripe.customers.create({
-                email: user.email,
-                metadata: { userId: userId }
-            });
+            const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
             customerId = customer.id;
-            // Save customer ID to database
-            await dbAPI.updateUserStripeCustomerId(userId, customerId);
+            await dbAPI.updateUserStripeCustomerId(user.id, customerId);
         }
-
-        // Create checkout session
-        console.log('Creating Stripe checkout session with:', { customerId, priceId });
-        
-        // First verify the price exists
-        try {
-            const price = await stripe.prices.retrieve(priceId);
-            console.log('Price verified:', price.id, '- Amount:', price.unit_amount, price.currency);
-        } catch (priceError) {
-            console.error('Price verification failed:', priceError.message);
-            return res.status(400).json({ 
-                error: `Invalid Price ID: ${priceError.message}. Please check that the Price ID exists in your Stripe account (test mode).` 
-            });
-        }
-        
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
             payment_method_types: ['card'],
             allow_promotion_codes: true,
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
-            success_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}?session_id={CHECKOUT_SESSION_ID}&user_id=${userId}`,
-            cancel_url: `${process.env.WEAVER_URL || 'http://localhost:3000'}?canceled=true&user_id=${userId}`,
-            metadata: {
-                userId: userId
-            }
+            line_items: [{ price: PRO_PRICES[plan], quantity: 1 }],
+            subscription_data: { metadata: { userId: user.id, plan } },
+            success_url: `${appUrl()}/?checkout=success#settings`,
+            cancel_url: `${appUrl()}/?checkout=canceled#settings`,
+            metadata: { userId: user.id, plan },
         });
-
-        console.log('Checkout session created successfully:', session.id);
-        res.json({ sessionId: session.id, url: session.url });
+        res.json({ url: session.url });
     } catch (error) {
-        console.error('Stripe checkout error:', error);
-        console.error('Error details:', {
-            message: error.message,
-            type: error.type,
-            code: error.code,
-            statusCode: error.statusCode
-        });
-        res.status(500).json({ 
-            error: error.message || 'Failed to create checkout session',
-            details: error.type || 'Unknown error'
-        });
+        console.error('Stripe checkout error:', error.message);
+        res.status(500).json({ error: 'Could not start checkout. Try again.' });
     }
 });
 
-// Create customer portal session (for managing subscriptions)
-// This endpoint needs JSON parsing
 router.post('/create-portal-session', express.json(), async (req, res) => {
     try {
-        let { userId } = req.body;
-        
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required' });
-        }
-        
-        // Ensure userId is a string
-        userId = String(userId);
-        
-        const user = await dbAPI.getUserById(userId);
-        if (!user || !user.stripeCustomerId) {
-            return res.status(404).json({ error: 'Customer not found' });
-        }
-
-        const session = await stripe.billingPortal.sessions.create({
-            customer: user.stripeCustomerId,
-            return_url: `${process.env.WEAVER_URL || 'https://weaver-kuwd.onrender.com'}/settings`,
-        });
-
+        const user = await dbAPI.getUserById(req.user.id);
+        if (!user || !user.stripeCustomerId) return res.status(404).json({ error: 'You don’t have a billing account yet.' });
+        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${appUrl()}/#settings` });
         res.json({ url: session.url });
     } catch (error) {
-        console.error('Stripe portal error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Stripe portal error:', error.message);
+        res.status(500).json({ error: 'Could not open billing. Try again.' });
     }
 });
 
 // ============ CLUB / CAREER-CENTER BILLING (per active member) ============
 // One Stripe subscription per organization on a per-seat price (CLUB_SEAT_PRICE_ID,
 // monthly, per unit). The seat quantity tracks members who were active in the
-// trailing 30 days; a daily job (server.js) re-syncs it without proration, so each
-// monthly invoice bills only the members who actually networked.
+// trailing 30 days; a daily job (server.js) re-syncs it without proration.
 
 const ACTIVE_WINDOW_DAYS = 30;
 function activeSince() { return new Date(Date.now() - ACTIVE_WINDOW_DAYS * 86400000); }
-function appUrl() { return process.env.WEAVER_URL || 'http://localhost:3000'; }
 
 async function requireOrgAdmin(userId, orgId) {
     const orgs = await dbAPI.getOrgsForUser(String(userId));
     const org = orgs.find(o => o.id === orgId);
-    if (!org) return { error: 'You are not a member of this organization', status: 403 };
-    if (org.role !== 'owner' && org.role !== 'admin') return { error: 'Only club owners/admins can manage billing', status: 403 };
+    if (!org) return { error: 'Club not found.', status: 404 };
+    if (org.role !== 'owner' && org.role !== 'admin') return { error: 'Only club owners and admins can manage billing.', status: 403 };
     return { org };
 }
 
-// Public pricing info for the landing page / pricing modal
+function describePrice(p) {
+    if (!p) return null;
+    return { amount: p.unit_amount, currency: p.currency, interval: p.recurring ? p.recurring.interval : null, intervalCount: p.recurring ? p.recurring.interval_count : 1 };
+}
+
+let pricingCache = { at: 0, data: null };
+
+// Public pricing for the landing page and plan picker (cached for 10 minutes).
 router.get('/pricing', async (req, res) => {
-    const out = { clubSeat: null, activeWindowDays: ACTIVE_WINDOW_DAYS };
-    try {
-        if (process.env.STRIPE_SECRET_KEY && process.env.CLUB_SEAT_PRICE_ID) {
-            const price = await stripe.prices.retrieve(process.env.CLUB_SEAT_PRICE_ID);
-            out.clubSeat = { amount: price.unit_amount, currency: price.currency, interval: price.recurring?.interval || 'month' };
+    if (pricingCache.data && Date.now() - pricingCache.at < 600000) return res.json(pricingCache.data);
+    const out = { pro: { monthly: null, quarterly: null, annual: null }, clubSeat: null, activeWindowDays: ACTIVE_WINDOW_DAYS };
+    if (configured()) {
+        const jobs = Object.entries(PRO_PRICES).map(async ([k, id]) => {
+            if (!id) return;
+            try { out.pro[k] = describePrice(await stripe.prices.retrieve(id)); } catch (e) { console.warn(`Pricing lookup failed for ${k}:`, e.message); }
+        });
+        if (process.env.CLUB_SEAT_PRICE_ID) {
+            jobs.push(stripe.prices.retrieve(process.env.CLUB_SEAT_PRICE_ID).then((p) => { out.clubSeat = describePrice(p); }).catch((e) => console.warn('Club seat lookup failed:', e.message)));
         }
-    } catch (e) { console.warn('Pricing lookup failed:', e.message); }
+        await Promise.all(jobs);
+    }
+    pricingCache = { at: Date.now(), data: out };
     res.json(out);
 });
 
 // Start a club subscription (owner/admin only)
 router.post('/club-checkout', express.json(), async (req, res) => {
     try {
-        const { userId, orgId, billingEmail } = req.body || {};
-        if (!userId || !orgId) return res.status(400).json({ error: 'userId and orgId are required' });
-        if (!process.env.STRIPE_SECRET_KEY || !process.env.CLUB_SEAT_PRICE_ID) {
-            return res.status(503).json({ error: 'Club billing is not configured yet (CLUB_SEAT_PRICE_ID missing).' });
+        const { orgId, billingEmail } = req.body || {};
+        if (!orgId) return res.status(400).json({ error: 'Choose a club.' });
+        if (!configured() || !process.env.CLUB_SEAT_PRICE_ID) {
+            return res.status(503).json({ error: 'Club billing isn’t set up yet. Contact us to start a club plan.' });
         }
-        const check = await requireOrgAdmin(userId, orgId);
+        const check = await requireOrgAdmin(req.user.id, orgId);
         if (check.error) return res.status(check.status).json({ error: check.error });
         const org = await dbAPI.getOrganizationById(orgId);
-        const user = await dbAPI.getUserById(String(userId));
+        if (!org.verified) return res.status(400).json({ error: 'Your club needs to be verified before starting a plan. We’ll email you once it is.' });
 
         let customerId = org.stripeCustomerId;
         if (!customerId) {
-            const customer = await stripe.customers.create({
-                email: (billingEmail || user?.email || '').trim() || undefined,
-                name: org.name,
-                metadata: { orgId: org.id, type: 'organization' },
-            });
+            const email = String(billingEmail || req.user.email || '').trim().slice(0, 200) || undefined;
+            const customer = await stripe.customers.create({ email, name: org.name, metadata: { orgId: org.id, type: 'organization' } });
             customerId = customer.id;
-            await dbAPI.setOrgBilling(org.id, { stripeCustomerId: customerId, billingEmail: billingEmail || user?.email || null });
+            await dbAPI.setOrgBilling(org.id, { stripeCustomerId: customerId, billingEmail: email || null });
         }
 
         const { active } = await dbAPI.getOrgActiveMemberCount(org.id, activeSince());
@@ -271,47 +141,48 @@ router.post('/club-checkout', express.json(), async (req, res) => {
             line_items: [{ price: process.env.CLUB_SEAT_PRICE_ID, quantity: seats }],
             subscription_data: { metadata: { orgId: org.id, type: 'organization' } },
             metadata: { orgId: org.id, type: 'organization' },
-            success_url: `${appUrl()}?club_billing=success&org_id=${encodeURIComponent(org.id)}#club`,
-            cancel_url: `${appUrl()}?club_billing=canceled&org_id=${encodeURIComponent(org.id)}#club`,
+            success_url: `${appUrl()}/?club_billing=success&org_id=${encodeURIComponent(org.id)}#console`,
+            cancel_url: `${appUrl()}/?club_billing=canceled&org_id=${encodeURIComponent(org.id)}#console`,
         });
         res.json({ url: session.url, seats });
     } catch (error) {
-        console.error('Club checkout error:', error);
-        res.status(500).json({ error: error.message || 'Failed to start club checkout' });
+        console.error('Club checkout error:', error.message);
+        res.status(500).json({ error: 'Could not start club checkout. Try again.' });
     }
 });
 
 // Stripe billing portal for the club (invoices, payment method, cancel)
 router.post('/club-portal', express.json(), async (req, res) => {
     try {
-        const { userId, orgId } = req.body || {};
-        const check = await requireOrgAdmin(userId, orgId);
+        const { orgId } = req.body || {};
+        const check = await requireOrgAdmin(req.user.id, orgId);
         if (check.error) return res.status(check.status).json({ error: check.error });
         const org = await dbAPI.getOrganizationById(orgId);
-        if (!org?.stripeCustomerId) return res.status(404).json({ error: 'This club has no billing account yet' });
-        const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: `${appUrl()}#club` });
+        if (!org || !org.stripeCustomerId) return res.status(404).json({ error: 'This club has no billing account yet.' });
+        const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: `${appUrl()}/#console` });
         res.json({ url: session.url });
     } catch (error) {
-        console.error('Club portal error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Club portal error:', error.message);
+        res.status(500).json({ error: 'Could not open billing. Try again.' });
     }
 });
 
-// Re-sync a club's plan status straight from Stripe (used after checkout redirect, in case the webhook is late)
+// Re-sync a club's plan status straight from Stripe (after checkout, in case the webhook is late)
 router.post('/club-refresh', express.json(), async (req, res) => {
     try {
         const { orgId } = req.body || {};
-        const org = orgId ? await dbAPI.getOrganizationById(orgId) : null;
-        if (!org) return res.status(404).json({ error: 'Organization not found' });
-        if (!org.stripeCustomerId || !process.env.STRIPE_SECRET_KEY) return res.json({ planStatus: org.planStatus || 'none' });
+        const check = await requireOrgAdmin(req.user.id, orgId);
+        if (check.error) return res.status(check.status).json({ error: check.error });
+        const org = await dbAPI.getOrganizationById(orgId);
+        if (!org.stripeCustomerId || !configured()) return res.json({ planStatus: org.planStatus || 'none' });
         const subs = await stripe.subscriptions.list({ customer: org.stripeCustomerId, status: 'all', limit: 5 });
         const live = (subs.data || []).find(s => ['active', 'trialing', 'past_due'].includes(s.status)) || subs.data?.[0];
         if (live) await applyOrgSubscription(org.id, live);
         const updated = await dbAPI.getOrganizationById(org.id);
         res.json({ planStatus: updated.planStatus || 'none' });
     } catch (error) {
-        console.error('Club refresh error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Club refresh error:', error.message);
+        res.status(500).json({ error: 'Could not refresh billing.' });
     }
 });
 
@@ -340,7 +211,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+        return res.status(400).send('Webhook signature verification failed');
     }
 
     // Handle the event

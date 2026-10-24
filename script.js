@@ -1,3 +1,70 @@
+// ═══ Escaping and icons ═══
+function wvEsc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+}
+window.wvEsc = wvEsc;
+var WV_ICONS = {
+    star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    sent: '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>',
+    call: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+    note: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+    check: '<path d="M20 6L9 17l-5-5"/>'
+};
+function wvIcon(name, size) {
+    var s = size || 16;
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (WV_ICONS[name] || '') + '</svg>';
+}
+window.wvIcon = wvIcon;
+
+// ═══ Notifications and confirmations ═══
+// In-app replacements for alert()/confirm(): a toast in the corner and a dialog that
+// returns a Promise<boolean>. Browser pop-ups block the page and look unfinished.
+(function () {
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function host() {
+        var h = document.getElementById('wv-toasts');
+        if (!h) { h = document.createElement('div'); h.id = 'wv-toasts'; h.className = 'wv-toasts'; h.setAttribute('role', 'status'); h.setAttribute('aria-live', 'polite'); document.body.appendChild(h); }
+        return h;
+    }
+    window.wvToast = function (message, kind) {
+        var text = String(message == null ? '' : message).replace(/^[\s✓✅❌⚠️]+/, '').trim();
+        if (!text) return;
+        if (!kind) kind = /(error|failed|could not|couldn’t|invalid|not found|unable|denied)/i.test(text) ? 'error' : 'info';
+        var t = document.createElement('div');
+        t.className = 'wv-toast wv-toast-' + kind;
+        t.innerHTML = '<span>' + esc(text).replace(/\n+/g, '<br>') + '</span><button type="button" class="wv-toast-x" aria-label="Dismiss">&times;</button>';
+        host().appendChild(t);
+        var remove = function () { if (t.parentNode) t.parentNode.removeChild(t); };
+        t.querySelector('.wv-toast-x').onclick = remove;
+        setTimeout(remove, kind === 'error' ? 7000 : 4500);
+    };
+    window.wvConfirm = function (message, opts) {
+        opts = opts || {};
+        return new Promise(function (resolve) {
+            var wrap = document.createElement('div');
+            wrap.className = 'wv-dialog-backdrop';
+            wrap.innerHTML = '<div class="wv-dialog" role="alertdialog" aria-modal="true" aria-labelledby="wv-dialog-title">' +
+                '<h2 id="wv-dialog-title">' + esc(opts.title || 'Are you sure?') + '</h2>' +
+                '<p>' + esc(message).replace(/\n+/g, '<br>') + '</p>' +
+                '<div class="wv-dialog-actions"><button type="button" class="wv-btn" data-a="no">' + esc(opts.cancelLabel || 'Cancel') + '</button>' +
+                '<button type="button" class="wv-btn ' + (opts.danger ? 'wv-btn-danger' : 'wv-btn-primary') + '" data-a="yes">' + esc(opts.confirmLabel || 'Confirm') + '</button></div></div>';
+            document.body.appendChild(wrap);
+            var done = function (v) { document.removeEventListener('keydown', onKey); if (wrap.parentNode) wrap.parentNode.removeChild(wrap); resolve(v); };
+            var onKey = function (e) { if (e.key === 'Escape') done(false); };
+            document.addEventListener('keydown', onKey);
+            wrap.addEventListener('click', function (e) { if (e.target === wrap) done(false); });
+            wrap.querySelector('[data-a="no"]').onclick = function () { done(false); };
+            var yes = wrap.querySelector('[data-a="yes"]');
+            yes.onclick = function () { done(true); };
+            setTimeout(function () { yes.focus(); }, 0);
+        });
+    };
+})();
+
 // Email Time Modal Functions (defined globally BEFORE DOMContentLoaded)
 window.openEmailTimeModal = function() {
     console.log('openEmailTimeModal called');
@@ -372,29 +439,32 @@ function updateSidebarUser() {
             }
         }
         if (nameEl) nameEl.textContent = displayName || user.email || 'User';
-        var isPro = hasActiveSubscription(user);
-        if (planEl) planEl.textContent = isPro ? 'Pro Plan' : 'Free Plan';
+        if (planEl) planEl.textContent = ((user.plan && user.plan.label) || (hasActiveSubscription(user) ? 'Pro' : 'Starter')) + ' plan';
     } else {
         if (avatarEl) avatarEl.textContent = '--';
         if (nameEl) nameEl.textContent = 'User';
-        if (planEl) planEl.textContent = 'Free Plan';
+        if (planEl) planEl.textContent = '';
     }
 }
 
-// Check if user is logged in on page load
+// On page load: render from the local copy right away, then confirm the session
+// with the server. If it has ended, return to the landing page.
 function checkAuth() {
     const currentUser = getCurrentUser();
     if (!currentUser) {
         showLandingView();
-    } else {
-        showAppView();
-        updateUserDisplay();
-        updateSidebarUser();
-        updateDashboard();
-        filterContacts();
-        // Prompt onboarding if the account type was never chosen
-        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+        return;
     }
+    enterApp();
+    refreshSessionUser().then(function (u) {
+        if (!u) {
+            setCurrentUser(null);
+            showLandingView();
+            return;
+        }
+        updateSidebarUser();
+        if (window.wvApplyRole) window.wvApplyRole();
+    });
 }
 
 // Dashboard
@@ -577,19 +647,19 @@ function updateDashboard() {
         }
         notifs.sort(function(a, b) { return (b.vip ? 1 : 0) - (a.vip ? 1 : 0) || b.days - a.days; });
         if (notifs.length === 0) {
-            notifEl.innerHTML = '<p class="dash-empty">All caught up — no overdue follow-ups!</p>';
+            notifEl.innerHTML = '<p class="dash-empty">No follow-ups are due.</p>';
         } else {
             var html = '';
             var shown = Math.min(notifs.length, 5);
             for (var i = 0; i < shown; i++) {
                 var n = notifs[i];
                 var iconClass = n.vip ? 'vip' : 'overdue';
-                var icon = n.vip ? '⭐' : '⏰';
+                var icon = wvIcon(n.vip ? 'star' : 'clock');
                 html += '<div class="dash-notif-item" onclick="showContactDetail(\'' + n.id + '\')">';
                 html += '<div class="dash-notif-icon ' + iconClass + '">' + icon + '</div>';
                 html += '<div class="dash-notif-info">';
-                html += '<div class="dash-notif-text">' + n.name + (n.vip ? ' (VIP)' : '') + '</div>';
-                html += '<div class="dash-notif-sub">' + (n.firm ? n.firm + ' · ' : '') + n.days + ' days since last contact</div>';
+                html += '<div class="dash-notif-text">' + wvEsc(n.name) + (n.vip ? ' (VIP)' : '') + '</div>';
+                html += '<div class="dash-notif-sub">' + (n.firm ? wvEsc(n.firm) + ', ' : '') + n.days + ' days since last contact</div>';
                 html += '</div></div>';
             }
             if (notifs.length > 5) {
@@ -675,20 +745,19 @@ function toggleAuthMode() {
     const toggleLink = document.getElementById('auth-toggle-link');
     const passwordLabel = document.querySelector('label[for="auth-password"]');
     
+    const pw = document.getElementById('auth-password');
     if (isSignupMode) {
-        title.textContent = 'Sign up for Weaver';
-        submitText.textContent = 'Sign Up';
-        toggleLink.textContent = 'Already have an account? Login';
-        if (passwordLabel) {
-            passwordLabel.innerHTML = 'Password: * <span style="font-size: 0.85rem; color: var(--text-medium); font-weight: normal;">(min 6 characters)</span>';
-        }
+        title.textContent = 'Create your Weaver account';
+        submitText.textContent = 'Create account';
+        toggleLink.textContent = 'Already have an account? Sign in';
+        if (passwordLabel) passwordLabel.innerHTML = 'Password <span style="font-size:12px;color:var(--slate);font-weight:400;">at least 8 characters</span>';
+        if (pw) { pw.setAttribute('autocomplete', 'new-password'); pw.setAttribute('placeholder', 'Create a password'); }
     } else {
-        title.textContent = 'Login to Weaver';
-        submitText.textContent = 'Login';
-        toggleLink.textContent = "Don't have an account? Sign up";
-        if (passwordLabel) {
-            passwordLabel.textContent = 'Password: *';
-        }
+        title.textContent = 'Sign in to Weaver';
+        submitText.textContent = 'Sign in';
+        toggleLink.textContent = 'New to Weaver? Create an account';
+        if (passwordLabel) passwordLabel.textContent = 'Password';
+        if (pw) { pw.setAttribute('autocomplete', 'current-password'); pw.setAttribute('placeholder', 'Your password'); }
     }
     
     // Clear form
@@ -696,247 +765,116 @@ function toggleAuthMode() {
     document.getElementById('auth-status').style.display = 'none';
 }
 
-// Clean password: remove whitespace and invisible characters (fixes cross-browser login)
+// Clean password: remove whitespace and invisible characters (matches the server)
 function cleanPassword(str) {
     if (!str || typeof str !== 'string') return '';
-    let s = str.replace(/\s/g, ''); // Remove ALL whitespace (including invisible Unicode spaces)
-    s = s.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width characters
-    s = s.replace(/[\x00-\x1F\x7F]/g, ''); // Remove non-printable characters
+    let s = str.replace(/\s/g, '');
+    s = s.replace(/[​-‍﻿]/g, '');
+    s = s.replace(/[\x00-\x1F\x7F]/g, '');
     return s;
 }
 
-// Handle auth form submission
+// The server returns the signed-in user with their plan, role and clubs.
+function storeSessionUser(u) {
+    if (!u) return;
+    setCurrentUser({
+        id: u.id,
+        email: u.email,
+        accountType: u.accountType || null,
+        role: u.role || 'student',
+        plan: u.plan || null,
+        orgs: u.orgs || [],
+        clubCovered: u.clubCovered === true,
+        subscriptionStatus: u.subscriptionStatus || 'free',
+        subscriptionPlan: u.subscriptionPlan || null,
+        hasBillingAccount: !!u.hasBillingAccount,
+        onboardedAt: u.onboardedAt || null
+    });
+}
+window.storeSessionUser = storeSessionUser;
+
+function setAuthStatus(text, kind) {
+    const status = document.getElementById('auth-status');
+    if (!status) return;
+    status.textContent = text;
+    status.className = 'upload-status ' + (kind || 'error');
+    status.style.display = text ? 'block' : 'none';
+}
+
+// Handle auth form submission. Sign-in creates a server session (httpOnly cookie);
+// the browser keeps only a copy of the public profile for rendering.
 async function handleAuth(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim().toLowerCase();
-    let password = document.getElementById('auth-password').value;
-    password = cleanPassword(password);
-    const status = document.getElementById('auth-status');
-    
-    if (!email || !password) {
-        status.textContent = 'Please fill in all fields';
-        status.className = 'upload-status error';
-        status.style.display = 'block';
-        return;
-    }
-    
-    // Disable form during processing
+    const password = cleanPassword(document.getElementById('auth-password').value);
+    if (!email || !password) { setAuthStatus('Enter your email and password.'); return; }
+    if (isSignupMode && password.length < 8) { setAuthStatus('Use at least 8 characters for your password.'); return; }
+
     const submitBtn = document.getElementById('auth-submit');
-    const originalBtnText = submitBtn?.textContent;
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = isSignupMode ? 'Creating Account...' : 'Logging In...';
-    }
-    
+    const originalBtnText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = isSignupMode ? 'Creating account…' : 'Signing in…'; }
+    setAuthStatus('');
+
     try {
+        const response = await fetch(isSignupMode ? '/api/auth/signup' : '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+            signal: weaverTimeoutSignal(20000)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            setAuthStatus(data.error || (isSignupMode ? 'Could not create your account.' : 'Could not sign you in.'));
+            return;
+        }
+        storeSessionUser(data.user);
+        closeAuthModal();
         if (isSignupMode) {
-            // Sign up
-            if (password.length < 6) {
-                status.textContent = 'Password must be at least 6 characters';
-                status.className = 'upload-status error';
-                status.style.display = 'block';
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalBtnText;
-                }
-                return;
-            }
-            
-            // Create new user in database
-            const userId = Date.now().toString();
-            const response = await fetch('/api/users/signup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, email, password })
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                console.error('Signup failed:', data);
-                // Show more detailed error message
-                let errorMsg = data.details || data.error || 'Failed to create account';
-                
-                // If email already exists, suggest logging in instead
-                if (data.error?.includes('already exists') || data.details?.includes('already exists')) {
-                    errorMsg = 'An account with this email already exists. Please try logging in instead.';
-                }
-                
-                status.textContent = errorMsg;
-                status.className = 'upload-status error';
-                status.style.display = 'block';
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalBtnText;
-                }
-                return;
-            }
-            
-            // Save user to localStorage for local access
-            const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-            users[email] = {
-                id: userId,
-                email: email,
-                createdAt: new Date().toISOString()
-            };
-            localStorage.setItem('weaver_users', JSON.stringify(users));
-            
-            // Log in the new user
-            setCurrentUser({ id: userId, email: email });
-            status.textContent = 'Account created successfully!';
-            status.className = 'upload-status success';
-            status.style.display = 'block';
-
-            setTimeout(() => {
-                closeAuthModal();
-                // New users pick Student vs Club/Organization before entering the app
-                showOnboardingModal();
-            }, 800);
-        } else {
-            // Login - check database first
-            let response = await fetch('/api/users/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            
-            let data = await response.json();
-            
-            // If database login fails, check localStorage (for users created before database sync)
-            if (!response.ok) {
-                const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-                const localUser = users[email];
-                
-                // If user exists in localStorage with matching password, migrate to database
-                if (localUser && localUser.password === password) {
-                    console.log('User found in localStorage, migrating to database...');
-                    
-                    // Migrate user to database
-                    const migrateResponse = await fetch('/api/users/signup', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            userId: localUser.id, 
-                            email: email, 
-                            password: password 
-                        })
-                    });
-                    
-                    const migrateData = await migrateResponse.json();
-                    
-                    if (migrateResponse.ok) {
-                        // Migration successful, now login via database
-                        response = await fetch('/api/users/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, password })
-                        });
-                        data = await response.json();
-                    } else if (migrateResponse.status === 400 && migrateData.error?.includes('already exists')) {
-                        // User already exists in database but password might be different
-                        // Try login again - maybe password was updated
-                        response = await fetch('/api/users/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, password })
-                        });
-                        data = await response.json();
-                    } else {
-                        // Migration failed, use local user
-                        console.log('Migration failed, using local user:', migrateData);
-                        setCurrentUser({ id: localUser.id, email: email });
-                        status.textContent = 'Login successful!';
-                        status.className = 'upload-status success';
-                        status.style.display = 'block';
-                        
-                        setTimeout(() => {
-                            closeAuthModal();
-                            showAppView();
-                            updateUserDisplay();
-                            updateSidebarUser();
-                            filterContacts();
-                            maybeShowOnboarding();
-                        }, 1000);
-                        return;
-                    }
-                }
-            }
-            
-            // If still not successful, show error
-            if (!response.ok) {
-                console.error('Login failed:', data);
-                let errorMsg = data.error || 'Invalid email or password';
-                
-                // If user exists but password is wrong, provide helpful message
-                if (data.error?.includes('Invalid email or password')) {
-                    errorMsg = 'Invalid email or password. If you forgot your password, please contact support.';
-                }
-                
-                status.textContent = errorMsg;
-                status.className = 'upload-status error';
-                status.style.display = 'block';
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalBtnText;
-                }
-                return;
-            }
-            
-            // Save user to localStorage for local access
-            const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-            users[email] = {
-                id: data.user.id,
-                email: data.user.email,
-                createdAt: data.user.createdAt || new Date().toISOString()
-            };
-            localStorage.setItem('weaver_users', JSON.stringify(users));
-            
-            // Log in the user with full data from database (including subscription info)
-            setCurrentUser({
-                id: data.user.id,
-                email: data.user.email,
-                accountType: data.user.accountType || null,
-                clubCovered: data.user.clubCovered === true,
-                subscriptionStatus: data.user.subscriptionStatus || 'free',
-                subscriptionPlan: data.user.subscriptionPlan || null,
-                stripeCustomerId: data.user.stripeCustomerId || null,
-                stripeSubscriptionId: data.user.stripeSubscriptionId || null
-            });
-            // Enter the app immediately — never block the UI on data loading.
-            // (Previously the UI awaited contacts/settings with no timeout, so a slow
-            // server left the login screen frozen until a manual reload.)
-            closeAuthModal();
-            showAppView();
-            updateUserDisplay();
-            updateSidebarUser();
-            updateDashboard();
-            filterContacts();
-            maybeShowOnboarding();
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalBtnText;
-            }
-
-            // Hydrate from the server in the background, then re-render.
-            Promise.allSettled([loadContactsFromAPI(), loadSettingsFromAPI()]).then(() => {
-                updateUserDisplay();
-                updateSidebarUser();
-                updateDashboard();
-                filterContacts();
-                if (window.renderAssistantHome) window.renderAssistantHome();
-            });
+            // New users choose Student or Manager before entering the app.
+            showOnboardingModal();
+            return;
         }
+        enterApp();
     } catch (error) {
-        console.error('Auth error:', error);
-        status.textContent = 'An error occurred. Please try again.';
-        status.className = 'upload-status error';
-        status.style.display = 'block';
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalBtnText;
-        }
+        setAuthStatus(error && error.name === 'AbortError' ? 'The server took too long to respond. Try again.' : 'Could not reach Weaver. Check your connection and try again.');
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalBtnText; }
     }
 }
+
+// Show the app immediately and hydrate data in the background.
+function enterApp() {
+    showAppView();
+    updateUserDisplay();
+    updateSidebarUser();
+    updateDashboard();
+    filterContacts();
+    if (window.wvApplyRole) window.wvApplyRole();
+    maybeShowOnboarding();
+    Promise.allSettled([loadContactsFromAPI(), loadSettingsFromAPI()]).then(() => {
+        updateUserDisplay();
+        updateSidebarUser();
+        updateDashboard();
+        filterContacts();
+        if (window.renderAssistantHome) window.renderAssistantHome();
+    });
+}
+window.enterApp = enterApp;
+
+// Ask the server who is signed in. Returns the user or null (session expired).
+async function refreshSessionUser() {
+    try {
+        const res = await fetch('/api/auth/me', { signal: weaverTimeoutSignal(8000) });
+        if (res.status === 401) return null;
+        if (!res.ok) return getCurrentUser();
+        const data = await res.json();
+        storeSessionUser(data.user);
+        return getCurrentUser();
+    } catch (e) {
+        return getCurrentUser(); // offline: keep the local copy
+    }
+}
+window.refreshSessionUser = refreshSessionUser;
 
 // Update user display
 function updateUserDisplay() {
@@ -998,65 +936,65 @@ function toggleProfileMenu() {
             const subscriptionStatus = getSubscriptionStatus(currentUser);
             const isPro = hasActiveSubscription(currentUser);
             
+            const planLabel = (currentUser.plan && currentUser.plan.label) || (isPro ? 'Pro' : 'Starter');
+            const esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
             menuContent.innerHTML = `
-                <div style="padding: 0.5rem;">
-                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--text-dark);">${currentUser.email}</p>
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.75rem; color: var(--text-medium);">User ID: <code style="background: var(--eggshell-white); padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.7rem;">${currentUser.id}</code></p>
-                    
-                    <!-- Subscription Section -->
-                    <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
-                        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Subscription</p>
-                        ${isPro ? 
-                            `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
-                                <span class="subscription-badge pro">PRO</span>
-                            </p>
-                            <button type="button" onclick="window.openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
-                            `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
-                                <span class="subscription-badge free">FREE</span>
-                            </p>
-                            <button onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
-                        }
+                <div class="wv-menu">
+                    <div class="wv-menu-head">
+                        <div class="wv-menu-email">${esc(currentUser.email)}</div>
+                        <div class="wv-menu-plan">${esc(planLabel)} plan</div>
                     </div>
-                    
-                    <!-- Gmail Integration Section -->
-                    <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
-                        <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Gmail Integration</p>
-                        ${gmailConnected ?
-                            `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem; color: var(--success);">✓ Gmail Connected</p>
-                             <button onclick="window.disconnectGmail()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Disconnect Gmail</button>` :
-                            `<button onclick="window.connectGmail()" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Connect Gmail</button>`
-                        }
-                    </div>
-                    <button onclick="window.logout()" class="btn btn-secondary" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;">Logout</button>
+                    <button type="button" class="wv-menu-item" onclick="toggleProfileMenu(); var l=document.querySelector('.nav-link[href=&quot;#settings&quot;]'); if(l) l.click();">Settings and plan</button>
+                    ${isPro ? '<button type="button" class="wv-menu-item" onclick="window.openCustomerPortal()">Manage billing</button>' : '<button type="button" class="wv-menu-item" onclick="toggleProfileMenu(); openSubscriptionModal();">Upgrade to Pro</button>'}
+                    <button type="button" class="wv-menu-item" onclick="window.logout()">Log out</button>
                 </div>
             `;
         }
     }
 }
 
-// Logout function
+// Logout: end the server session, then clear the local copy.
 function logout() {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(function () {});
     setCurrentUser(null);
     const profileMenu = document.getElementById('profile-menu');
-    if (profileMenu) {
-        profileMenu.style.display = 'none';
-    }
+    if (profileMenu) profileMenu.style.display = 'none';
     updateUserDisplay();
     updateSidebarUser();
-    // Clear contacts display
     const contactsList = document.getElementById('contacts-list');
-    if (contactsList) {
-        contactsList.innerHTML = '';
-    }
-    // Show landing page
+    if (contactsList) contactsList.innerHTML = '';
     showLandingView();
 }
+
+// Any API call that finds the session gone signs the user out once, with a message.
+(function watchSession() {
+    if (window.__wvFetchWrapped || typeof window.fetch !== 'function') return;
+    window.__wvFetchWrapped = true;
+    var nativeFetch = window.fetch.bind(window);
+    var handling = false;
+    window.fetch = function (input, init) {
+        return nativeFetch(input, init).then(function (res) {
+            try {
+                var url = typeof input === 'string' ? input : (input && input.url) || '';
+                if (res.status === 401 && /\/api\//.test(url) && !/\/api\/auth\/(login|signup|me)/.test(url) && getCurrentUser() && !handling) {
+                    handling = true;
+                    setCurrentUser(null);
+                    showLandingView();
+                    showAuthModal('login');
+                    setAuthStatus('Your session ended. Sign in again to continue.', 'info');
+                    setTimeout(function () { handling = false; }, 2000);
+                }
+            } catch (e) { /* never break the caller */ }
+            return res;
+        });
+    };
+})();
 
 // Gmail connection functions
 async function connectGmail() {
     const currentUser = getCurrentUser();
     if (!currentUser) {
-        alert('Please log in first');
+        wvToast('Please log in first');
         return;
     }
 
@@ -1091,7 +1029,7 @@ async function connectGmail() {
             );
 
             if (!authWindow) {
-                alert('Popup blocked! Please allow popups for this site and try again.');
+                wvToast('Popup blocked! Please allow popups for this site and try again.');
                 return;
             }
 
@@ -1109,7 +1047,7 @@ async function connectGmail() {
                             // Refresh profile menu
                             toggleProfileMenu();
                             toggleProfileMenu(); // Toggle twice to refresh
-                            alert('Gmail connected successfully!');
+                            wvToast('Gmail connected successfully!');
                         } else {
                             console.log('Gmail not connected yet');
                         }
@@ -1120,7 +1058,7 @@ async function connectGmail() {
             }, 1000);
         } else {
             console.error('No authUrl in response:', data);
-            alert('Failed to get Gmail authorization URL. Check server logs.');
+            wvToast('Failed to get Gmail authorization URL. Check server logs.');
         }
     } catch (error) {
         console.error('Gmail connection error:', error);
@@ -1128,9 +1066,9 @@ async function connectGmail() {
         
         // More specific error messages
         if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Load failed')) {
-            alert('Cannot connect to server. Please check:\n1. Your internet connection\n2. The server is running\n3. No firewall is blocking the connection\n\nIf the problem persists, check the browser console (F12) for more details.');
+            wvToast('Cannot connect to server. Please check:\n1. Your internet connection\n2. The server is running\n3. No firewall is blocking the connection\n\nIf the problem persists, check the browser console (F12) for more details.');
         } else {
-            alert(`Error connecting to Gmail: ${error.message}\n\nCheck the browser console (F12) for more details.`);
+            wvToast(`Error connecting to Gmail: ${error.message}\n\nCheck the browser console (F12) for more details.`);
         }
     }
 }
@@ -1141,7 +1079,7 @@ async function disconnectGmail() {
         return;
     }
 
-    if (!confirm('Are you sure you want to disconnect Gmail?')) {
+    if (!(await wvConfirm('Weaver will stop reading this Gmail account.', { title: 'Disconnect Gmail?', confirmLabel: 'Disconnect' }))) {
         return;
     }
 
@@ -1159,11 +1097,11 @@ async function disconnectGmail() {
             // Refresh profile menu
             toggleProfileMenu();
             toggleProfileMenu(); // Toggle twice to refresh
-            alert('Gmail disconnected');
+            wvToast('Gmail disconnected');
         }
     } catch (error) {
         console.error('Gmail disconnect error:', error);
-        alert('Error disconnecting Gmail');
+        wvToast('Error disconnecting Gmail');
     }
 }
 
@@ -1171,321 +1109,146 @@ async function disconnectGmail() {
 // Make functions globally accessible for onclick handlers
 window.toggleProfileMenu = toggleProfileMenu;
 
-// ============ STRIPE SUBSCRIPTION FUNCTIONS ============
+// ============ PLANS & BILLING ============
 
-// Initialize Stripe (will be set from environment variable or hardcoded for testing)
-let stripe = null;
-if (typeof Stripe !== 'undefined') {
-    // Live publishable key (for client-side Stripe.js if needed)
-    // Note: Server-side checkout doesn't require this, but keeping it for potential future use
-    stripe = Stripe('pk_live_51Sq1GVQZZ2GMzWg9tNwQomBd6JsmVfsM0t8J1MGncL4mb8s0pVpzTUyR3aFssJYobqpvPs5ZNsfYOvBA0sTQPJKn002kPqAdm7');
-}
-
-// Check if user has active subscription
+// Pro = an individual subscription. Club members get their allowance through the club.
 function hasActiveSubscription(user) {
     if (!user) return false;
-    // Check subscription status from user object
-    // This would typically come from the database
-    const subscriptionStatus = user.subscriptionStatus || 'free';
-    // Members of a club on an active plan are covered by the club's seat.
-    return subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || user.clubCovered === true;
+    if (user.plan && user.plan.key) return user.plan.key === 'pro';
+    const s = user.subscriptionStatus || 'free';
+    return s === 'active' || s === 'trialing';
 }
 
-// Get subscription status from user
 function getSubscriptionStatus(user) {
     if (!user) return 'free';
     return user.subscriptionStatus || 'free';
 }
 
-// Free plan contact limit
-const FREE_PLAN_CONTACT_LIMIT = 20;
+function planContactLimit(user) {
+    return (user && user.plan && user.plan.contactLimit) || 20;
+}
 
-// Check if user can add more contacts (free = 20 max, paid = unlimited)
+// Can the user add another contact on their current plan?
 function canAddMoreContacts() {
     const user = getCurrentUser();
     if (!user) return false;
-    if (hasActiveSubscription(user)) return true;
-    return getContacts().length < FREE_PLAN_CONTACT_LIMIT;
+    return getContacts().length < planContactLimit(user);
 }
 
-// Open subscription modal
-function openSubscriptionModal() {
+var pricingPromise = null;
+function loadPricing() {
+    if (!pricingPromise) {
+        pricingPromise = fetch('/api/stripe/pricing').then(function (r) { return r.json(); }).catch(function () { return null; });
+    }
+    return pricingPromise;
+}
+
+function formatMoney(cents, currency) {
+    try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: (currency || 'usd').toUpperCase(), minimumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100); }
+    catch (e) { return '$' + (cents / 100).toFixed(2); }
+}
+
+// Plan picker: monthly / quarterly / annual, priced live from Stripe.
+function openSubscriptionModal(reason) {
     const modal = document.getElementById('subscription-modal');
-    if (modal) {
-        modal.classList.add('active');
-        updateSubscriptionModalButtons();
+    if (!modal) return;
+    const body = document.getElementById('wv-plan-picker');
+    const user = getCurrentUser();
+    const note = document.getElementById('wv-plan-reason');
+    if (note) { note.textContent = reason || ''; note.style.display = reason ? 'block' : 'none'; }
+    modal.classList.add('active');
+    if (!body) return;
+    if (hasActiveSubscription(user)) {
+        body.innerHTML = '<p class="wv-muted">You’re on Pro. Change or cancel your plan in billing.</p><button type="button" class="wv-btn wv-btn-primary" onclick="openCustomerPortal()">Manage billing</button>';
+        return;
     }
+    body.innerHTML = '<p class="wv-muted">Loading prices…</p>';
+    loadPricing().then(function (p) {
+        const pro = (p && p.pro) || {};
+        const options = [
+            { key: 'monthly', label: 'Monthly', months: 1 },
+            { key: 'quarterly', label: 'Quarterly', months: 3 },
+            { key: 'annual', label: 'Annual', months: 12 }
+        ].filter(function (o) { return pro[o.key]; });
+        if (!options.length) {
+            body.innerHTML = '<p class="wv-muted">Online checkout isn’t available right now. Email <a href="mailto:info@studentweaver.com">info@studentweaver.com</a> to upgrade.</p>';
+            return;
+        }
+        const monthly = pro.monthly ? pro.monthly.amount : null;
+        body.innerHTML = '<div class="wv-plan-options">' + options.map(function (o) {
+            const price = pro[o.key];
+            const perMonth = Math.round(price.amount / o.months);
+            const saving = monthly && o.months > 1 ? Math.round((1 - perMonth / monthly) * 100) : 0;
+            return '<button type="button" class="wv-plan-option" data-plan="' + o.key + '">' +
+                '<span class="wv-plan-option-name">' + o.label + (saving > 0 ? '<span class="wv-plan-save">Save ' + saving + '%</span>' : '') + '</span>' +
+                '<span class="wv-plan-option-price">' + formatMoney(price.amount, price.currency) + '<span> / ' + (o.months === 1 ? 'month' : o.months === 3 ? 'quarter' : 'year') + '</span></span>' +
+                (o.months > 1 ? '<span class="wv-plan-option-sub">' + formatMoney(perMonth, price.currency) + ' a month</span>' : '<span class="wv-plan-option-sub">Cancel anytime</span>') +
+                '</button>';
+        }).join('') + '</div><p class="wv-fine">Promotion codes can be entered at checkout. Prices include all Pro features; usage limits are listed on the Plan page.</p>';
+        body.querySelectorAll('.wv-plan-option').forEach(function (b) {
+            b.onclick = function () { handleSubscription(b.getAttribute('data-plan'), b); };
+        });
+    });
 }
 
-// Update pricing modal buttons: show "Current plan" (disabled) on Pro when user is already subscribed
-function updateSubscriptionModalButtons() {
-    const freeBtn = document.getElementById('subscribe-free-btn');
-    const proBtn = document.getElementById('subscribe-pro-btn');
-    const yearlyBtn = document.getElementById('subscribe-yearly-btn');
-    if (!proBtn || !yearlyBtn) return;
+function updateSubscriptionModalButtons() { /* kept for older callers */ }
 
-    const currentUser = getCurrentUser();
-    const isPro = currentUser && hasActiveSubscription(currentUser);
-
-    const monthlyPriceId = 'price_1StXttQZZ2GMzWg9cj6s4DXD';
-    const yearlyPriceId = 'price_1StXtnQZZ2GMzWg9YeTAGbIq';
-
-    if (isPro) {
-        if (freeBtn) {
-            freeBtn.textContent = 'Free';
-            freeBtn.disabled = true;
-        }
-        proBtn.textContent = 'Current plan';
-        proBtn.disabled = true;
-        proBtn.removeAttribute('onclick');
-        proBtn.onclick = null;
-        yearlyBtn.textContent = 'Current plan';
-        yearlyBtn.disabled = true;
-        yearlyBtn.removeAttribute('onclick');
-        yearlyBtn.onclick = null;
-    } else {
-        if (freeBtn) {
-            freeBtn.textContent = 'Current plan';
-            freeBtn.disabled = true;
-        }
-        proBtn.textContent = 'Subscribe Now';
-        proBtn.disabled = false;
-        proBtn.setAttribute('onclick', `handleSubscription('${monthlyPriceId}')`);
-        yearlyBtn.textContent = 'Subscribe Yearly';
-        yearlyBtn.disabled = false;
-        yearlyBtn.setAttribute('onclick', `handleSubscription('${yearlyPriceId}')`);
-    }
-}
-
-// Close subscription modal
 function closeSubscriptionModal() {
     const modal = document.getElementById('subscription-modal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
+    if (modal) modal.classList.remove('active');
 }
 
-// Handle subscription checkout
-async function handleSubscription(priceId) {
+// Start Stripe Checkout for a Pro plan: 'monthly' | 'quarterly' | 'annual'.
+async function handleSubscription(plan, btn) {
     const user = getCurrentUser();
-    if (!user) {
-        alert('Please log in to subscribe');
-        closeSubscriptionModal();
-        showAuthModal();
-        return;
-    }
-    if (hasActiveSubscription(user)) {
-        alert('You already have an active Pro subscription. Use "Manage Subscription" in your profile to change or cancel it.');
-        return;
-    }
-
-    // Store user in sessionStorage before redirect (persists during Stripe redirect so we can restore session)
-    sessionStorage.setItem('weaver_user_before_stripe', JSON.stringify(user));
-
-    let btn = null;
+    if (!user) { closeSubscriptionModal(); showAuthModal('login'); return; }
+    if (hasActiveSubscription(user)) { wvToast('You’re already on Pro. Manage your plan from Settings.', 'info'); return; }
+    if (btn) { btn.disabled = true; btn.classList.add('is-busy'); }
     try {
-        // Disable button during processing
-        btn = event?.target || document.querySelector(`button[onclick*="${priceId}"]`);
-        if (btn) {
-            const originalText = btn.textContent;
-            btn.setAttribute('data-original-text', originalText);
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-        }
-
-        // Create checkout session
-        console.log('Creating checkout session for:', { userId: user.id, priceId, email: user.email });
-        
         const response = await fetch('/api/stripe/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: user.id,
-                priceId: priceId,
-                email: user.email // Include email so user can be created in database if needed
-            })
+            body: JSON.stringify({ plan: plan })
         });
-
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Checkout session error:', errorData);
-            throw new Error(errorData.error || 'Failed to create checkout session');
-        }
-
-        const data = await response.json();
-        console.log('Checkout session created:', data);
-        
-        if (!data.url) {
-            throw new Error('No checkout URL returned from server');
-        }
-
-        // Redirect to Stripe Checkout
+        const data = await response.json().catch(function () { return {}; });
+        if (!response.ok || !data.url) throw new Error(data.error || 'Could not start checkout.');
         window.location.href = data.url;
     } catch (error) {
-        console.error('Payment error:', error);
-        console.error('Error details:', error.message, error.stack);
-        
-        // Get error message
-        const errorMessage = error.message || 'Error processing payment. Please try again.';
-        
-        alert(`Payment Error: ${errorMessage}\n\nCheck the browser console (F12) for more details.`);
-        
-        // Re-enable button
-        if (!btn) {
-            btn = event?.target || document.querySelector(`button[onclick*="${priceId}"]`);
-        }
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = btn.getAttribute('data-original-text') || 'Subscribe Now';
-        }
+        wvToast(error.message || 'Could not start checkout. Try again.', 'error');
+        if (btn) { btn.disabled = false; btn.classList.remove('is-busy'); }
     }
 }
 
-// Handle customer portal (manage subscription)
+// Stripe billing portal (change plan, payment method, cancel).
 async function openCustomerPortal() {
-    const user = getCurrentUser();
-    if (!user) {
-        alert('Please log in');
-        return;
-    }
-
     try {
-        const response = await fetch('/api/stripe/create-portal-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to create portal session');
-        }
-
-        const { url } = await response.json();
-        window.location.href = url;
+        const response = await fetch('/api/stripe/create-portal-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await response.json().catch(function () { return {}; });
+        if (!response.ok || !data.url) throw new Error(data.error || 'Could not open billing.');
+        window.location.href = data.url;
     } catch (error) {
-        console.error('Portal error:', error);
-        alert('Error opening customer portal. Please try again.');
+        wvToast(error.message || 'Could not open billing. Try again.', 'error');
     }
 }
 
-// Sync subscription status from Stripe (for users who paid but still see Free)
+// Re-check the subscription with Stripe (for a payment that hasn't shown up yet).
 async function syncMyPlan() {
-    const currentUser = getCurrentUser();
-    if (!currentUser || !currentUser.id) {
-        alert('Please log in first.');
-        return;
-    }
     try {
-        const response = await fetch('/api/users/refresh-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: currentUser.id })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || data.message || 'Failed to refresh');
-        }
-        if (data.success && data.user) {
-            const updatedUser = {
-                id: data.user.id,
-                email: data.user.email,
-                subscriptionStatus: data.user.subscriptionStatus || 'free',
-                subscriptionPlan: data.user.subscriptionPlan || null,
-                stripeCustomerId: data.user.stripeCustomerId || null,
-                stripeSubscriptionId: data.user.stripeSubscriptionId || null
-            };
-            setCurrentUser(updatedUser);
-            window.location.reload();
-            return;
-        }
-        alert('Could not update plan. Please try again or contact support.');
+        await fetch('/api/users/refresh-subscription', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const u = await refreshSessionUser();
+        updateSidebarUser();
+        if (window.wvRenderPlan) window.wvRenderPlan();
+        wvToast(u && u.plan ? 'Your plan: ' + u.plan.label + '.' : 'Plan refreshed.', 'info');
     } catch (error) {
-        console.error('Sync plan error:', error);
-        alert('Error syncing plan: ' + (error.message || 'Please try again.'));
+        wvToast('Could not refresh your plan. Try again.', 'error');
     }
 }
 
-// Update profile menu with subscription info
-function updateProfileMenuWithSubscription() {
-    const menuContent = document.getElementById('profile-menu-content');
-    const currentUser = getCurrentUser();
-    
-    if (!menuContent || !currentUser) return;
-    
-    // This will be updated when we fetch user data from server
-    // For now, check localStorage or make API call
-    const subscriptionStatus = getSubscriptionStatus(currentUser);
-    const isPro = hasActiveSubscription(currentUser);
-    
-    // Get existing menu HTML
-    const existingHTML = menuContent.innerHTML;
-    
-    // Add subscription section
-    const subscriptionHTML = `
-        <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">
-            <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: var(--text-medium);">Subscription</p>
-            ${isPro ? 
-                `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
-                    <span class="subscription-badge pro">PRO</span>
-                </p>
-                <button type="button" onclick="window.openCustomerPortal()" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Manage Subscription</button>` :
-                `<p style="margin: 0 0 0.5rem 0; font-size: 0.8rem;">
-                    <span class="subscription-badge free">FREE</span>
-                </p>
-                <button type="button" onclick="openSubscriptionModal(); toggleProfileMenu();" class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 0.4rem;">Upgrade to Pro</button>`
-            }
-        </div>
-    `;
-    
-    // Insert subscription section before Gmail section
-    const gmailSectionIndex = existingHTML.indexOf('Gmail Integration');
-    if (gmailSectionIndex > -1) {
-        menuContent.innerHTML = 
-            existingHTML.substring(0, existingHTML.indexOf('<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">')) +
-            subscriptionHTML +
-            existingHTML.substring(existingHTML.indexOf('<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--silver-gray);">'));
-    } else {
-        // If Gmail section not found, prepend subscription section
-        menuContent.innerHTML = subscriptionHTML + existingHTML;
-    }
-}
+function updateProfileMenuWithSubscription() { /* the profile menu renders plan details itself */ }
 
-// Show upgrade prompt for premium features
+// Shown when a feature needs a larger plan.
 function showUpgradePrompt(featureName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 500px;">
-            <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
-            <h2 style="color: var(--accent-blue);">Upgrade to Pro</h2>
-            <p style="color: var(--text-medium); margin: 1rem 0;">
-                <strong>${featureName}</strong> is a Pro feature. Upgrade now to unlock:
-            </p>
-            <ul style="list-style: none; padding: 0; margin: 1rem 0;">
-                <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                    ${featureName}
-                </li>
-                <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                    Unlimited contacts
-                </li>
-                <li style="padding: 0.5rem 0; color: var(--text-dark);">
-                    <span style="color: var(--success); margin-right: 0.5rem;">✓</span>
-                    All premium features
-                </li>
-            </ul>
-            <button onclick="openSubscriptionModal(); this.closest('.modal').remove();" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                Upgrade to Pro - $4.99/month
-            </button>
-            <button onclick="this.closest('.modal').remove();" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
-                Maybe Later
-            </button>
-        </div>
-    `;
-    document.body.appendChild(modal);
+    openSubscriptionModal(featureName ? featureName + ' needs Pro or a sponsored club plan.' : '');
 }
 
 window.openSubscriptionModal = openSubscriptionModal;
@@ -1624,6 +1387,7 @@ function loadSettingsPage() {
 
     var statusEl = document.getElementById('settings-status');
     if (statusEl) statusEl.style.display = 'none';
+    if (window.wvRenderSettingsExtras) window.wvRenderSettingsExtras();
 }
 
 function getInitials() {
@@ -1641,7 +1405,7 @@ function initSettingsListeners() {
             var file = e.target.files[0];
             if (!file) return;
             if (file.size > 2 * 1024 * 1024) {
-                alert('Photo must be under 2 MB.');
+                wvToast('Photo must be under 2 MB.');
                 return;
             }
             var reader = new FileReader();
@@ -1706,13 +1470,13 @@ let gmailLabelReviewData = {};
 async function syncGmailLabel() {
     const currentUser = getCurrentUser();
     if (!currentUser) {
-        alert('Please log in first');
+        wvToast('Please log in first');
         return;
     }
     
     const gmailConnected = localStorage.getItem(`weaver_gmail_connected_${currentUser.id}`) === 'true';
     if (!gmailConnected) {
-        alert('Please connect your Gmail account first');
+        wvToast('Please connect your Gmail account first');
         return;
     }
     
@@ -1816,7 +1580,7 @@ async function syncGmailLabel() {
             if (isExisting && contactId) {
                 const contact = contacts.find(c => c.id === contactId);
                 html += `<div style="padding: 0.75rem; background: var(--success-light); border-radius: 4px; margin-bottom: 1rem;">`;
-                html += `<p style="margin: 0; font-size: 0.9rem;"><strong>✓ Will add to existing contact:</strong> ${contact.name}</p>`;
+                html += `<p style="margin: 0; font-size: 0.9rem;"><strong>Will add to existing contact:</strong> ${escapeHtmlClub(contact.name)}</p>`;
                 html += `</div>`;
                 gmailLabelReviewData[group.email] = {
                     action: 'existing',
@@ -1827,7 +1591,7 @@ async function syncGmailLabel() {
                 html += `<div style="margin-bottom: 1rem;">`;
                 html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Action:</label>`;
                 html += `<select id="gmail-action-${index}" onchange="updateGmailLabelAction(${index}, '${group.email}')" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
-                html += `<option value="new">Create New Contact</option>`;
+                html += `<option value="new">Create a new contact</option>`;
                 html += `<option value="existing">Assign to Existing Contact</option>`;
                 html += `<option value="skip">Skip</option>`;
                 html += `</select>`;
@@ -1835,10 +1599,10 @@ async function syncGmailLabel() {
                 
                 // Existing contact selector (hidden by default)
                 html += `<div id="gmail-existing-select-${index}" style="display: none; margin-bottom: 1rem;">`;
-                html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Select Contact:</label>`;
+                html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contact</label>`;
                 html += `<select id="gmail-contact-select-${index}" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
                 contacts.forEach(contact => {
-                    html += `<option value="${contact.id}">${contact.name}${contact.email ? ` (${contact.email})` : ''}</option>`;
+                    html += `<option value="${contact.id}">${escapeHtmlClub(contact.name)}${contact.email ? ` (${escapeHtmlClub(contact.email)})` : ''}</option>`;
                 });
                 html += `</select>`;
                 html += `</div>`;
@@ -1852,7 +1616,7 @@ async function syncGmailLabel() {
             
             // Email preview
             html += `<div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--silver-gray); border-radius: 4px; padding: 0.5rem; background: var(--bg-light);">`;
-            html += `<p style="margin: 0 0 0.5rem 0; font-weight: 600; font-size: 0.85rem;">Email Preview:</p>`;
+            html += `<p style="margin: 0 0 0.5rem 0; font-weight: 600; font-size: 0.85rem;">Preview</p>`;
             group.emails.slice(0, 5).forEach(email => {
                 html += `<div style="padding: 0.25rem 0; font-size: 0.85rem;">`;
                 html += `<span style="font-weight: 600;">${email.direction === 'sent' ? 'Sent' : 'Received'}:</span> `;
@@ -2056,7 +1820,7 @@ async function processGmailLabelEmails() {
         message += `\n\nErrors:\n${errors.join('\n')}`;
     }
 
-    alert(message);
+    wvToast(message);
     closeGmailLabelReviewModal();
 
     // Refresh contact list if on contacts page
@@ -2081,108 +1845,28 @@ document.addEventListener('click', (e) => {
 
 // Navigation functionality
 document.addEventListener('DOMContentLoaded', async function() {
-    // Handle return from Stripe Checkout - restore session so user stays logged in
+    // Returning from Stripe Checkout: refresh the plan, then clean the URL.
     const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session_id');
-    const userIdFromUrl = urlParams.get('user_id');
-    const wasCanceled = urlParams.get('canceled');
-
-    // Restore user from sessionStorage first (set before redirect to Stripe)
-    const storedUser = sessionStorage.getItem('weaver_user_before_stripe');
-    if (storedUser && !getCurrentUser()) {
-        try {
-            setCurrentUser(JSON.parse(storedUser));
-            sessionStorage.removeItem('weaver_user_before_stripe');
-            console.log('Restored user from sessionStorage after Stripe redirect');
-        } catch (e) {
-            sessionStorage.removeItem('weaver_user_before_stripe');
-        }
-    }
-
-    // If we have user_id in URL but still no current user, try restoring from weaver_users by id
-    if (userIdFromUrl && !getCurrentUser()) {
-        const users = JSON.parse(localStorage.getItem('weaver_users') || '{}');
-        const userEmail = Object.keys(users).find(function(email) { return users[email].id === userIdFromUrl; });
-        if (userEmail) {
-            setCurrentUser(users[userEmail]);
-            console.log('Restored user session after Stripe redirect (from weaver_users)');
-        }
-    }
-
-    // If successful payment (session_id, not canceled), refresh subscription and show success
-    if (sessionId && !wasCanceled) {
-        const user = getCurrentUser();
-        if (user) {
-            try {
-                const response = await fetch('/api/users/refresh-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id })
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.user) {
-                        setCurrentUser({
-                            id: data.user.id,
-                            email: data.user.email,
-                            subscriptionStatus: data.user.subscriptionStatus || 'free',
-                            subscriptionPlan: data.user.subscriptionPlan || null,
-                            stripeCustomerId: data.user.stripeCustomerId || null,
-                            stripeSubscriptionId: data.user.stripeSubscriptionId || null
-                        });
-                        alert('✓ Subscription activated! Welcome to Weaver Pro.');
-                    }
-                }
-            } catch (err) {
-                console.error('Error refreshing subscription after Stripe return:', err);
-            }
-        }
-    }
-
-    // Clean up URL parameters so user doesn't see session_id/user_id/canceled
-    if (userIdFromUrl || sessionId || wasCanceled) {
-        const cleanPath = window.location.pathname || '/';
-        window.history.replaceState({}, document.title, cleanPath);
-    }
+    const checkoutResult = urlParams.get('checkout');
+    if (checkoutResult) window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
 
     // Check authentication on page load
     checkAuth();
 
-    // Refresh subscription status if user is logged in (helps catch cases where webhook hasn't fired yet)
-    const currentUser = getCurrentUser();
-    if (currentUser && currentUser.id) {
-        // Only refresh if status is 'free' or if we have a Stripe customer ID (indicates they might have subscribed)
-        if (currentUser.subscriptionStatus === 'free' || currentUser.stripeCustomerId) {
-            try {
-                const response = await fetch('/api/users/refresh-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.id })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.user) {
-                        // Update user in localStorage with refreshed subscription data
-                        const updatedUser = {
-                            id: data.user.id,
-                            email: data.user.email,
-                            subscriptionStatus: data.user.subscriptionStatus || 'free',
-                            subscriptionPlan: data.user.subscriptionPlan || null,
-                            stripeCustomerId: data.user.stripeCustomerId || null,
-                            stripeSubscriptionId: data.user.stripeSubscriptionId || null
-                        };
-                        setCurrentUser(updatedUser);
-                        console.log('Subscription status refreshed on page load:', updatedUser.subscriptionStatus);
-                    }
-                }
-            } catch (error) {
-                console.error('Error refreshing subscription on page load:', error);
-                // Non-critical error, continue
-            }
-        }
+    if (checkoutResult === 'success' && getCurrentUser()) {
+        fetch('/api/users/refresh-subscription', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .catch(function () {})
+            .then(function () { return refreshSessionUser(); })
+            .then(function (u) {
+                updateSidebarUser();
+                if (u && u.plan && u.plan.key === 'pro') wvToast('Welcome to Weaver Pro. Your plan is active.', 'success');
+                else wvToast('Payment received. Your plan will update in a moment.', 'info');
+                if (window.wvRenderPlan) window.wvRenderPlan();
+            });
+    } else if (checkoutResult === 'canceled') {
+        wvToast('Checkout canceled. You have not been charged.', 'info');
     }
-    
+
     // Auth form uses onsubmit in HTML (window.handleAuth) so it works even if DOMContentLoaded hasn't finished
     // Close auth modal when clicking outside
     const authModal = document.getElementById('auth-modal');
@@ -2722,7 +2406,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if user is logged in
         const user = getCurrentUser();
         if (!user) {
-            alert('Please create a free account to add contacts. It only takes a moment!');
+            wvToast('Please create a free account to add contacts. It only takes a moment!');
             showAuthModal();
             // Switch to signup mode
             if (typeof toggleAuthMode === 'function') {
@@ -3462,7 +3146,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     // Show green success message with file name
                     if (status) {
-                        status.innerHTML = `✓ File selected successfully<br><span style="font-size: 0.9rem; color: var(--text-medium);">${file.name}</span>`;
+                        status.innerHTML = `File selected<br><span style="font-size: 0.9rem; color: var(--text-medium);">${file.name}</span>`;
                         status.className = 'upload-status success';
                         status.style.display = 'block';
                     }
@@ -3753,12 +3437,12 @@ function addContact(contact, skipDuplicateCheck = false) {
             if (contact.email) newInfo.push(`Email: ${contact.email}`);
             if (contact.firm) newInfo.push(`Company: ${contact.firm}`);
             
-            const message = `A contact with the same ${duplicate.name && contact.name ? 'name' : 'email'} already exists:\n\n` +
-                          `Existing: ${duplicateInfo.join(', ')}\n` +
-                          `New: ${newInfo.join(', ')}\n\n` +
-                          `Is this the same person? Would you like to combine the profiles?`;
-            
-            if (confirm(message)) {
+            // Combine automatically only when it is clearly the same person: same email,
+            // or same name at the same firm (or one side has no firm yet).
+            const sameEmail = contact.email && duplicate.email && contact.email.toLowerCase().trim() === duplicate.email.toLowerCase().trim();
+            const firmA = (duplicate.firm || '').toLowerCase().trim(), firmB = (contact.firm || '').toLowerCase().trim();
+            const sameFirm = !firmA || !firmB || firmA === firmB;
+            if (sameEmail || sameFirm) {
                 // Merge contacts
                 const merged = mergeContacts(duplicate, contact);
                 const duplicateIndex = contacts.findIndex(c => c.id === duplicate.id);
@@ -3768,19 +3452,19 @@ function addContact(contact, skipDuplicateCheck = false) {
                     updateContactDropdown();
                     updateFirmFilter();
                     filterContacts();
-                    console.log('Contacts merged successfully');
+                    wvToast('Added to your existing contact ' + (merged.name || '') + '.', 'info');
                     return merged; // Return the merged contact
                 }
             } else {
-                // User chose not to merge, add as separate contact
-                console.log('User chose not to merge, adding as separate contact');
+                // Same name at a different firm: treat as a different person.
             }
         }
     }
     
-    // Free plan: max 20 contacts (check before adding new contact, not when merging)
+    // Plan contact limit (checked before adding a new contact, not when merging)
     if (!canAddMoreContacts()) {
-        showUpgradePrompt(`More contacts (Free plan limited to ${FREE_PLAN_CONTACT_LIMIT} contacts)`);
+        const u = getCurrentUser();
+        showUpgradePrompt('Your ' + ((u && u.plan && u.plan.label) || 'current') + ' plan includes ' + planContactLimit(u) + ' contacts. Adding more');
         return null;
     }
     
@@ -3794,7 +3478,7 @@ function addContact(contact, skipDuplicateCheck = false) {
     return contact;
 }
 
-function deleteContact(contactId) {
+async function deleteContact(contactId) {
     const contact = getContacts().find(c => c.id === contactId);
     if (!contact) {
         console.error('Contact not found:', contactId);
@@ -3802,8 +3486,8 @@ function deleteContact(contactId) {
     }
     
     // Confirm deletion
-    const confirmMessage = `Are you sure you want to delete ${contact.name}${contact.firm ? ` from ${contact.firm}` : ''}? This action cannot be undone.`;
-    if (!confirm(confirmMessage)) {
+    const confirmMessage = `${contact.name}${contact.firm ? ` (${contact.firm})` : ''} and all their emails and notes will be removed. This can’t be undone.`;
+    if (!(await wvConfirm(confirmMessage, { title: 'Delete contact?', confirmLabel: 'Delete', danger: true }))) {
         return;
     }
     
@@ -3954,7 +3638,7 @@ function displayContacts(contactsToShow = null) {
     }
     
     if (contacts.length === 0) {
-        contactsList.innerHTML = '<div class="empty-state"><p>No contacts found. Upload your spreadsheet to get started!</p></div>';
+        contactsList.innerHTML = getContacts().length ? '<div class="wv-empty"><h2>No matches</h2><p>No contacts match these filters.</p></div>' : '<div class="wv-empty"><h2>No contacts yet</h2><p>Add people you’re talking to, or import a spreadsheet.</p><button type="button" class="wv-btn wv-btn-primary" onclick="var l=document.querySelector(\'.nav-link[href=&quot;#upload-notes&quot;]\'); if(l) l.click();">Add contacts</button></div>';
         // Update count to show 0
         const totalContacts = getContacts();
         updateContactCount(0, totalContacts.length);
@@ -3971,82 +3655,50 @@ function displayContacts(contactsToShow = null) {
         });
     }
 
-    contactsList.innerHTML = contacts.map(contact => {
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    const rows = contacts.map(contact => {
         const emailsSent = contact.emails ? contact.emails.filter(e => e.direction === 'sent' || !e.direction).length : 0;
         const emailsReceived = contact.emails ? contact.emails.filter(e => e.direction === 'received').length : 0;
         const callCount = contact.notes ? contact.notes.length : 0;
-        const lastEmailDate = contact.emails && contact.emails.length > 0 
-            ? contact.emails[contact.emails.length - 1].date 
-            : null;
-        const lastCallDate = contact.notes && contact.notes.length > 0
-            ? contact.notes[contact.notes.length - 1].date
-            : null;
-        
-        // Calculate days since last contact (using local date parsing)
-        let daysSinceLastContact = null;
-        const allInteractions = [];
-        if (contact.emails) {
-            contact.emails.forEach(e => {
-                const date = parseLocalDate(e.date);
-                if (date) allInteractions.push(date);
-            });
+        const dates = [];
+        (contact.emails || []).forEach(e => { const d = parseLocalDate(e.date); if (d) dates.push(d); });
+        (contact.notes || []).forEach(n => { const d = parseLocalDate(n.date); if (d) dates.push(d); });
+        let last = '<span class="wv-muted">No contact yet</span>';
+        if (dates.length) {
+            const lastDate = new Date(Math.max(...dates.map(d => d.getTime())));
+            lastDate.setHours(0, 0, 0, 0);
+            const days = Math.max(0, Math.floor((today0 - lastDate) / 86400000));
+            const cls = days > 30 ? 'wv-status-inactive' : days > 14 ? 'wv-status-slowing' : 'wv-status-active';
+            const label = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days + ' days ago';
+            last = '<span class="wv-status ' + cls + '">' + label + '</span>';
         }
-        if (contact.notes) {
-            contact.notes.forEach(n => {
-                const date = parseLocalDate(n.date);
-                if (date) allInteractions.push(date);
-            });
-        }
-        if (allInteractions.length > 0) {
-            const lastContactDate = new Date(Math.max(...allInteractions.map(d => d.getTime())));
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            lastContactDate.setHours(0, 0, 0, 0);
-            const diffTime = today - lastContactDate;
-            daysSinceLastContact = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        }
-        
-        return `
-        <div class="contact-card" onclick="showContactDetail('${contact.id}')" style="cursor: pointer; position: relative;">
-            <div class="contact-card-actions">
-                <button class="vip-contact-btn ${contact.vip ? 'vip-active' : ''}" onclick="event.stopPropagation(); toggleVIP('${contact.id}')" title="${contact.vip ? 'Remove from VIP' : 'Mark as VIP'}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="${contact.vip ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                </button>
-                <button class="delete-contact-btn" onclick="event.stopPropagation(); deleteContact('${contact.id}')" title="Delete Contact">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="contact-info">
-                <h3>${contact.name}</h3>
-                <div class="contact-details">
-                    ${contact.firm ? `<p><strong>Firm:</strong> ${contact.firm}</p>` : '<p><strong>Firm:</strong> N/A</p>'}
-                    ${contact.position ? `<p><strong>Position:</strong> ${contact.position}</p>` : '<p><strong>Position:</strong> N/A</p>'}
-                    ${contact.email ? `<p><strong>Email:</strong> ${contact.email}</p>` : ''}
-                </div>
-            </div>
-            <div class="contact-details">
-                ${contact.firstEmailDate ? `<p><strong>First Email:</strong> ${formatLocalDate(contact.firstEmailDate)}</p>` : ''}
-                ${lastEmailDate ? `<p><strong>Last Email:</strong> ${formatLocalDate(lastEmailDate)}</p>` : ''}
-                ${lastCallDate ? `<p><strong>Last Call:</strong> ${formatLocalDate(lastCallDate)}</p>` : ''}
-                ${daysSinceLastContact !== null ? `<p><strong>Days Since Last Contact:</strong> <span class="days-badge ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span></p>` : '<p><strong>Days Since Last Contact:</strong> <span class="days-badge">No contact yet</span></p>'}
-            </div>
-            <div class="contact-stats">
-                <p><strong>Emails Sent:</strong> ${emailsSent}</p>
-                <p><strong>Emails Received:</strong> ${emailsReceived}</p>
-                <p><strong>Calls:</strong> ${callCount}</p>
-            </div>
-            <div class="contact-actions">
-                ${contact.notes && contact.notes.length > 0 ? `
-                    <button class="btn-view-notes" onclick="event.stopPropagation(); showCallNotes('${contact.id}')">View Notes</button>
-                ` : '<p style="color: var(--text-muted); font-size: 0.9rem;">No notes</p>'}
-            </div>
-        </div>
-    `;
+        const id = esc(contact.id);
+        const role = [contact.firm && contact.firm !== 'N/A' ? contact.firm : '', contact.position && contact.position !== 'N/A' ? contact.position : ''].filter(Boolean).map(esc).join('<span class="wv-muted"> · </span>');
+        return '<tr class="wv-net-row" data-contact="' + id + '" tabindex="0">' +
+            '<td class="wv-net-vip"><button type="button" class="wv-icon-btn' + (contact.vip ? ' is-on' : '') + '" data-vip="' + id + '" aria-pressed="' + (contact.vip ? 'true' : 'false') + '" title="' + (contact.vip ? 'Remove VIP' : 'Mark as VIP') + '">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (contact.vip ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+                '<span class="wv-sr">' + (contact.vip ? 'VIP' : 'Not VIP') + '</span></button></td>' +
+            '<td><div class="wv-cell-strong">' + esc(contact.name) + '</div>' + (contact.email ? '<div class="wv-cell-sub">' + esc(contact.email) + '</div>' : '') + '</td>' +
+            '<td>' + (role || '<span class="wv-muted">Not recorded</span>') + '</td>' +
+            '<td>' + last + '</td>' +
+            '<td class="num">' + emailsSent + '</td><td class="num">' + emailsReceived + '</td><td class="num">' + callCount + '</td>' +
+            '<td class="wv-row-actions">' + (callCount ? '<button type="button" class="wv-linkbtn wv-inline" data-notes="' + id + '">Notes</button>' : '') +
+                '<button type="button" class="wv-icon-btn wv-icon-danger" data-del="' + id + '" title="Delete contact"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span class="wv-sr">Delete</span></button></td>' +
+            '</tr>';
     }).join('');
+    contactsList.innerHTML = '<div class="wv-table-scroll"><table class="wv-table wv-table-click wv-net-table"><thead><tr>' +
+        '<th scope="col"><span class="wv-sr">VIP</span></th><th scope="col">Name</th><th scope="col">Firm and role</th><th scope="col">Last contact</th>' +
+        '<th scope="col" class="num">Sent</th><th scope="col" class="num">Replies</th><th scope="col" class="num">Calls</th><th scope="col"><span class="wv-sr">Actions</span></th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    contactsList.querySelectorAll('[data-vip]').forEach(b => { b.onclick = (e) => { e.stopPropagation(); toggleVIP(b.getAttribute('data-vip')); }; });
+    contactsList.querySelectorAll('[data-del]').forEach(b => { b.onclick = (e) => { e.stopPropagation(); deleteContact(b.getAttribute('data-del')); }; });
+    contactsList.querySelectorAll('[data-notes]').forEach(b => { b.onclick = (e) => { e.stopPropagation(); showCallNotes(b.getAttribute('data-notes')); }; });
+    contactsList.querySelectorAll('tr[data-contact]').forEach(tr => {
+        const open = () => showContactDetail(tr.getAttribute('data-contact'));
+        tr.onclick = open;
+        tr.onkeydown = (e) => { if (e.key === 'Enter') open(); };
+    });
 }
 
 // Update Strengthening the Net display
@@ -4113,8 +3765,8 @@ function updateStrengtheningNet() {
             if (showColdEmailOnly && showVipOnly) {
                 message = `No VIP cold email contacts need follow-up (all VIP contacts have been contacted within the last ${daysThreshold} days, or have calls/received emails)`;
             }
-            resultsCount.textContent = message + '.';
-            resultsCount.className = 'results-count success';
+            resultsCount.textContent = '';
+            resultsCount.className = 'results-count';
         } else {
             let countText = `Found ${contactsNeedingFollowUp.length} contact${contactsNeedingFollowUp.length !== 1 ? 's' : ''} that need follow-up (${daysThreshold}+ days since last contact)`;
             if (showColdEmailOnly && showVipOnly) {
@@ -4132,7 +3784,7 @@ function updateStrengtheningNet() {
     
     // Display contacts
     if (contactsNeedingFollowUp.length === 0) {
-        contactsList.innerHTML = '<div class="empty-state"><p>Great job! All your contacts have been contacted within the last ' + daysThreshold + ' days.</p></div>';
+        contactsList.innerHTML = '<div class="wv-empty"><h2>No one is due</h2><p>Everyone matching these filters was contacted in the last ' + daysThreshold + ' days.</p></div>';
     } else {
         contactsList.innerHTML = contactsNeedingFollowUp.map(contact => {
             const daysSinceLastContact = getDaysSinceLastContact(contact);
@@ -4161,22 +3813,22 @@ function updateStrengtheningNet() {
                     </button>
                 </div>
                 <div class="contact-info">
-                    <h3>${contact.name}</h3>
+                    <h3>${escapeHtmlClub(contact.name)}</h3>
                     <div class="contact-details">
-                        ${contact.firm ? `<p><strong>Firm:</strong> ${contact.firm}</p>` : '<p><strong>Firm:</strong> N/A</p>'}
-                        ${contact.position ? `<p><strong>Position:</strong> ${contact.position}</p>` : '<p><strong>Position:</strong> N/A</p>'}
-                        ${contact.email ? `<p><strong>Email:</strong> ${contact.email}</p>` : ''}
+                        ${contact.firm ? `<p><strong>Firm:</strong> ${escapeHtmlClub(contact.firm)}</p>` : '<p><strong>Firm:</strong> N/A</p>'}
+                        ${contact.position ? `<p><strong>Position:</strong> ${escapeHtmlClub(contact.position)}</p>` : '<p><strong>Position:</strong> N/A</p>'}
+                        ${contact.email ? `<p><strong>Email:</strong> ${escapeHtmlClub(contact.email)}</p>` : ''}
                     </div>
                 </div>
                 <div class="contact-details">
-                    ${contact.firstEmailDate ? `<p><strong>First Email:</strong> ${formatLocalDate(contact.firstEmailDate)}</p>` : ''}
-                    ${lastEmailDate ? `<p><strong>Last Email:</strong> ${formatLocalDate(lastEmailDate)}</p>` : ''}
-                    ${lastCallDate ? `<p><strong>Last Call:</strong> ${formatLocalDate(lastCallDate)}</p>` : ''}
-                    ${daysSinceLastContact !== null ? `<p><strong>Days Since Last Contact:</strong> <span class="days-badge ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span></p>` : '<p><strong>Days Since Last Contact:</strong> <span class="days-badge days-high">No contact yet</span></p>'}
+                    ${contact.firstEmailDate ? `<p><strong>First email</strong> ${formatLocalDate(contact.firstEmailDate)}</p>` : ''}
+                    ${lastEmailDate ? `<p><strong>Last email</strong> ${formatLocalDate(lastEmailDate)}</p>` : ''}
+                    ${lastCallDate ? `<p><strong>Last call</strong> ${formatLocalDate(lastCallDate)}</p>` : ''}
+                    ${daysSinceLastContact !== null ? `<p><strong>Days since last contact</strong> <span class="days-badge ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span></p>` : '<p><strong>Days since last contact</strong> <span class="days-badge days-high">No contact yet</span></p>'}
                 </div>
                 <div class="contact-stats">
-                    <p><strong>Emails Sent:</strong> ${emailsSent}</p>
-                    <p><strong>Emails Received:</strong> ${emailsReceived}</p>
+                    <p><strong>Emails sent</strong> ${emailsSent}</p>
+                    <p><strong>Replies</strong> ${emailsReceived}</p>
                     <p><strong>Calls:</strong> ${callCount}</p>
                 </div>
                 <div class="contact-actions">
@@ -4241,7 +3893,7 @@ function updateFirmFilter() {
     const firms = [...new Set(contacts.map(c => c.firm).filter(f => f))].sort();
     
     // Keep "All Firms" option
-    firmFilter.innerHTML = '<option value="">All Firms</option>';
+    firmFilter.innerHTML = '<option value="">All firms</option>';
     
     firms.forEach(firm => {
         const option = document.createElement('option');
@@ -4398,9 +4050,9 @@ function buildTimelineItems(timeline, contact) {
                 var bi = timeline[bothItems[b]];
                 var biType = bi.type.indexOf('email') >= 0 ? bi.type : 'call';
                 if (biType === 'email-sent') {
-                    lines.push('Email Sent: ' + (bi.subject || 'No subject'));
+                    lines.push('Email sent: ' + (bi.subject || 'No subject'));
                 } else if (biType === 'email-received') {
-                    lines.push('Email Received: ' + (bi.subject || 'No subject'));
+                    lines.push('Reply: ' + (bi.subject || 'No subject'));
                 }
             }
             tooltipContent = lines.join('\n');
@@ -4420,7 +4072,7 @@ function buildTimelineItems(timeline, contact) {
             tooltipContent = tooltipContent.substring(0, 500);
         }
         
-        var typeLabel = itemType === 'email-both' ? 'Sent &amp; Received' : (item.label || (itemType === 'call' ? 'Call' : 'Email'));
+        var typeLabel = itemType === 'email-both' ? 'Sent and replied' : (item.label || (itemType === 'call' ? 'Call' : 'Email'));
         var formattedDate = formatLocalDate(item.date);
         
         html += '<div class="timeline-item timeline-' + itemType + '" style="left: ' + position + '%">';
@@ -4453,10 +4105,10 @@ function buildInteractionsList(timeline, contact) {
         var item = timeline[i];
         var itemType = item.type.indexOf('email') >= 0 ? item.type : 'call';
         
-        var icon = '📌';
-        if (itemType === 'email-sent') icon = '📤';
-        else if (itemType === 'email-received') icon = '📥';
-        else if (itemType === 'call') icon = '📞';
+        var icon = wvIcon('note');
+        if (itemType === 'email-sent') icon = wvIcon('sent');
+        else if (itemType === 'email-received') icon = wvIcon('inbox');
+        else if (itemType === 'call') icon = wvIcon('call');
         
         var typeLabel = item.label || (itemType === 'call' ? 'Call' : 'Email');
         
@@ -4472,23 +4124,23 @@ function buildInteractionsList(timeline, contact) {
         html += '<span class="interaction-row-icon">' + icon + '</span>';
         html += '<div class="interaction-row-info">';
         html += '<div class="interaction-row-top">';
-        html += '<span class="interaction-row-type">' + typeLabel + '</span>';
+        html += '<span class="interaction-row-type">' + wvEsc(typeLabel) + '</span>';
         html += '<span class="interaction-row-date">' + formatLocalDate(item.date) + '</span>';
         html += '</div>';
-        html += '<div class="interaction-row-details">' + details + '</div>';
+        html += '<div class="interaction-row-details">' + wvEsc(details) + '</div>';
         
         if (itemType === 'call' && item.extractedText) {
             html += '<details class="interaction-row-full-notes">';
-            html += '<summary>View Full Notes</summary>';
-            html += '<div class="interaction-row-full-notes-content">' + item.extractedText + '</div>';
+            html += '<summary>Full notes</summary>';
+            html += '<div class="interaction-row-full-notes-content">' + wvEsc(item.extractedText) + '</div>';
             html += '</details>';
         }
         
         html += '</div>';
         html += '</div>';
         html += '<div class="interaction-row-actions">';
-        html += '<button class="interaction-row-edit" onclick="editTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Edit">✏️</button>';
-        html += '<button class="interaction-row-delete" onclick="deleteTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Delete">🗑️</button>';
+        html += '<button class="interaction-row-edit" onclick="editTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Edit" aria-label="Edit">' + wvIcon('edit', 15) + '</button>';
+        html += '<button class="interaction-row-delete" onclick="deleteTimelineItem(\'' + contact.id + '\', \'' + item.id + '\', \'' + item.itemType + '\', ' + item.itemIndex + ')" title="Delete" aria-label="Delete">' + wvIcon('trash', 15) + '</button>';
         html += '</div>';
         html += '</div>';
     }
@@ -4557,7 +4209,7 @@ function showContactDetail(contactId) {
                 itemIndex: emailIndex,
                 type: email.direction === 'received' ? 'email-received' : 'email-sent',
                 date: email.date,
-                label: email.direction === 'received' ? 'Email Received' : (email.type === 'cold' && !contact.emails.some(e => e.direction === 'received' && e.date <= email.date) ? 'Cold Email Sent' : 'Email Sent'),
+                label: email.direction === 'received' ? 'Reply received' : (email.type === 'cold' && !contact.emails.some(e => e.direction === 'received' && e.date <= email.date) ? 'Cold email Sent' : 'Email sent'),
                 subject: email.subject || '',
                 direction: email.direction,
                 emailType: email.type
@@ -4623,38 +4275,38 @@ function showContactDetail(contactId) {
     content.innerHTML = `
         <div class="contact-detail-header">
             <div class="header-top">
-                <h1 id="contact-detail-name">${contact.name}</h1>
+                <h1 id="contact-detail-name">${escapeHtmlClub(contact.name)}</h1>
                 <button class="btn btn-secondary" onclick="toggleEditMode('${contactId}')" id="edit-contact-btn">Edit</button>
             </div>
             <div class="contact-detail-info" id="contact-detail-info">
                 <div class="info-row">
                     <div class="info-item">
                         <strong>Firm</strong>
-                        <span id="contact-detail-firm">${contact.firm || 'N/A'}</span>
+                        <span id="contact-detail-firm">${escapeHtmlClub(contact.firm || 'N/A')}</span>
                     </div>
                     <div class="info-item">
                         <strong>Position</strong>
-                        <span id="contact-detail-position">${contact.position || 'N/A'}</span>
+                        <span id="contact-detail-position">${escapeHtmlClub(contact.position || 'N/A')}</span>
                     </div>
                     <div class="info-item">
                         <strong>Priority</strong>
-                        <span id="contact-detail-priority-display" class="priority-badge priority-${contact.priority || 'medium'}">${(contact.priority || 'medium').toUpperCase()}</span>
+                        <span id="contact-detail-priority-display" class="priority-badge priority-${contact.priority || 'medium'}">${(contact.priority || 'medium').toLowerCase()}</span>
                     </div>
                 </div>
                 <div class="info-row">
                     <div class="info-item email-item full-width">
                         <strong>Email</strong>
-                        <span id="contact-detail-email" class="email-value" title="${(contact.email || '').replace(/"/g, '&quot;')}">${contact.email || 'N/A'}</span>
+                        <span id="contact-detail-email" class="email-value" title="${(contact.email || '').replace(/"/g, '&quot;')}">${escapeHtmlClub(contact.email || 'N/A')}</span>
                     </div>
                 </div>
                 <div class="info-row">
-                    ${contact.firstEmailDate ? `<div class="info-item"><strong>First Contact</strong><span>${formatLocalDate(contact.firstEmailDate)}</span></div>` : ''}
+                    ${contact.firstEmailDate ? `<div class="info-item"><strong>First contact</strong><span>${formatLocalDate(contact.firstEmailDate)}</span></div>` : ''}
                     ${daysSinceLastContact !== null ? `
                         <div class="info-item">
-                            <strong>Days Since Last Contact</strong>
+                            <strong>Days since last contact</strong>
                             <span class="days-count ${daysSinceLastContact > 30 ? 'days-high' : daysSinceLastContact > 14 ? 'days-medium' : 'days-low'}">${daysSinceLastContact}</span>
                         </div>
-                    ` : '<div class="info-item"><strong>Days Since Last Contact</strong><span class="days-count">No contact yet</span></div>'}
+                    ` : '<div class="info-item"><strong>Days since last contact</strong><span class="days-count">No contact yet</span></div>'}
                 </div>
             </div>
             <div id="contact-edit-form" class="contact-edit-form" style="display: none;">
@@ -4662,21 +4314,21 @@ function showContactDetail(contactId) {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="edit-contact-name">Name *</label>
-                            <input type="text" id="edit-contact-name" value="${contact.name}" required>
+                            <input type="text" id="edit-contact-name" value="${escapeHtmlClub(contact.name)}" required>
                         </div>
                         <div class="form-group">
                             <label for="edit-contact-email">Email</label>
-                            <input type="email" id="edit-contact-email" value="${contact.email || ''}">
+                            <input type="email" id="edit-contact-email" value="${escapeHtmlClub(contact.email || '')}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="edit-contact-firm">Firm</label>
-                            <input type="text" id="edit-contact-firm" value="${contact.firm || ''}">
+                            <input type="text" id="edit-contact-firm" value="${escapeHtmlClub(contact.firm || '')}">
                         </div>
                         <div class="form-group">
                             <label for="edit-contact-position">Position</label>
-                            <input type="text" id="edit-contact-position" value="${contact.position || ''}">
+                            <input type="text" id="edit-contact-position" value="${escapeHtmlClub(contact.position || '')}">
                         </div>
                     </div>
                     <div class="form-group">
@@ -4688,7 +4340,7 @@ function showContactDetail(contactId) {
                         </select>
                     </div>
                     <div class="edit-form-actions">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
                         <button type="button" class="btn btn-secondary" onclick="toggleEditMode('${contactId}', false)">Cancel</button>
                     </div>
                 </form>
@@ -4698,7 +4350,7 @@ function showContactDetail(contactId) {
         <div class="general-notes-section">
             <div class="accordion-item" id="general-notes-accordion">
                 <button class="accordion-header" onclick="toggleGeneralNotes()">
-                    <span>General Notes</span>
+                    <span>General notes</span>
                     <span class="accordion-icon" id="general-notes-icon">+</span>
                 </button>
                 <div class="accordion-content" id="general-notes-content">
@@ -4708,7 +4360,7 @@ function showContactDetail(contactId) {
                             class="general-notes-textarea" 
                             placeholder="Add any notes about this contact here..."
                             oninput="saveGeneralNotes('${contactId}')"
-                        >${contact.generalNotes || ''}</textarea>
+                        >${escapeHtmlClub(contact.generalNotes || '')}</textarea>
                         <p class="notes-hint">Notes are saved automatically as you type.</p>
                     </div>
                 </div>
@@ -4716,7 +4368,7 @@ function showContactDetail(contactId) {
         </div>
         
         <div class="timeline-section">
-            <h2>Interaction Timeline</h2>
+            <h2>Timeline</h2>
             <div class="timeline-container">
                 <div class="timeline-line"></div>
                 ${buildTimelineItems(timeline, contact)}
@@ -4737,15 +4389,15 @@ function showContactDetail(contactId) {
             <div class="timeline-legend">
                 <div class="legend-item">
                     <span class="legend-dot legend-email-sent"></span>
-                    <span>Email Sent</span>
+                    <span>Email sent</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot legend-email-received"></span>
-                    <span>Email Received</span>
+                    <span>Reply received</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot legend-email-both"></span>
-                    <span>Sent &amp; Received</span>
+                    <span>Sent and replied</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot legend-call"></span>
@@ -4754,14 +4406,14 @@ function showContactDetail(contactId) {
             </div>
 
             <div class="quick-actions">
-                <button class="btn btn-primary" onclick="openQuickAdd('email-sent', '${contact.id}')">+ Add Email Sent</button>
-                <button class="btn btn-primary" onclick="openQuickAdd('email-received', '${contact.id}')">+ Add Email Received</button>
-                <button class="btn btn-primary" onclick="openQuickAdd('call', '${contact.id}')">+ Add Call</button>
+                <button class="btn btn-primary" onclick="openQuickAdd('email-sent', '${contact.id}')">Log email sent</button>
+                <button class="btn btn-primary" onclick="openQuickAdd('email-received', '${contact.id}')">Log reply</button>
+                <button class="btn btn-primary" onclick="openQuickAdd('call', '${contact.id}')">Log call</button>
             </div>
 
             <div class="interactions-accordion">
                 <button class="interactions-accordion-header" type="button" onclick="toggleInteractionsAccordion()">
-                    <span>All Interactions (${timeline.length})</span>
+                    <span>All interactions (${timeline.length})</span>
                     <span class="interactions-accordion-icon" id="interactions-accordion-icon">+</span>
                 </button>
                 <div class="interactions-accordion-content" id="interactions-accordion-content">
@@ -4771,7 +4423,7 @@ function showContactDetail(contactId) {
         </div>
         
         <div class="call-notes-section">
-            <h2>Call Notes</h2>
+            <h2>Call notes</h2>
             ${contact.notes && contact.notes.length > 0 ? `
                 <div class="call-notes-grid">
                     ${contact.notes.map((note, index) => `
@@ -4787,13 +4439,13 @@ function showContactDetail(contactId) {
                                     </div>
                                 ` : ''}
                                 <div class="call-note-summary">
-                                    <h4>AI Summary</h4>
-                                    <p>${note.summary}</p>
+                                    <h4>Summary</h4>
+                                    <p>${escapeHtmlClub(note.summary)}</p>
                                     ${note.extractedText ? `
                                         <details class="extracted-text-details">
-                                            <summary>View Full Extracted Text</summary>
+                                            <summary>Show full text</summary>
                                             <div class="extracted-text-content">
-                                                <pre>${note.extractedText}</pre>
+                                                <pre>${escapeHtmlClub(note.extractedText)}</pre>
                                             </div>
                                         </details>
                                     ` : ''}
@@ -4817,12 +4469,12 @@ function showCallNotes(contactId) {
         content.innerHTML = '<p>No call notes available for this contact.</p>';
     } else {
         content.innerHTML = `
-            <h3 style="color: var(--light-accent); margin-bottom: 1rem;">${contact.name} - Call Notes</h3>
+            <h3 style="color: var(--light-accent); margin-bottom: 1rem;">Call notes: ${escapeHtmlClub(contact.name)}</h3>
             ${contact.notes.map((note, index) => `
                 <div class="call-note-item">
                     <h4>Note #${contact.notes.length - index}</h4>
                     <p class="call-note-date">Date: ${formatLocalDate(note.date)}</p>
-                    <p>${note.summary}</p>
+                    <p>${escapeHtmlClub(note.summary)}</p>
                 </div>
             `).join('')}
         `;
@@ -4857,7 +4509,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
         modal.innerHTML = `
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
-                <h2 id="timeline-edit-title">Edit Timeline Item</h2>
+                <h2 id="timeline-edit-title">Edit entry</h2>
                 <form id="timeline-edit-form">
                     <div class="form-group">
                         <label for="timeline-edit-date">Date *</label>
@@ -4874,7 +4526,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
                         <div class="form-group">
                             <label for="timeline-edit-email-type">Type</label>
                             <select id="timeline-edit-email-type">
-                                <option value="cold">Cold Email</option>
+                                <option value="cold">Cold email</option>
                                 <option value="follow-up">Follow-up</option>
                             </select>
                         </div>
@@ -4891,7 +4543,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
                     </div>
                     <div id="timeline-edit-status" class="upload-status" style="display: none;"></div>
                     <div class="edit-form-actions">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
                         <button type="button" class="btn btn-secondary" onclick="closeTimelineEditModal()">Cancel</button>
                     </div>
                 </form>
@@ -4923,7 +4575,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
     editDateInput.setAttribute('max', today);
     
     if (itemType === 'email') {
-        document.getElementById('timeline-edit-title').textContent = 'Edit Email';
+        document.getElementById('timeline-edit-title').textContent = 'Edit email';
         document.getElementById('timeline-edit-email-fields').style.display = 'block';
         document.getElementById('timeline-edit-note-fields').style.display = 'none';
         // Use direction and emailType from timeline item, with defaults
@@ -4933,7 +4585,7 @@ window.editTimelineItem = function(contactId, itemId, itemType, itemIndex) {
         document.getElementById('timeline-edit-email-type').value = emailType;
         document.getElementById('timeline-edit-email-subject').value = item.subject || '';
     } else {
-        document.getElementById('timeline-edit-title').textContent = 'Edit Call';
+        document.getElementById('timeline-edit-title').textContent = 'Edit call';
         document.getElementById('timeline-edit-email-fields').style.display = 'none';
         document.getElementById('timeline-edit-note-fields').style.display = 'block';
         document.getElementById('timeline-edit-note-summary').value = item.summary || '';
@@ -5013,8 +4665,8 @@ function saveTimelineItemEdit(contactId, itemType, itemIndex) {
 }
 
 // Delete timeline item
-window.deleteTimelineItem = function(contactId, itemId, itemType, itemIndex) {
-    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+window.deleteTimelineItem = async function(contactId, itemId, itemType, itemIndex) {
+    if (!(await wvConfirm('This interaction will be removed from the timeline. This can’t be undone.', { title: 'Delete this item?', confirmLabel: 'Delete', danger: true }))) {
         return;
     }
     
@@ -5040,7 +4692,7 @@ function exportToExcel() {
     const contacts = getContacts();
     
     if (contacts.length === 0) {
-        alert('No contacts to export. Please add contacts first.');
+        wvToast('No contacts to export. Please add contacts first.');
         return;
     }
     
@@ -5158,7 +4810,7 @@ function exportToExcel() {
     // Show success message
     const exportBtn = document.getElementById('export-excel');
     const originalText = exportBtn.textContent;
-    exportBtn.textContent = '✓ Exported!';
+    exportBtn.textContent = 'Exported';
     exportBtn.style.background = 'var(--success)';
     setTimeout(() => {
         exportBtn.textContent = originalText;
@@ -5167,10 +4819,10 @@ function exportToExcel() {
 }
 
 // Delete all contacts function
-function deleteAllContacts() {
+async function deleteAllContacts() {
     const currentUser = getCurrentUser();
     if (!currentUser) {
-        alert('Please log in first');
+        wvToast('Please log in first');
         return;
     }
     
@@ -5178,30 +4830,16 @@ function deleteAllContacts() {
     const contactCount = contacts.length;
     
     if (contactCount === 0) {
-        alert('No contacts to delete');
+        wvToast('No contacts to delete');
         return;
     }
     
-    // Show confirmation dialog with contact count
-    const confirmed = confirm(
-        `Are you sure you want to delete ALL ${contactCount} contact${contactCount !== 1 ? 's' : ''}?\n\n` +
-        `This action cannot be undone. All contact data, emails, notes, and interactions will be permanently deleted.`
+    const confirmed = await wvConfirm(
+        `All ${contactCount} contact${contactCount !== 1 ? 's' : ''}, with their emails, notes and interactions, will be permanently deleted. This can’t be undone. Export first if you want a copy.`,
+        { title: 'Delete all contacts?', confirmLabel: 'Delete all', danger: true }
     );
-    
-    if (!confirmed) {
-        return; // User cancelled
-    }
-    
-    // Second confirmation for safety
-    const doubleConfirmed = confirm(
-        `FINAL WARNING: You are about to permanently delete ${contactCount} contact${contactCount !== 1 ? 's' : ''}.\n\n` +
-        `This cannot be undone. Type "DELETE" in the next prompt to confirm.`
-    );
-    
-    if (!doubleConfirmed) {
-        return;
-    }
-    
+    if (!confirmed) return;
+
     // Clear all contacts
     saveContacts([]);
     
@@ -5211,7 +4849,7 @@ function deleteAllContacts() {
     filterContacts();
     
     // Show success message
-    alert(`All ${contactCount} contact${contactCount !== 1 ? 's' : ''} have been deleted.`);
+    wvToast(`All ${contactCount} contact${contactCount !== 1 ? 's' : ''} have been deleted.`);
     
     console.log(`Deleted all ${contactCount} contacts for user ${currentUser.id}`);
 }
@@ -5291,7 +4929,7 @@ window.openQuickAdd = function(type, contactId) {
     quickAddNotesMode = 'text';
     
     if (type === 'email-sent' || type === 'email-received') {
-        title.textContent = type === 'email-sent' ? 'Add Email Sent' : 'Add Email Received';
+        title.textContent = type === 'email-sent' ? 'Log email sent' : 'Log reply';
         // Don't show email type dropdown since we already know the direction from the button
         emailTypeDiv.style.display = 'none';
         // Remove required attribute from hidden email type field
@@ -5303,7 +4941,7 @@ window.openQuickAdd = function(type, contactId) {
         // Change textarea to empty
         document.getElementById('quick-email-subject').value = '';
     } else if (type === 'call') {
-        title.textContent = 'Add Call';
+        title.textContent = 'Log a call';
         
         // Show toggle and default to text mode
         const notesToggleDiv = document.getElementById('quick-add-notes-toggle');
@@ -5318,15 +4956,15 @@ window.openQuickAdd = function(type, contactId) {
         // Update button text to "Add Call"
         const submitButton = document.getElementById('quick-add-submit-btn');
         if (submitButton) {
-            submitButton.textContent = 'Add Call';
-            submitButton.innerHTML = 'Add Call'; // Also update innerHTML
+            submitButton.textContent = 'Log a call';
+            submitButton.innerHTML = 'Log a call'; // Also update innerHTML
         }
     } else {
         // Reset button text for other interaction types
         const submitButton = document.getElementById('quick-add-submit-btn');
         if (submitButton) {
-            submitButton.textContent = 'Add Interaction';
-            submitButton.innerHTML = 'Add Interaction';
+            submitButton.textContent = 'Log an interaction';
+            submitButton.innerHTML = 'Log an interaction';
         }
     }
     
@@ -5348,7 +4986,7 @@ window.openQuickAdd = function(type, contactId) {
                     window.handleQuickAddSubmit(e);
                 } else {
                     console.error('handleQuickAddSubmit not found');
-                    alert('Error: Please refresh the page.');
+                    wvToast('Error: Please refresh the page.');
                 }
                 return false;
             };
@@ -5367,7 +5005,7 @@ window.updateContactPriority = function(contactId, priority) {
         // Update the display
         const priorityBadge = document.querySelector('.priority-badge');
         if (priorityBadge) {
-            priorityBadge.textContent = priority.toUpperCase();
+            priorityBadge.textContent = priority.toLowerCase();
             priorityBadge.className = `priority-badge priority-${priority}`;
         }
     }
@@ -5900,24 +5538,12 @@ function detectAndPromptForMissingYear(dateValues) {
     
     if (!hasMissingYear) return null;
     
-    // Prompt user once for the year
-    let year = prompt(`Some dates in your spreadsheet are missing the year (e.g., "11/24" instead of "11/24/2024").\n\nPlease enter the year in YYYY format (e.g., 2024) to apply to all dates missing years:`);
-    
-    // Keep prompting until valid year is entered or user cancels
-    while (year !== null) {
-        const yearNum = parseInt(year);
-        if (yearNum >= 1900 && yearNum <= 2100) {
-            console.log(`User provided year: ${yearNum}`);
-            return yearNum;
-        }
-        // Invalid year, prompt again
-        year = prompt(`Invalid year. Please enter a year between 1900 and 2100:\n\n(Click Cancel to skip dates without years)`);
-    }
-    
-    // User cancelled
-    console.log('User cancelled year input');
-    return null;
+    // Dates without a year get the most recent past date (e.g. 11/24 means last November
+    // if that date is still ahead this year). No pop-up needed.
+    wvToast('Some dates had no year. Weaver used the most recent past date for each.', 'info');
+    return 'recent';
 }
+
 
 // Parse a single date in MM/DD/YEAR format
 // defaultYear: optional year to use if date is missing year (MM/DD format)
@@ -5971,6 +5597,12 @@ function parseDate(dateString, defaultYear = null) {
         console.log(`parseDate: only 2 parts, month=${month}, day=${day}`);
         
         if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            if (defaultYear === 'recent') {
+                const now = new Date();
+                let y = now.getFullYear();
+                if (new Date(y, month - 1, day) > now) y -= 1;
+                defaultYear = y;
+            }
             // Use defaultYear if provided
             if (defaultYear !== null && defaultYear >= 1900 && defaultYear <= 2100) {
                 const date = new Date(defaultYear, month - 1, day);
@@ -5998,7 +5630,7 @@ function processSpreadsheet(file) {
     // Check if user is logged in
     const user = getCurrentUser();
     if (!user) {
-        alert('Please create a free account to upload contacts. It only takes a moment!');
+        wvToast('Please create a free account to upload contacts. It only takes a moment!');
         showAuthModal();
         // Switch to signup mode
         if (typeof toggleAuthMode === 'function') {
@@ -6695,7 +6327,7 @@ async function processCallNotesForNewContact(file, contact, statusElement, callD
     // Check if user is logged in
     const user = getCurrentUser();
     if (!user) {
-        alert('Please create a free account to add call notes. It only takes a moment!');
+        wvToast('Please create a free account to add call notes. It only takes a moment!');
         showAuthModal();
         // Switch to signup mode
         if (typeof toggleAuthMode === 'function') {
@@ -6901,7 +6533,7 @@ async function processCallNotes(file, contactId, callDate, notesText) {
     // Check if user is logged in
     const user = getCurrentUser();
     if (!user) {
-        alert('Please create a free account to add call notes. It only takes a moment!');
+        wvToast('Please create a free account to add call notes. It only takes a moment!');
         showAuthModal();
         // Switch to signup mode
         if (typeof toggleAuthMode === 'function') {
@@ -7608,7 +7240,7 @@ window.toggleQuickAddNotesMode = function(mode) {
         // Update image label to show it's required
         const imageLabel = notesImageDiv ? notesImageDiv.querySelector('label') : null;
         if (imageLabel) {
-            imageLabel.textContent = 'Upload Call Notes Photo: *';
+            imageLabel.textContent = 'Photo of call notes';
         }
         
         // Clear status (will show when image is selected)
@@ -7723,7 +7355,7 @@ window.onboardJoinClub = async function () {
         const data = await res.json();
         if (!res.ok) { showInlineStatus(status, data.error || 'Could not join that club.', 'error'); return; }
         updateCurrentUserFields({ accountType: 'student', primaryOrgId: data.org.id });
-        showInlineStatus(status, 'Joined ' + data.org.name + '!', 'success');
+        showInlineStatus(status, 'You joined ' + data.org.name + '.', 'success');
         setTimeout(window.finishOnboarding, 700);
     } catch (e) {
         showInlineStatus(status, 'Something went wrong. Please try again.', 'error');
@@ -7741,7 +7373,7 @@ window.onboardCreateOrg = async function () {
         const res = await fetch('/api/orgs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: u.id, name: name, school: (schoolEl?.value || '').trim() })
+            body: JSON.stringify({ name: name, school: (schoolEl?.value || '').trim(), orgType: ((document.querySelector('input[name=onboard-org-type]:checked') || {}).value || 'club') })
         });
         const data = await res.json();
         if (!res.ok) { showInlineStatus(status, data.error || 'Could not create club.', 'error'); return; }
@@ -7757,6 +7389,10 @@ window.onboardCreateOrg = async function () {
 window.finishOnboarding = function () {
     const m = document.getElementById('onboarding-modal');
     if (m) m.classList.remove('active');
+    refreshSessionUser().then(function () {
+        updateSidebarUser();
+        if (window.wvApplyRole) window.wvApplyRole(true);
+    });
     showAppView();
     if (typeof updateUserDisplay === 'function') updateUserDisplay();
     if (typeof updateSidebarUser === 'function') updateSidebarUser();
@@ -7768,8 +7404,8 @@ window.copyJoinCode = function (code) {
     if (!code) return;
     try {
         navigator.clipboard.writeText(code);
-        if (typeof showToast === 'function') showToast('Club code copied'); else alert('Copied: ' + code);
-    } catch (e) { alert('Club code: ' + code); }
+        if (typeof showToast === 'function') showToast('Club code copied'); else wvToast('Copied: ' + code);
+    } catch (e) { wvToast('Club code: ' + code); }
 };
 
 function showInlineStatus(el, msg, kind) {
@@ -7820,71 +7456,50 @@ window.renderClubView = async function () {
 
     const me = members.find(function (m) { return m.userId === u.id; });
 
+    const e = escapeHtmlClub;
     let html = '';
 
-    // Header card: name + join code + (admin) invite
-    html += '<div class="settings-card" style="margin-bottom:1.25rem;">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">';
-    html += '<div><h3 class="settings-card-title" style="margin:0;">' + escapeHtmlClub(org.name) + '</h3>';
-    html += '<p style="color:var(--slate);font-size:13px;margin:2px 0 0;">' + (org.school ? escapeHtmlClub(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + escapeHtmlClub(org.role) + '</p></div>';
-    html += '<div style="text-align:right;"><div style="font-size:12px;color:var(--slate);">Club code</div>';
-    html += '<div style="font-size:18px;font-weight:700;letter-spacing:1px;color:var(--blue);">' + escapeHtmlClub(org.joinCode || '—') + '</div>';
-    html += '<button class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:4px;" onclick="window.copyJoinCode(\'' + escapeHtmlClub(org.joinCode) + '\')">Copy</button></div>';
-    html += '</div>';
-
+    // Header: club identity and join code (same layout as the manager console)
+    html += '<div class="wv-console-head"><div class="wv-console-id">';
+    html += '<h2 class="wv-console-name">' + e(org.name) + '</h2>';
+    html += '<div class="wv-console-meta">' + (org.school ? e(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + e(org.role) + '</div></div>';
+    html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + e(org.joinCode || '') + '</code>' +
+        '<button type="button" class="wv-btn wv-btn-sm" onclick="window.copyJoinCode(\'' + e(org.joinCode) + '\')">Copy</button></div></div>';
     if (isAdmin) {
-        html += '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">';
-        html += '<label style="font-size:13px;color:var(--slate);">Invite a member by email</label>';
-        html += '<div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;">';
-        html += '<input type="email" id="club-invite-email" placeholder="member@school.edu" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">';
-        html += '<button class="tb-btn tb-btn-primary tb-btn-sm" onclick="window.clubInvite(\'' + escapeHtmlClub(org.id) + '\')">Send invite</button></div>';
-        html += '<div id="club-invite-status" class="upload-status" style="display:none;margin-top:0.5rem;"></div></div>';
+        html += '<div class="wv-note">You manage this club. Invites, member activity, shared outcomes and billing are in the <a href="#console" onclick="event.preventDefault(); var l=document.querySelector(\'.nav-link[href=&quot;#console&quot;]\'); if(l) l.click();">club console</a>.</div>';
     }
-    html += '</div>';
+    if (!org.verified) {
+        html += '<div class="wv-note wv-note-warn">This club is waiting for verification by Weaver. Until then, members are on the Starter plan.</div>';
+    }
 
-    // Billing (owners/admins): per-active-member plan
-    if (isAdmin) html += '<div id="club-billing" class="settings-card" style="margin-bottom:1.25rem;"><p style="color:var(--slate);font-size:13px;margin:0;">Loading billing…</p></div>';
-
-    // The user's own standing — the comparison hook that drives engagement
+    // The member's own standing
     if (me) {
-        html += '<div class="dash-stats-grid" style="margin-bottom:1.25rem;">';
-        html += clubStatCard('Your rank', me.rank + ' of ' + members.length, 'var(--blue)');
-        html += clubStatCard('Networking calls', me.calls, 'var(--navy)');
-        html += clubStatCard('Outreach sent', me.emailsSent, 'var(--navy)');
-        html += clubStatCard('Response rate', me.responseRate + '%', 'var(--navy)');
-        html += '</div>';
+        const kpi = (label, value) => '<div class="wv-kpi"><div class="wv-kpi-value">' + e(value) + '</div><div class="wv-kpi-label">' + e(label) + '</div></div>';
+        html += '<div class="wv-kpis">' + kpi('Your rank', me.rank + ' of ' + members.length) + kpi('Calls logged', me.calls) +
+            kpi('Outreach sent', me.emailsSent) + kpi('Reply rate', me.responseRate + '%') + '</div>';
     }
 
-    // Leaderboard — clubs observe who is working efficiently; members compare themselves
-    html += '<div class="settings-card">';
-    html += '<h3 class="settings-card-title">Leaderboard</h3>';
-    html += '<p style="color:var(--slate);font-size:13px;margin:-0.25rem 0 0.75rem;">Ranked by networking activity — calls logged, outreach sent, replies earned, and contacts built.</p>';
-    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">';
-    html += '<thead><tr style="text-align:left;color:var(--slate);font-size:12.5px;font-weight:500;">';
-    html += '<th style="padding:8px 6px;">#</th><th style="padding:8px 6px;">Member</th><th style="padding:8px 6px;text-align:center;">Calls</th><th style="padding:8px 6px;text-align:center;">Outreach</th><th style="padding:8px 6px;text-align:center;">Replies</th><th style="padding:8px 6px;text-align:center;">Contacts</th><th style="padding:8px 6px;text-align:center;">Resp. rate</th><th style="padding:8px 6px;text-align:center;">Score</th></tr></thead><tbody>';
-
+    // Leaderboard
+    html += '<h3 class="wv-h3">Leaderboard</h3><p class="wv-fine" style="margin-top:-4px;">Ranked by networking activity: calls logged, outreach sent, replies and contacts. Members see activity totals, never each other’s contacts or notes.</p>';
     if (members.length === 0) {
-        html += '<tr><td colspan="8" style="padding:16px 6px;color:var(--slate);">No activity yet. As members log calls and outreach, they\'ll appear here.</td></tr>';
+        html += '<div class="wv-empty"><h2>No activity yet</h2><p>As members log calls and outreach, they appear here.</p></div>';
     } else {
+        html += '<div class="wv-table-scroll"><table class="wv-table"><thead><tr><th scope="col" class="num">Rank</th><th scope="col">Member</th>' +
+            '<th scope="col" class="num">Calls</th><th scope="col" class="num">Outreach</th><th scope="col" class="num">Replies</th><th scope="col" class="num">Contacts</th><th scope="col" class="num">Reply rate</th><th scope="col" class="num">Score</th></tr></thead><tbody>';
         members.forEach(function (m) {
             const mine = m.userId === u.id;
-            const medal = '<span style="color:' + (m.rank <= 3 ? 'var(--navy)' : 'var(--slate)') + ';">' + m.rank + '</span>';
-            html += '<tr style="border-top:1px solid var(--border);' + (mine ? 'background:var(--blue-ghost,#eef4ff);' : '') + '">';
-            html += '<td style="padding:10px 6px;font-weight:600;">' + medal + '</td>';
-            html += '<td style="padding:10px 6px;font-weight:600;color:var(--navy);">' + escapeHtmlClub(m.name) + (mine ? ' <span style="color:var(--blue);font-weight:500;">(you)</span>' : '') + (m.role === 'owner' ? ' <span style="font-size:11px;color:var(--slate);">· owner</span>' : '') + '</td>';
-            html += '<td style="padding:10px 6px;text-align:center;">' + m.calls + '</td>';
-            html += '<td style="padding:10px 6px;text-align:center;">' + m.emailsSent + '</td>';
-            html += '<td style="padding:10px 6px;text-align:center;">' + m.emailsReceived + '</td>';
-            html += '<td style="padding:10px 6px;text-align:center;">' + m.contactsCount + '</td>';
-            html += '<td style="padding:10px 6px;text-align:center;">' + m.responseRate + '%</td>';
-            html += '<td style="padding:10px 6px;text-align:center;font-weight:700;color:var(--blue);">' + m.activityScore + '</td>';
-            html += '</tr>';
+            html += '<tr' + (mine ? ' class="wv-row-me"' : '') + '><td class="num">' + m.rank + '</td>' +
+                '<td><span class="wv-cell-strong">' + e(m.name) + '</span>' + (mine ? ' <span class="wv-muted">(you)</span>' : '') + (m.role !== 'member' ? ' <span class="wv-muted">' + e(m.role) + '</span>' : '') + '</td>' +
+                '<td class="num">' + m.calls + '</td><td class="num">' + m.emailsSent + '</td><td class="num">' + m.emailsReceived + '</td><td class="num">' + m.contactsCount + '</td>' +
+                '<td class="num">' + m.responseRate + '%</td><td class="num"><strong>' + m.activityScore + '</strong></td></tr>';
         });
+        html += '</tbody></table></div>';
     }
-    html += '</tbody></table></div></div>';
 
+    if (org.role !== 'owner') {
+        html += '<p style="margin-top:1rem;"><button type="button" class="wv-linkbtn" onclick="window.wvLeaveClub && window.wvLeaveClub(\'' + e(org.id) + '\', \'' + e(org.name).replace(/'/g, '') + '\')">Leave this club</button></p>';
+    }
     root.innerHTML = html;
-    if (isAdmin) loadClubBilling(org.id);
 };
 
 // Fill the club billing card: plan status, active (billable) members, checkout / portal.
@@ -7911,12 +7526,13 @@ async function loadClubBilling(orgId) {
 
     let h = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">';
     h += '<div style="flex:1 1 320px;min-width:0;"><h3 class="settings-card-title" style="margin:0;">Club plan <span class="wv-pill ' + (live ? 'wv-pill-ok' : '') + '">' + escapeHtmlClub(statusLabel) + '</span></h3>';
-    h += '<p style="color:var(--slate);font-size:13px;margin:4px 0 0;">' + escapeHtmlClub(priceLine) + '. You only pay for members who logged networking activity in the last ' + billing.activeWindowDays + ' days — everyone on the roster gets Pro.</p></div>';
+    h += '<p style="color:var(--slate);font-size:13px;margin:4px 0 0;">' + escapeHtmlClub(priceLine) + '. You pay only for members who logged networking activity in the last ' + billing.activeWindowDays + ' days. Every member gets the sponsored allowance.</p></div>';
     h += '<div style="text-align:right;flex:0 0 auto;"><div style="font-size:22px;font-weight:600;color:var(--navy);">' + billing.activeMembers + ' <span style="font-size:13px;font-weight:400;color:var(--slate);">of ' + billing.totalMembers + ' active</span></div>';
-    if (estimate) h += '<div style="font-size:12px;color:var(--slate);">≈ ' + estimate + ' this period (' + billing.billableSeats + ' seat' + (billing.billableSeats === 1 ? '' : 's') + ')</div>';
+    if (estimate) h += '<div style="font-size:12px;color:var(--slate);">About ' + estimate + ' this period (' + billing.billableSeats + ' seat' + (billing.billableSeats === 1 ? '' : 's') + ')</div>';
     h += '</div></div>';
     h += '<div style="margin-top:0.9rem;display:flex;gap:0.5rem;flex-wrap:wrap;">';
-    if (live || status === 'past_due') h += '<button class="tb-btn tb-btn-outline tb-btn-sm" onclick="window.clubBillingPortal(\'' + escapeHtmlClub(orgId) + '\')">Manage billing</button>';
+    if (billing.license === 'campus') h += '<span class="wv-muted">Covered by a campus license' + (billing.licenseExpiresAt ? ' through ' + new Date(billing.licenseExpiresAt).toLocaleDateString() : '') + '.</span>';
+    else if (live || status === 'past_due') h += '<button class="tb-btn tb-btn-outline tb-btn-sm" onclick="window.clubBillingPortal(\'' + escapeHtmlClub(orgId) + '\')">Manage billing</button>';
     else h += '<button class="tb-btn tb-btn-primary tb-btn-sm" onclick="window.clubStartPlan(\'' + escapeHtmlClub(orgId) + '\')">Start club plan</button>';
     h += '</div><div id="club-billing-status" class="upload-status" style="display:none;margin-top:0.5rem;"></div>';
     box.innerHTML = h;
@@ -7952,9 +7568,9 @@ window.clubBillingPortal = async function (orgId) {
         const result = params.get('club_billing');
         const orgId = params.get('org_id');
         if (!result || !orgId) return;
-        history.replaceState(null, '', window.location.pathname + '#club');
+        history.replaceState(null, '', window.location.pathname + '#console');
         const go = function () {
-            const link = document.querySelector('.nav-link[href="#club"]');
+            const link = document.querySelector('.nav-link[href="#console"]');
             if (link) link.click();
         };
         if (result === 'success') {

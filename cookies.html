@@ -145,7 +145,7 @@
 <div class="container">
   <div class="badge">Legal</div>
   <h1>Cookie Policy</h1>
-  <p class="last-updated">Last updated: October 23, 2026</p>
+  <p class="last-updated">Last updated: October 24, 2026</p>
 
   <h2>1. What are cookies?</h2>
   <p>Cookies are small text files that a website stores on your device. Weaver also uses related browser storage technologies — <strong>localStorage</strong> and <strong>sessionStorage</strong> — which work the same way: they save small pieces of information in your browser so the app can function and remember you between visits. In this policy, "cookies" refers to all of these technologies.</p>
@@ -163,7 +163,8 @@
       <tr><th>Name</th><th>Type</th><th>Purpose</th><th>Duration</th></tr>
     </thead>
     <tbody>
-      <tr><td>weaver_current_user</td><td>Strictly necessary</td><td>Keeps you signed in and identifies your account in the app.</td><td>Until logout</td></tr>
+      <tr><td>weaver_session (cookie)</td><td>Strictly necessary</td><td>Your sign-in session. HttpOnly, so page scripts cannot read it.</td><td>30 days or until logout</td></tr>
+      <tr><td>weaver_current_user</td><td>Strictly necessary</td><td>Remembers your account details so the app loads quickly.</td><td>Until logout</td></tr>
       <tr><td>weaver_users, weaver_contacts_*</td><td>Strictly necessary</td><td>Stores your account and contact data locally so the app works and loads quickly.</td><td>Persistent</td></tr>
       <tr><td>weaver_gmail_connected_*</td><td>Strictly necessary</td><td>Remembers whether you connected Gmail.</td><td>Persistent</td></tr>
       <tr><td>weaver_assistant_threads_*, weaver_assistant_sources_*, weaver_assistant_saved_*</td><td>Strictly necessary</td><td>Stores your assistant chats, chosen sources and saved workflows on this device.</td><td>Persistent</td></tr>
