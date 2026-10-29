@@ -63,7 +63,7 @@ module.exports = function authRoutes({ pool, dbAPI }) {
 
     async function signup(req, res) {
         try {
-            const limit = auth.hit('signup-ip:' + req.ip, 10, 3600000);
+            const limit = auth.hit('signup-ip:' + req.ip, 40, 3600000);
             if (!limit.allowed) return res.status(429).json({ error: `Too many sign-ups from this network. Try again in ${Math.ceil(limit.retryAfterSec / 60)} minutes.` });
 
             const email = cleanEmail(req.body && req.body.email);
@@ -92,7 +92,7 @@ module.exports = function authRoutes({ pool, dbAPI }) {
             const password = cleanPassword(req.body && req.body.password);
             if (!email || !password) return res.status(400).json({ error: 'Enter your email and password.' });
 
-            const byIp = auth.hit('login-ip:' + req.ip, 30, 900000);
+            const byIp = auth.hit('login-ip:' + req.ip, 150, 900000);
             const byEmail = auth.hit('login-email:' + email, 8, 900000);
             if (!byIp.allowed || !byEmail.allowed) {
                 const wait = Math.max(byIp.retryAfterSec, byEmail.retryAfterSec);

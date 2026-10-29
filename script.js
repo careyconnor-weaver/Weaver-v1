@@ -433,7 +433,7 @@ function updateSidebarUser() {
 
         if (avatarEl) {
             if (settings.profilePhoto) {
-                avatarEl.innerHTML = '<img src="' + settings.profilePhoto + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+                avatarEl.innerHTML = /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(String(settings.profilePhoto)) ? '<img src="' + settings.profilePhoto + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : escapeHtmlClub(initials);
             } else {
                 avatarEl.textContent = initials;
             }
@@ -690,7 +690,7 @@ function updateDashboard() {
             for (var i = 0; i < shown; i++) {
                 var escapedName = sorted[i].name.replace(/'/g, "\\'");
                 html += '<div class="dash-firm-row" onclick="goToFirmFilter(\'' + escapedName + '\')" style="cursor:pointer;">';
-                html += '<span class="dash-firm-name">' + sorted[i].name + '</span>';
+                html += '<span class="dash-firm-name">' + escapeHtmlClub(sorted[i].name) + '</span>';
                 html += '<span class="dash-firm-count">' + sorted[i].count + '</span>';
                 html += '</div>';
             }
@@ -1404,18 +1404,32 @@ function initSettingsListeners() {
         photoInput.addEventListener('change', function(e) {
             var file = e.target.files[0];
             if (!file) return;
-            if (file.size > 2 * 1024 * 1024) {
-                wvToast('Photo must be under 2 MB.');
+            if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
+                wvToast('Choose a PNG, JPG, GIF or WebP image.', 'error');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                wvToast('Photo must be under 10 MB.', 'error');
                 return;
             }
             var reader = new FileReader();
             reader.onload = function(ev) {
-                var s = getUserSettings();
-                s.profilePhoto = ev.target.result;
-                saveUserSettings(s);
-                syncSettingsToBackend(s);
-                loadSettingsPage();
-                refreshProfileDisplays();
+                // Resize to a 256px square JPEG (about 30 KB) before saving.
+                var img = new Image();
+                img.onload = function () {
+                    var size = 256, side = Math.min(img.width, img.height);
+                    var canvas = document.createElement('canvas');
+                    canvas.width = size; canvas.height = size;
+                    canvas.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+                    var s = getUserSettings();
+                    s.profilePhoto = canvas.toDataURL('image/jpeg', 0.85);
+                    saveUserSettings(s);
+                    syncSettingsToBackend(s);
+                    loadSettingsPage();
+                    refreshProfileDisplays();
+                };
+                img.onerror = function () { wvToast('That image could not be read. Try another file.', 'error'); };
+                img.src = ev.target.result;
             };
             reader.readAsDataURL(file);
         });
@@ -1556,7 +1570,7 @@ async function syncGmailLabel() {
             const detectedFirm = group.emails[0]?.firm || null;
 
             html += `<div class="gmail-email-group" style="border: 1px solid var(--silver-gray); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">`;
-            html += `<h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Email Address: ${group.email}</h3>`;
+            html += `<h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Email address: ${escapeHtmlClub(group.email)}</h3>`;
             if (detectedFirm) {
                 html += `<p style="margin: 0 0 0.5rem 0; color: var(--accent-blue); font-weight: 600;">Detected Firm: ${detectedFirm}</p>`;
             }
@@ -1565,7 +1579,7 @@ async function syncGmailLabel() {
             // Name confirmation
             html += `<div style="margin-bottom: 1rem;">`;
             html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Name (from email):</label>`;
-            html += `<input type="text" id="gmail-name-${index}" value="${(group.name || '').replace(/"/g, '&quot;')}" placeholder="Enter contact name" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
+            html += `<input type="text" id="gmail-name-${index}" value="${escapeHtmlClub(group.name || '')}" placeholder="Enter contact name" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
             html += `<p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-medium);">Is this name correct? Edit if needed.</p>`;
             html += `</div>`;
 
@@ -1590,7 +1604,7 @@ async function syncGmailLabel() {
             } else {
                 html += `<div style="margin-bottom: 1rem;">`;
                 html += `<label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Action:</label>`;
-                html += `<select id="gmail-action-${index}" onchange="updateGmailLabelAction(${index}, '${group.email}')" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
+                html += `<select id="gmail-action-${index}" onchange="updateGmailLabelAction(${index}, ${escapeHtmlClub(JSON.stringify(String(group.email || '')))})" style="width: 100%; padding: 0.5rem; border: 1px solid var(--silver-gray); border-radius: 4px; font-size: 0.9rem;">`;
                 html += `<option value="new">Create a new contact</option>`;
                 html += `<option value="existing">Assign to Existing Contact</option>`;
                 html += `<option value="skip">Skip</option>`;
@@ -1620,8 +1634,8 @@ async function syncGmailLabel() {
             group.emails.slice(0, 5).forEach(email => {
                 html += `<div style="padding: 0.25rem 0; font-size: 0.85rem;">`;
                 html += `<span style="font-weight: 600;">${email.direction === 'sent' ? 'Sent' : 'Received'}:</span> `;
-                html += `<span>${email.subject || '(No subject)'}</span> `;
-                html += `<span style="color: var(--text-medium);">(${email.date})</span>`;
+                html += `<span>${escapeHtmlClub(email.subject || '(No subject)')}</span> `;
+                html += `<span style="color: var(--text-medium);">(${escapeHtmlClub(email.date)})</span>`;
                 html += `</div>`;
             });
             if (group.emails.length > 5) {
@@ -3146,7 +3160,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     // Show green success message with file name
                     if (status) {
-                        status.innerHTML = `File selected<br><span style="font-size: 0.9rem; color: var(--text-medium);">${file.name}</span>`;
+                        status.innerHTML = `File selected<br><span style="font-size: 0.9rem; color: var(--text-medium);">${escapeHtmlClub(file.name)}</span>`;
                         status.className = 'upload-status success';
                         status.style.display = 'block';
                     }
@@ -4435,7 +4449,7 @@ function showContactDetail(contactId) {
                             <div class="call-note-content">
                                 ${note.imageUrl ? `
                                     <div class="call-note-image">
-                                        <img src="${note.imageUrl}" alt="Call notes ${index + 1}">
+                                        <img src="${escapeHtmlClub(note.imageUrl)}" alt="Call notes ${index + 1}">
                                     </div>
                                 ` : ''}
                                 <div class="call-note-summary">

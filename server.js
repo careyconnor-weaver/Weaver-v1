@@ -69,6 +69,22 @@ app.use((req, res, next) => {
     next();
 });
 
+// ---------- Error responses never expose internals ----------
+// Many older routes put error.message / stack / provider responses into 5xx JSON.
+// Strip those fields centrally; the user-facing "error" text is kept (and length-capped).
+app.use('/api', (req, res, next) => {
+    const json = res.json.bind(res);
+    res.json = (body) => {
+        if (res.statusCode >= 500 && body && typeof body === 'object' && !Array.isArray(body)) {
+            const { message, details, stack, code, hint, fixUrl, instructions, ...rest } = body;
+            if (typeof rest.error === 'string') rest.error = rest.error.slice(0, 300);
+            return json(rest);
+        }
+        return json(body);
+    };
+    next();
+});
+
 // ---------- Public files ----------
 // Only these files are served. (Previously the whole project folder was public, which
 // exposed server code, config files and the Gmail token backup.)
@@ -119,7 +135,7 @@ app.use('/api', async (req, res, next) => {
 app.use('/api/stripe', stripeRoutes);
 
 // JSON parsing middleware (after Stripe routes to avoid interfering with webhooks)
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 // A signed-in user can only act on their own account. Older client code still sends
 // userId in the query/body; it must match the session, and is then normalized to it.
@@ -2178,10 +2194,12 @@ app.post('/api/users/settings', async (req, res) => {
         if (!userId) {
             return res.status(400).json({ error: 'User ID required' });
         }
+        // Photos must be a real image data URL under ~1.5 MB; names are length-limited.
+        const photo = typeof profilePhoto === 'string' && profilePhoto.length <= 4000000 && /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(profilePhoto) ? profilePhoto : null;
         const saved = await dbAPI.saveUserSettingsToDb(userId, {
-            firstName: firstName || null,
-            lastName: lastName || null,
-            profilePhoto: profilePhoto || null,
+            firstName: firstName ? String(firstName).trim().slice(0, 100) : null,
+            lastName: lastName ? String(lastName).trim().slice(0, 100) : null,
+            profilePhoto: photo,
         });
         res.json({ success: true, settings: saved });
     } catch (error) {
