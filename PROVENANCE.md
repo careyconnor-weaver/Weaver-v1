@@ -341,3 +341,45 @@ due first; Stripe return pages rebuilt; landing pricing uses drawn check marks.
   one. Not verified on Windows or macOS natively.
 - A packaged copy (`Weaver-demo.zip`, built from the committed tree with a
   START-HERE.txt) was prepared for Carey to run locally.
+
+---
+
+# Change set 4: Pre-launch security audit
+
+**Requested by:** shindon@bc.edu ("conduct a security check and once you are sure everything is safe, push Weaver v2")
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
+
+## Checked
+- **Secrets:** no live keys or real connection strings in the code. The old production
+  database password remains in git history (`render.yaml`, before commit 05706ad); that
+  database user was deleted and outside access to the database is closed, so it is inert.
+- **Dependencies:** `npm audit --omit=dev` went from 19 issues (1 critical, 5 high) to 8
+  moderate. Remaining: drizzle-kit/esbuild (local developer tooling, not run in production)
+  and googleapis/gaxios/uuid (the uuid flaw only affects a buffer argument Weaver never passes).
+- **Access control:** every API route reviewed; all require a session except sign-in,
+  pricing, Stripe webhook (signature-verified), Gmail callback (single-use state) and health.
+- **Cross-site request forgery:** SameSite=Lax cookie plus JSON bodies; the one multipart
+  route also requires the cookie, which browsers don't send on cross-site POSTs.
+- **Injection:** all browser rendering of user and email data re-scanned.
+
+## Fixed
+- 11 vulnerable packages updated within their major versions (express, body-parser,
+  path-to-regexp, qs, proxy-addr, axios, follow-redirects, form-data, drizzle-orm, resend, svix).
+- 5xx responses no longer carry `message`, `stack`, `details`, `code` or provider responses.
+- Escaped: firm names on Overview; sender name, address and subject in the Gmail review dialog;
+  uploaded file names; stored note image URLs.
+- Profile photos: the server accepts only image data URLs; the browser resizes to 256 px.
+- Per-network sign-in limits raised (signup 40/hour, login 150/15 min per address) so a shared
+  school network can't lock students out; the per-account limit (8 per 15 min) is unchanged.
+- `render.yaml` indentation fixed so the file parses.
+
+## Verified
+18 end-to-end and 6 metering checks re-run on the updated packages; new checks for
+production cookie flags (Secure, HttpOnly), error-detail stripping, photo validation;
+a browser test with hostile contact data (script in name, firm and email subject) across
+every screen ran no injected code; 25 screens re-rendered with zero errors.
+
+## Known, not blocking launch
+No email verification at signup, no password reset, no Content-Security-Policy header yet.
+Deploying hashes existing plaintext passwords in place: rolling back to the previous
+version afterwards would stop existing users signing in, so problems should be fixed forward.
