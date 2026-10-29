@@ -501,3 +501,38 @@ security check after")
 - Until the `weaver-playbook.md` Secret File is added in Render, the AI uses a short generic
   fallback (see CLUB_BILLING_SETUP.md section 7).
 - The GitHub repository is public and its history still contains the earlier public tips page.
+
+---
+
+# Change set 7: Every screen gets its own address
+
+**Product direction by:** shindon@bc.edu (asked why Weaver always stays at studentweaver.com
+while professional sites use addresses like /feed/foryou, then "add it")
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
+
+## Built
+- **`router.js`** (new): keeps the address bar in step with the screen. Addresses:
+  `/app/assistant`, `/app/library`, `/app/review`, `/app/documents`, `/app/checklists`,
+  `/app/network`, `/app/network/<contact id>`, `/app/network/map`, `/app/follow-ups`,
+  `/app/outcomes`, `/app/club`, `/app/console`, `/app/add-contacts`, `/app/playbook`,
+  `/app/overview`, `/app/settings`. The browser tab title names the screen.
+- Refresh keeps your place; back and forward move between screens; any address can be
+  bookmarked or shared.
+- Opening an app address while signed out shows the landing page with sign-in, then goes to
+  that screen after sign-in. Logging out returns to `/` and forgets the screen. Old `#section`
+  links (earlier reminder emails) still work and are converted to the new addresses.
+  Unknown screens open the assistant; a contact that doesn't exist opens My network.
+- **Server:** `/app` and `/app/<screen>[/<id>]` return the app page (and only that page,
+  never another file). Asset links in `index.html` are now absolute (`/styles.css`) so they
+  load from any address.
+- **Emails:** the follow-up reminder button links to `/app/follow-ups`.
+- Built by following the app's existing navigation (sidebar, phone tab bar, in-app links,
+  contact pages, network map) rather than rewriting it, so every existing path keeps working.
+
+## Verified
+22 browser checks (signed-out deep link and return after sign-in, sidebar and phone tab bar,
+titles, back/forward, refresh on a screen and on a contact, direct and old-style links,
+unknown screen and missing contact, Library to assistant, log out), plus the full regression
+suite: 18 end-to-end, 6 metering, 5 playbook confidentiality, 4 security probes, production
+cookie/error checks, the hostile-data browser test and the Library test. Requests such as
+`/app/../server.js` return the app page, not the file.

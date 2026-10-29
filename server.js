@@ -90,12 +90,17 @@ app.use('/api', (req, res, next) => {
 // exposed server code, config files and the Gmail token backup.)
 const PUBLIC_FILES = new Set([
     'index.html', 'privacy.html', 'terms.html', 'cookies.html', 'success.html', 'cancel.html',
-    'script.js', 'assistant.js', 'workspace-ui.js', 'api.js', 'styles.css', 'app-theme.css',
+    'script.js', 'assistant.js', 'workspace-ui.js', 'router.js', 'api.js', 'styles.css', 'app-theme.css',
     'weaver-badge.png', 'hero-network.jpg', 'networking-event.jpg', 'student-laptop.jpg',
     'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
 ]);
 app.use('/assets', express.static(path.join(__dirname, 'assets'), { dotfiles: 'deny', index: false, maxAge: '7d' }));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// App screens have their own addresses (/app/assistant, /app/network/<id>, ...). They are all
+// the same page; router.js opens the right screen. Only the app page is ever sent here.
+app.get(['/app', /^\/app\/[A-Za-z0-9._~%-]+(\/[A-Za-z0-9._~%-]+)?\/?$/], (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'), { headers: { 'Cache-Control': 'no-cache' } });
+});
 app.get('/:file', (req, res, next) => {
     const file = req.params.file;
     if (!PUBLIC_FILES.has(file)) return next();
@@ -1932,7 +1937,7 @@ function generateEmailBody(contacts) {
           ${more}
         </td></tr>
         <tr><td style="padding:24px;">
-          <a href="${escapeHtml(weaverUrl)}/#strengthening-net" style="display:inline-block;background:#1E6A55;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open follow-ups</a>
+          <a href="${escapeHtml(weaverUrl)}/app/follow-ups" style="display:inline-block;background:#1E6A55;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open follow-ups</a>
         </td></tr>
         <tr><td style="padding:16px 24px;border-top:1px solid #E3E6EB;color:#5B6474;font-size:12px;line-height:1.5;">
           You get these reminders because they are turned on in Weaver. Change the time or turn them off in Settings.
