@@ -383,3 +383,74 @@ every screen ran no injected code; 25 screens re-rendered with zero errors.
 No email verification at signup, no password reset, no Content-Security-Policy header yet.
 Deploying hashes existing plaintext passwords in place: rolling back to the previous
 version afterwards would stop existing users signing in, so problems should be fixed forward.
+
+---
+
+# Change set 5: Grinders, human connection and a confidential playbook
+
+**Product direction by:** shindon@bc.edu (Weaver co-founder). The ideas, priorities and the
+recruiting playbook itself are his; this change set implements them.
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
+
+## Your contribution (shindon@bc.edu)
+- **The Weaver playbook (original IP).** The core recruiting method (call structure,
+  outreach timing and execution, calendar invites, after-call follow-through, no-response
+  and rescheduling, referral introductions, expanding the pipeline) was written by you.
+  It is used verbatim as the core of the confidential playbook. Claude drafted the
+  supplementary sections (first emails, human connection, semi-target strategy, timeline,
+  coffee-chat prep), marked as defaults for you to replace.
+- **The product brief this change set implements:** keep the playbook a trade secret that
+  works in the background ("like the KFC recipe"); start from Weaver, not Excel; emphasize
+  human connection over AI transactions; "built for grinders" branding for semi-target
+  students; referral tips; prep vs. in-the-midst timelines; questions that make students do
+  their own research; drafting emails with etiquette.
+- **Scope decisions:** you asked for the most feasible items now. Bulk-finding BC alumni
+  emails was deliberately not built (see below).
+
+## What was built (Claude)
+- **Confidential playbook** (`lib/playbook.js`): loaded at start from a Render Secret File
+  (or env), never committed, because the repository is public. Applied to the assistant,
+  review tables and every document type with an instruction never to quote it or reveal
+  its rules, numbers, timings or scripts. A leak guard removes any output sentence that
+  repeats 6+ consecutive playbook words or a whole playbook rule. The "Playbook" source chip
+  was removed: the method is always on, in the background.
+- **Public Playbook page** rewritten to principles only. The previous page published the
+  detailed rules on studentweaver.com.
+- **Start from Weaver, not Excel:** first-run card on the Assistant home ("Start with one
+  person") adds a contact inline and writes the first email; other ways in are logging a
+  past conversation, planning the season, or importing a spreadsheet.
+- **New documents:** First email to an alum (requires a real reason, else a placeholder);
+  Recruiting season plan (class year, target, stage → prep phase, in the midst, this week);
+  Coffee chat prep now includes 6-8 person-specific questions and a "Do your own research"
+  checklist instead of stating guesses as facts.
+- **New checklists:** Landing a referral; Turning a call into a relationship. Existing ones
+  no longer publish specific timings.
+- **New assistant workflows:** Ask for a referral (checks readiness first), Turn a call
+  into a relationship, Reconnect with someone gone cold, Plan my recruiting season,
+  Grinder mode: this week.
+- **Human connection:** assistant and document prompts require specific, true details and
+  placeholders over invention; draft cards say "Make it sound like you before you send it."
+- **"Built for grinders"** section on the landing page for semi-target students.
+
+## Not built, and why
+- **Finding all BC alumni and their emails:** collecting personal contact data in bulk
+  (scraping LinkedIn or directories) breaks those sites' terms, raises privacy and
+  anti-spam issues, and would put the product at risk. Legitimate routes: a licensed
+  alumni-directory integration through the career center, students importing contacts
+  they find themselves, and (later) club-shared contacts with consent.
+- **Call tracking, AI notes and follow-up reminders** already exist (call logging in plain
+  words, notes from photos, follow-up clocks and email reminders), so nothing new was added.
+
+## Verified
+5 new confidentiality checks (no page or script contains playbook details; the private file
+and `lib/` are not served; leaked wording is scrubbed from assistant replies, drafts and
+documents while the rest is kept; every AI call carries the confidentiality rule; new
+documents and checklists work), plus the 18 end-to-end and 6 metering checks. Screens
+checked at desktop and phone width with no page errors.
+
+## Known limits
+- The leak guard catches verbatim and near-verbatim wording, not paraphrase. Paraphrase is
+  handled by the model instruction, which is strong but not absolute.
+- The original detailed tips remain in the public repository's history (earlier versions
+  of `index.html`) and were visible on the live site until this deploy. Making the
+  repository private is the remaining step for trade-secret protection.

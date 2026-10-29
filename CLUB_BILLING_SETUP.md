@@ -88,3 +88,22 @@ await fetch('/api/admin/orgs/ORG_ID', { method: 'POST', headers: { 'Content-Type
 - Existing passwords are converted to secure hashes automatically, in the background on
   first start and on each user's next sign-in. Nothing for users to do.
 - New database tables are created automatically on start.
+
+## 7. The confidential playbook (do this once)
+
+Weaver's detailed recruiting playbook is a trade secret, and this code repository is
+public, so the playbook is **not** in the code. The server loads it at start from a
+Render Secret File:
+
+1. Render → Weaver web service → **Environment** → **Secret Files** → **Add Secret File**.
+2. Filename: `weaver-playbook.md`. Paste the contents of the private playbook file.
+3. Save. Render redeploys; the file is available at `/etc/secrets/weaver-playbook.md`.
+
+Until it is added, the AI uses a short generic fallback and the server log says
+"Weaver playbook not installed". To change the method later, edit the Secret File;
+no code change or commit is needed. For a local run, put the same file at
+`private/weaver-playbook.md` (git-ignored).
+
+The playbook is applied silently to every AI feature, the AI is instructed never to
+reveal it, and every AI output is scrubbed of sentences that repeat its wording. The
+in-app Playbook page shows principles only.

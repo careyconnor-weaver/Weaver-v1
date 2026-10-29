@@ -21,3 +21,7 @@ Thumbs.db
 
 # Local demo database (npm run demo)
 .demo-db/
+
+# Confidential playbook (trade secret). Lives in a Render Secret File, never in git.
+private/
+weaver-playbook.md

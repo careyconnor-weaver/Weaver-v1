@@ -11,7 +11,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { resolvePlan, publicPlan } = require('../lib/plans');
 const usage = require('../lib/usage');
-const { PLAYBOOK } = require('../lib/playbook');
+const { withPlaybook, guardLeak } = require('../lib/playbook');
 const { isAdmin } = require('../lib/auth');
 
 const STAGES = [
@@ -62,9 +62,9 @@ const CHECKLISTS = {
                 'Ask who else they suggest you speak with',
             ]),
             ...items('After', [
-                'Send a thank-you within 24 hours referencing one specific point',
+                'Send a thank-you promptly, referencing one specific thing they said',
                 'Log the conversation in Weaver with next steps',
-                'Set a follow-up date 6-8 weeks out',
+                'Set a follow-up reminder in Weaver so the relationship stays warm',
             ]),
         ],
     },
@@ -163,6 +163,50 @@ const CHECKLISTS = {
             ]),
         ],
     },
+    landing_referral: {
+        title: 'Landing a referral',
+        description: 'Earn the referral through the relationship, then make the ask easy.',
+        audience: 'student',
+        items: [
+            ...items('Earn it', [
+                'Have more than one real conversation with this person before asking',
+                'Show you did the work: reference what they told you and what you did with it',
+                'Know exactly which role, group and deadline you are applying for',
+            ]),
+            ...items('Ask', [
+                'Ask directly and politely, and make it easy to say no',
+                'Send a short note they can forward: your resume and two lines on why you fit',
+                'Reinforce the ask in writing after the call',
+            ]),
+            ...items('Close the loop', [
+                'Thank them whatever they decide',
+                'Tell them when you hear back, and how it went',
+                'Log the referral in Weaver and set a reminder to update them',
+            ]),
+        ],
+    },
+    human_connection: {
+        title: 'Turning a call into a relationship',
+        description: 'How a single conversation becomes someone in your corner.',
+        audience: 'student',
+        items: [
+            ...items('On the call', [
+                'Start with them as a person before getting to recruiting',
+                'Listen for one thing they care about outside work and remember it',
+                'Share your own story honestly, not a rehearsed pitch',
+            ]),
+            ...items('After', [
+                'Write down specifics while they are fresh, and log them in Weaver',
+                'Thank them, mentioning the one thing that stuck with you',
+                'Act on their advice and tell them you did',
+            ]),
+            ...items('Over the season', [
+                'Check in with something useful or a real update, not just an ask',
+                'Congratulate them on news: a promotion, a deal, a move',
+                'Introduce them to someone they would value meeting when you can',
+            ]),
+        ],
+    },
     club_season: {
         title: 'Club recruiting season kickoff',
         description: 'For club leaders: set up, run and measure the season.',
@@ -188,8 +232,10 @@ const CHECKLISTS = {
 
 // ---------------- document kinds ----------------
 const DOCUMENTS = {
-    coffee_chat_brief: { label: 'Coffee chat brief', needs: 'contact', email: false, maxTokens: 900,
-        brief: 'A one-page prep brief for an upcoming coffee chat. Sections: Who they are; Our history (dates and what was discussed); What to bring up; Questions to ask (3, specific to them); The ask. Use only the data provided; mark anything to research as "Look up:".' },
+    cold_outreach: { label: 'First email to an alum', needs: 'contact', email: true, maxTokens: 500,
+        brief: 'The first email to someone the student has not spoken with. Short and human: who the student is, the specific and true reason they chose this person (shared school, club, hometown, path), and one easy ask for a brief call. If the data has no specific reason, leave a bracketed placeholder such as [why you chose them: shared club, a deal they worked on] instead of inventing one. Include a subject line that makes the thread easy to find. Under 120 words.' },
+    coffee_chat_brief: { label: 'Coffee chat prep: questions and research', needs: 'contact', email: false, maxTokens: 1100,
+        brief: 'A one-page prep sheet for an upcoming call. Sections: ## Who they are (only what the data says); ## Our history (dates and what was discussed, or "First conversation"); ## Do your own research (a checklist of 4-6 specific things the student must look up themselves before the call, e.g. their career path, their group, recent deals or news; never state these as facts); ## Questions to ask (6-8 questions specific to this person and their path, ordered from light openers to deeper ones, plus 2 follow-up prompts to go deeper on whatever they say); ## Your story (3 bullet prompts to help the student share their own background naturally); ## Building the relationship (2-3 short reminders on making a genuine connection and closing the call well). Questions must be ones a search engine cannot answer.' },
     thank_you: { label: 'Thank-you note', needs: 'contact', email: true, maxTokens: 500,
         brief: 'A thank-you email for the most recent conversation. Reference one specific thing from the latest note and any next step offered. Under 120 words.' },
     follow_up: { label: 'Follow-up email', needs: 'contact', email: true, maxTokens: 500,
@@ -198,6 +244,8 @@ const DOCUMENTS = {
         brief: 'An email asking, respectfully and specifically, whether they would be comfortable referring the student or passing their resume to the recruiting team. Only appropriate after real conversations; if the history is thin, write a relationship-building email instead and say so in one line at the top. Under 140 words.' },
     firm_brief: { label: 'Firm relationship brief', needs: 'firm', email: false, maxTokens: 900,
         brief: 'A brief on the student\'s relationships at one firm. Sections: Summary; People (one line each: role, last touch, strength); Gaps (groups or seniority levels with no contact); Next 3 actions.' },
+    recruiting_plan: { label: 'Recruiting season plan', needs: 'plan', email: false, maxTokens: 1400,
+        brief: 'A personal recruiting plan for this student, built from their PLAN inputs and their current network. Sections: ## Where you are (one paragraph); ## Prep phase (before applications open: monthly goals for target list, outreach volume, conversations and technical prep, with the months named); ## In the midst (applications and interviews: what to do each week, how to keep contacts updated, preparing for each round); ## This week (5 concrete actions, naming people from their network when possible); ## Staying human (3 short reminders on building real relationships rather than collecting contacts). Assume a semi-target student without an on-campus pipeline unless told otherwise: consistency and relationships win. Use typical timelines for their industry, and say "check each firm\'s dates" where timing varies.' },
     weekly_report: { label: 'Weekly recruiting report', needs: 'none', email: false, maxTokens: 900,
         brief: 'The student\'s weekly recruiting report. Sections: This week in numbers; Momentum (relationships moving forward); Going cold (who needs a follow-up); Next week\'s plan (5 specific actions with names).' },
     club_report: { label: 'Club weekly report', needs: 'org', email: false, maxTokens: 1100,
@@ -467,16 +515,14 @@ module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI }) {
                 const system = `You fill a review table for a student's recruiting network. Today is ${today()}.
 For every contact and every column, answer the column's question using ONLY that contact's data.
 Return JSON: {"rows":[{"id":"<contact id>","cells":{"<column key>":{"value":"<answer>","source":"<date and type of the interaction you relied on, e.g. 2026-10-03 call note, or none>"}}}]}.
-If the data cannot answer a question, the value is exactly "Not enough information" and the source is "none". Never invent facts, names, deals or dates.
-Recruiting guidance to apply:
-${PLAYBOOK}`;
+If the data cannot answer a question, the value is exactly "Not enough information" and the source is "none". Never invent facts, names, deals or dates.`;
                 const user = JSON.stringify({ columns: questions, contacts: batch.map(contactForModel) });
                 try {
                     const completion = await usage.meteredCompletion({
                         pool, openai: getOpenAI(), user: req.user, plan, feature: 'review',
                         model: usage.DEFAULT_MODEL,
                         maxTokens: Math.min(6000, 120 + batch.length * questions.length * 60),
-                        params: { temperature: 0.2, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] },
+                        params: { temperature: 0.2, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: withPlaybook(system) }, { role: 'user', content: user }] },
                     });
                     let parsed = {};
                     try { parsed = JSON.parse(completion.choices[0].message.content || '{}'); } catch (e) { parsed = {}; }
@@ -488,7 +534,7 @@ ${PLAYBOOK}`;
                             const cell = row.cells && row.cells[q.key];
                             if (!cell) continue;
                             const source = clip(cell.source, 80);
-                            cells[id][q.key] = { value: clip(cell.value, 400), source: source && source.toLowerCase() !== 'none' ? source : null };
+                            cells[id][q.key] = { value: guardLeak(clip(cell.value, 400)) || 'Not enough information', source: source && source.toLowerCase() !== 'none' ? source : null };
                         }
                     }
                 } catch (err) {
@@ -625,6 +671,20 @@ ${PLAYBOOK}`;
                 const at = all.filter((c) => String(c.firm || c.company || '').toLowerCase().includes(firm.toLowerCase()));
                 data = { firm, contacts_at_firm: at.slice(0, 30).map(contactForModel) };
                 title = `${kind.label}: ${firm}`;
+            } else if (kind.needs === 'plan') {
+                const inputs = body.plan || {};
+                const all = await dbAPI.getContactsByUserId(req.user.id);
+                data = {
+                    plan: {
+                        class_year: clip(String(inputs.classYear || '').trim(), 40) || 'not given',
+                        target: clip(String(inputs.target || '').trim(), 120) || 'investment banking',
+                        stage: clip(String(inputs.stage || '').trim(), 60) || 'just starting',
+                        school: clip(String(inputs.school || '').trim(), 120) || null,
+                    },
+                    network_size: all.length,
+                    contacts: all.slice(0, 40).map(contactForModel),
+                };
+                title = `${kind.label}: ${data.plan.target}`;
             } else if (kind.needs === 'org') {
                 const org = orgs.find((o) => o.id === body.orgId && (o.role === 'owner' || o.role === 'admin'));
                 if (!org) return res.status(403).json({ error: 'Only club owners and admins can create club reports.' });
@@ -656,15 +716,14 @@ ${PLAYBOOK}`;
 Task: ${kind.brief}
 ${kind.email ? 'Format: first line "Subject: ...", a blank line, then the email body signed with the student\'s first name. Plain text, no markdown.' : 'Format: GitHub-flavored markdown with short "##" section headings and tight bullets. No preamble, no closing remarks.'}
 Ground everything in the DATA. Never invent people, deals, numbers or dates; if something is unknown, leave a bracketed placeholder like [their group].
-Recruiting guidance:
-${PLAYBOOK}`;
+Write like a thoughtful, specific human, never like a template: no buzzwords, no generic flattery, no "I hope this email finds you well". The goal is a real relationship, not a transaction.`;
             const completion = await usage.meteredCompletion({
                 pool, openai: getOpenAI(), user: req.user, plan, feature: 'document:' + body.kind,
                 model: plan.qualityModel ? usage.QUALITY_MODEL : usage.DEFAULT_MODEL,
                 maxTokens: kind.maxTokens,
-                params: { temperature: 0.4, messages: [{ role: 'system', content: system }, { role: 'user', content: 'DATA:\n' + JSON.stringify(data).slice(0, 60000) + (instructions ? '\n\nEXTRA INSTRUCTIONS FROM THE STUDENT:\n' + instructions : '') }] },
+                params: { temperature: 0.4, messages: [{ role: 'system', content: withPlaybook(system) }, { role: 'user', content: 'DATA:\n' + JSON.stringify(data).slice(0, 60000) + (instructions ? '\n\nEXTRA INSTRUCTIONS FROM THE STUDENT:\n' + instructions : '') }] },
             });
-            const text = clip((completion.choices[0].message.content || '').trim(), 20000);
+            const text = guardLeak(clip((completion.choices[0].message.content || '').trim(), 20000));
             const { rows } = await pool.query('INSERT INTO documents (id, user_id, kind, title, contact_id, org_id, body) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
                 [newId('dc_'), req.user.id, body.kind, clip(title, 200), contactId, orgId, text]);
             res.json({ success: true, document: docOut(rows[0], true) });

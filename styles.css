@@ -1446,3 +1446,19 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 .hero { background: transparent; }
 .features-landing { background: transparent; }
 .trust { background: #f5f5f8; }
+
+/* ── Built for grinders ─────────────────────────────────────────── */
+.grinders { padding: 96px 40px; background: #fff; border-bottom: 1px solid var(--border); }
+.grinders-inner { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 5fr 7fr; gap: 64px; align-items: start; }
+.grinders-lead h2 { font-family: var(--font-serif-landing, var(--font-serif)); font-size: 44px; font-weight: 500; line-height: 1.1; letter-spacing: -0.5px; margin: 0 0 18px; color: var(--navy); }
+.grinders-lead p { font-size: 17px; line-height: 1.65; color: var(--slate); margin: 0; max-width: 30em; }
+.grinders-points { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 36px; }
+.gp { border-top: 2px solid var(--navy); padding-top: 14px; }
+.gp h3 { font-size: 16px; font-weight: 600; color: var(--navy); margin: 0 0 6px; }
+.gp p { font-size: 14.5px; line-height: 1.6; color: var(--slate); margin: 0; }
+@media (max-width: 860px) {
+  .grinders { padding: 64px 20px; }
+  .grinders-inner { grid-template-columns: 1fr; gap: 32px; }
+  .grinders-lead h2 { font-size: 34px; }
+  .grinders-points { grid-template-columns: 1fr; gap: 22px; }
+}

@@ -17,7 +17,7 @@ const auth = require('./lib/auth');
 const { resolvePlan } = require('./lib/plans');
 const usage = require('./lib/usage');
 const { selectRelevant } = require('./lib/context');
-const { PLAYBOOK: WEAVER_PLAYBOOK } = require('./lib/playbook');
+const { withPlaybook, guardLeak } = require('./lib/playbook');
 const SCHEMA_SQL = require('./lib/schema-sql');
 const authRoutes = require('./routes/auth');
 const workspaceRoutes = require('./routes/workspace');
@@ -2314,19 +2314,22 @@ Rules:
 - Follow-up plans: prioritize VIP/high-priority and the most overdue contacts, give a one-line reason for each, and include draft_email actions for the top ones (max 5).
 - Keep replies short and scannable: one-line lead, then bullets or a compact table, then next steps. Do not repeat draft text in the reply — drafts render as cards. When you log something, confirm it in one line.
 - If who/when is ambiguous, make a sensible assumption (e.g. today's date) and state it.
-- "playbook", when present, is Weaver's recruiting guidance; apply it to advice and drafts. "web_results", when present, are web search results; cite them by title/URL and never treat them as the user's own data.
+- Human connection first: Weaver exists to help students build real relationships, not to automate them. Drafts must sound like a specific student wrote them to a specific person, mention something true and specific about the recipient when the data has it, and never use generic flattery or buzzwords. When a draft depends on facts you don't have (what they discussed, why this person), leave a short [bracketed] placeholder for the student to fill in rather than inventing it.
+- Many users are at semi-target or non-target schools and win through consistency and relationships. Be encouraging and practical, never condescending.
+- When preparing someone for a call, give questions and tell them what to research themselves (the person's background, group, recent deals or news); do not present guesses about the person as facts.
+- "web_results", when present, are web search results; cite them by title/URL and never treat them as the user's own data.
 - Club data, when present, describes members' activity. For club questions, name top performers, flag stalling members (14+ days inactive or near-zero score) and suggest concrete actions for the club leader.
 - Use an empty actions array when nothing should change.`;
+        const systemWithMethod = withPlaybook(system);
 
         const context = {
             sources_enabled: src,
             network: src.includes('network') || src.includes('followups') ? selectRelevant(network, message, plan.key === 'starter' ? 15 : 40) : null,
             club,
-            playbook: src.includes('playbook') ? WEAVER_PLAYBOOK : null,
             web_results: web,
         };
 
-        const msgs = [{ role: 'system', content: system }];
+        const msgs = [{ role: 'system', content: systemWithMethod }];
         (Array.isArray(history) ? history : []).slice(-6).forEach(h => {
             if (h && (h.role === 'user' || h.role === 'assistant') && h.content) msgs.push({ role: h.role, content: clip(h.content, 2000) });
         });
@@ -2340,8 +2343,8 @@ Rules:
         try { parsed = JSON.parse(completion.choices[0].message.content || '{}'); } catch (e) { parsed = { reply: completion.choices[0].message.content || '' }; }
         res.json({
             success: true,
-            reply: clip(parsed.reply || 'Done.', 20000),
-            actions: sanitizeAssistantActions(parsed.actions),
+            reply: guardLeak(clip(parsed.reply || 'Done.', 20000)),
+            actions: sanitizeAssistantActions(parsed.actions).map((a) => (a.type === 'draft_email' ? { ...a, body: guardLeak(a.body), subject: guardLeak(a.subject) } : a.summary ? { ...a, summary: guardLeak(a.summary) } : a)),
         });
     } catch (error) {
         if (usage.sendUsageError(res, error)) return;

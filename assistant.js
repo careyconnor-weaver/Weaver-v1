@@ -40,7 +40,6 @@
         { id: 'network', label: 'My network', hint: 'Your contacts, emails and call notes' },
         { id: 'followups', label: 'Follow-ups', hint: 'Who is overdue and going cold' },
         { id: 'club', label: 'Club data', hint: 'Your club roster and activity', needsClub: true },
-        { id: 'playbook', label: 'Playbook', hint: 'Weaver recruiting guidance' },
         { id: 'web', label: 'Web search', hint: 'Look up firms and people online' },
     ];
     var state = { club: null, busy: false, threadId: null, sourcesOpen: true };
@@ -50,8 +49,8 @@
     function sourcesKey() { var u = user(); return 'weaver_assistant_sources_' + (u ? u.id : 'anon'); }
     function activeSources() {
         var s = load(sourcesKey(), null);
-        if (!Array.isArray(s)) s = ['network', 'followups', 'playbook'].concat(state.club ? ['club'] : []);
-        return s.filter(function (id) { return id !== 'club' || state.club; });
+        if (!Array.isArray(s)) s = ['network', 'followups'].concat(state.club ? ['club'] : []);
+        return s.filter(function (id) { return id !== 'playbook' && (id !== 'club' || state.club); });
     }
     function setSources(list) { store(sourcesKey(), list); renderSources(); }
 
@@ -72,11 +71,16 @@
     var WORKFLOWS = [
         { group: 'Outreach', title: "Plan this week's follow-ups", desc: 'Who to contact, in what order, with drafts for the top people.', prompt: "Who should I follow up with this week? Prioritize VIPs and anyone going cold, give me a one-line reason for each, and draft the most important emails.", send: true },
         { group: 'Outreach', title: 'Draft a thank-you note', desc: 'A short, specific thank-you after a call or coffee chat.', prompt: 'Draft a thank-you email to [name] for our conversation today. Reference what we discussed from my notes.' },
-        { group: 'Outreach', title: 'Write a cold email', desc: 'First outreach to someone at a target firm.', prompt: "Write a cold email to [name], [role] at [firm]. I'm a [year] at [school] interested in [group]. Ask for a 15-minute call.", sources: ['playbook'] },
+        { group: 'Outreach', title: 'Write a cold email', desc: 'First outreach to someone at a target firm.', prompt: "Write a cold email to [name], [role] at [firm]. I'm a [year] at [school] interested in [group]. Ask for a short call. The real reason I picked them: [shared school, club, hometown or something they worked on]." },
+        { group: 'Relationships', title: 'Ask for a referral', desc: 'Checks the relationship is ready, then drafts the ask.', prompt: 'I want to ask [name] at [firm] for a referral for [role]. Look at our history in my notes: is the relationship ready for the ask? If yes, draft the email. If not, tell me what to do first and draft that instead.' },
+        { group: 'Relationships', title: 'Turn a call into a relationship', desc: 'What to send next so they remember you for the right reasons.', prompt: 'I spoke with [name] at [firm]. Based on my notes, what should I do over the next two months to build a real relationship with them, not just follow up? Draft the next message.' },
+        { group: 'Relationships', title: 'Reconnect with someone gone cold', desc: 'A warm, honest note that doesn’t feel like an ask.', prompt: "Find the contacts I've let go cold who mattered most, and draft a short, genuine check-in for the top 3 that references what we last talked about." , send: true },
+        { group: 'Plan', title: 'Plan my recruiting season', desc: 'Prep phase, the weeks in the midst, and this week’s moves.', prompt: "I'm a [year] at [school] recruiting for [industry / role]. Build my recruiting plan: what to do in the prep phase, what to do once applications open, and five actions for this week using people in my network." },
+        { group: 'Plan', title: 'Grinder mode: this week', desc: 'For semi-target students: a concrete weekly target and who to contact.', prompt: "I'm at a semi-target school. Set me a realistic networking target for this week and tell me exactly who in my network to contact first and why. Draft the top two emails.", send: true },
         { group: 'Logging', title: 'Log a conversation', desc: 'Describe it in plain words; Weaver files it to the right contact.', prompt: 'Log this: I had a [call / coffee chat] with [name] at [firm] today. We talked about [topics]. Next step: [next step].' },
-        { group: 'Prep', title: 'Prep for a coffee chat', desc: 'What you already know about them, plus sharp questions to ask.', prompt: 'Help me prepare for my coffee chat with [name] at [firm]: summarize what I know from my notes, and give me 3 sharp questions to ask.', sources: ['web'] },
-        { group: 'Prep', title: 'Mock interview', desc: 'Practice one question at a time, with feedback after each answer.', prompt: 'Run a mock [investment banking / consulting] interview for [firm]. Ask one question at a time, mixing technical and behavioral. After each of my answers, give short feedback on structure and accuracy, then ask the next question.', sources: ['playbook'] },
-        { group: 'Prep', title: 'Technicals drill', desc: 'Five questions on one topic, with model answers.', prompt: 'Give me 5 [accounting / valuation / DCF / LBO / merger model] technical questions, one at a time. Wait for my answer, then show a concise model answer and what I missed.', sources: ['playbook'] },
+        { group: 'Prep', title: 'Prep for a coffee chat', desc: 'Questions to ask, and what to research yourself first.', prompt: 'Help me prepare for my coffee chat with [name] at [firm]: summarize what I know from my notes, list what I should research myself before the call, and give me 6 questions specific to them, from light openers to deeper ones.' },
+        { group: 'Prep', title: 'Mock interview', desc: 'Practice one question at a time, with feedback after each answer.', prompt: 'Run a mock [investment banking / consulting] interview for [firm]. Ask one question at a time, mixing technical and behavioral. After each of my answers, give short feedback on structure and accuracy, then ask the next question.' },
+        { group: 'Prep', title: 'Technicals drill', desc: 'Five questions on one topic, with model answers.', prompt: 'Give me 5 [accounting / valuation / DCF / LBO / merger model] technical questions, one at a time. Wait for my answer, then show a concise model answer and what I missed.' },
         { group: 'Prep', title: 'Why this firm', desc: 'A specific answer built from the people you have spoken to.', prompt: 'Help me write a 60-second "Why [firm]?" answer using the conversations in my notes with people at [firm]. Name the people and what they said that stood out.' },
         { group: 'Insights', title: 'Who do I know at a firm?', desc: 'Every relationship at one firm and where it stands.', prompt: 'Who do I know at [firm]? Summarize where each relationship stands and what I should do next with each.' },
         { group: 'Insights', title: 'My recruiting pulse', desc: 'Outreach, replies and calls this month, and what to change.', prompt: 'How is my networking going this month? Cover outreach sent, reply rate, calls, and the one thing I should change.', send: true },
@@ -240,6 +244,7 @@
         var part = h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
         var n = firstName();
         el.textContent = part + (n ? ', ' + n : '') + '. What should we work on?';
+        renderStart();
         var sub = $('wv-home-sub');
         if (sub) {
             var overdue = 0;
@@ -248,6 +253,65 @@
                 ? overdue + (overdue === 1 ? ' contact is' : ' contacts are') + ' due for a follow-up. Ask about your network, log a conversation in plain words, or plan this week’s outreach.'
                 : 'Ask about your network, log a conversation in plain words, or plan this week’s outreach.';
         }
+    }
+
+    // First run: no contacts yet. Start in Weaver itself, no spreadsheet needed.
+    function renderStart() {
+        var box = $('wv-start');
+        if (!box) return;
+        var count = 0;
+        try { count = (getContacts() || []).length; } catch (e) {}
+        var th = currentThread();
+        if (count > 0 || (th && th.messages && th.messages.length)) { box.hidden = true; box.innerHTML = ''; return; }
+        box.hidden = false;
+        box.innerHTML =
+            '<h2 class="wv-start-title">Start with one person</h2>' +
+            '<p class="wv-start-sub">No spreadsheet needed. Add someone you want to talk to: an alum, a friend of a friend, someone whose path you admire. Weaver keeps track from there.</p>' +
+            '<form class="wv-start-form" id="wv-start-form">' +
+            '<label class="wv-field"><span>Name</span><input id="wv-st-name" required maxlength="120" placeholder="Jordan Lee"></label>' +
+            '<label class="wv-field"><span>Firm</span><input id="wv-st-firm" maxlength="120" placeholder="Evercore"></label>' +
+            '<label class="wv-field"><span>Role <em class="wv-optional">optional</em></span><input id="wv-st-role" maxlength="120" placeholder="Analyst, restructuring"></label>' +
+            '<label class="wv-field"><span>Email <em class="wv-optional">optional</em></span><input id="wv-st-email" type="email" maxlength="200" placeholder="jordan@firm.com"></label>' +
+            '<label class="wv-field wv-start-why"><span>Why them? <em class="wv-optional">optional, but it makes the first email real</em></span><input id="wv-st-why" maxlength="300" placeholder="Also from my school, was in the same finance club"></label>' +
+            '<button type="submit" class="wv-btn wv-btn-primary">Add and write my first email</button>' +
+            '</form>' +
+            '<div class="wv-start-next"><span>Or start another way:</span>' +
+            '<button type="button" class="wv-linkbtn" data-start="log">Log a conversation you already had</button>' +
+            '<button type="button" class="wv-linkbtn" data-start="plan">Plan my recruiting season</button>' +
+            '<button type="button" class="wv-linkbtn" data-start="import">I do have a spreadsheet</button></div>';
+        $('wv-start-form').onsubmit = function (e) {
+            e.preventDefault();
+            var name = $('wv-st-name').value.trim();
+            if (!name) return;
+            var firm = $('wv-st-firm').value.trim(), role = $('wv-st-role').value.trim(), email = $('wv-st-email').value.trim(), why = $('wv-st-why').value.trim();
+            try {
+                addContact({ id: Date.now().toString(), name: name, firm: firm, position: role, email: email, generalNotes: why, priority: 'medium', dateAdded: new Date().toISOString() });
+            } catch (err) { return; }
+            box.hidden = true;
+            var input = $('wv-input');
+            if (input) {
+                input.value = 'Write my first email to ' + name + (firm ? ' at ' + firm : '') + '. ' +
+                    (why ? 'Why I chose them: ' + why + '. ' : 'Leave a placeholder for why I chose them. ') +
+                    'Keep it short and human, and ask for a brief call.';
+            }
+            if (window.wvSend) window.wvSend();
+        };
+        box.querySelectorAll('[data-start]').forEach(function (b) {
+            b.onclick = function () {
+                var k = b.getAttribute('data-start'), input = $('wv-input');
+                if (k === 'import') {
+                    var l = document.querySelector('.nav-link[href="#upload-notes"]'); if (l) l.click();
+                    var m = document.querySelector('.mode-btn[data-mode="spreadsheet"]'); if (m) m.click();
+                    return;
+                }
+                if (!input) return;
+                input.value = k === 'log'
+                    ? 'Log this: I had a [call / coffee chat] with [name] at [firm] on [date]. We talked about [topics]. Next step: [next step].'
+                    : "I'm a [year] at [school] recruiting for [industry / role]. Build my recruiting plan: the prep phase, what to do once applications open, and five actions for this week.";
+                input.focus();
+                var i = input.value.indexOf('['); if (i >= 0) input.setSelectionRange(i, input.value.indexOf(']', i) + 1);
+            };
+        });
     }
 
     function renderSources() {
@@ -366,6 +430,7 @@
                 '<div class="wv-draft-head"><span class="wv-draft-kind">Draft email</span>' + (a.contact_name ? '<span class="wv-draft-to">to ' + esc(a.contact_name) + (a.to_email ? ' &lt;' + esc(a.to_email) + '&gt;' : '') + '</span>' : '') + '</div>' +
                 '<input class="wv-draft-subject" data-m="' + mi + '" data-a="' + ai + '" value="' + esc(a.subject) + '" aria-label="Subject">' +
                 '<textarea class="wv-draft-body" data-m="' + mi + '" data-a="' + ai + '" rows="' + Math.min(14, Math.max(5, String(a.body).split('\n').length + 1)) + '" aria-label="Email body">' + esc(a.body) + '</textarea>' +
+                '<p class="wv-draft-note">Make it sound like you before you send it.</p>' +
                 '<div class="wv-draft-actions">' +
                 '<button type="button" class="wv-btn wv-btn-primary" data-mailto="' + mi + ':' + ai + '">Open in email</button>' +
                 '<button type="button" class="wv-btn" data-copy="' + mi + ':' + ai + '">Copy</button>' +

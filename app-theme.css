@@ -678,3 +678,16 @@
 #wv-security-card .wv-btn, #wv-pw-form .wv-btn { width: auto; align-self: flex-start; }
 #app-container .results-count { color: var(--wv-graphite); }
 #app-container .contact-detail-info .info-item .days-count { align-self: flex-start; margin-left: 0; font-weight: 600; }
+
+/* ── First run: start from Weaver ───────────────────────────────── */
+.wv-start { background: var(--wv-surface); border: 1px solid var(--wv-hair); border-radius: 14px; padding: 22px 24px 18px; margin: 0 0 22px; text-align: left; }
+.wv-assist.has-thread .wv-start { display: none; }
+.wv-start-title { font-family: var(--wv-display); font-weight: 400; font-size: 24px; margin: 0; color: var(--wv-ink); }
+.wv-start-sub { margin: 6px 0 16px; color: var(--wv-graphite); font-size: 14.5px; line-height: 1.55; max-width: 40em; }
+.wv-start-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-items: end; }
+.wv-start-form .wv-start-why { grid-column: 1 / -1; }
+.wv-start-form button[type=submit] { grid-column: 1 / -1; justify-self: start; }
+.wv-start-next { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--wv-hair); font-size: 13.5px; color: var(--wv-graphite); }
+.wv-draft-note { margin: 0; padding: 8px 14px 0; font-size: 12.5px; color: var(--wv-graphite); border-top: 1px solid var(--wv-hair); }
+.wv-draft-note + .wv-draft-actions { border-top: 0; }
+@media (max-width: 640px) { .wv-start-form { grid-template-columns: 1fr; } .wv-start { padding: 18px 16px 14px; } }

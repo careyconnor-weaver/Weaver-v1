@@ -548,8 +548,10 @@
     }
 
     var KIND_DESC = {
-        coffee_chat_brief: 'One page before a call: who they are, your history, what to ask.',
-        thank_you: 'Sent within 24 hours, referencing what you discussed.',
+        cold_outreach: 'A short, personal first email to someone you haven’t met. You add the real reason you chose them.',
+        coffee_chat_brief: 'Questions to ask, plus a list of what to research yourself before the call.',
+        recruiting_plan: 'Your season mapped out: the prep phase, the weeks in the midst, and this week’s moves.',
+        thank_you: 'A prompt thank-you that mentions something specific they said.',
         follow_up: 'The right next email for where the relationship stands.',
         referral_request: 'Asks for a referral only when the relationship supports it.',
         firm_brief: 'Everyone you know at one firm, gaps, and your next moves.',
@@ -591,6 +593,11 @@
             '<p class="wv-panel-sub">' + esc(KIND_DESC[kind.key] || '') + '</p><form id="wv-doc-form" class="wv-form">';
         if (kind.needs === 'contact') h += '<label class="wv-field"><span>Contact</span><select id="wv-df-contact" required>' + contactOptions('', 'Choose a contact') + '</select></label>';
         if (kind.needs === 'firm') h += '<label class="wv-field"><span>Firm</span><input id="wv-df-firm" required maxlength="120" placeholder="Evercore"></label>';
+        if (kind.needs === 'plan') h +=
+            '<label class="wv-field"><span>Class year</span><select id="wv-df-year"><option>Freshman</option><option selected>Sophomore</option><option>Junior</option><option>Senior</option></select></label>' +
+            '<label class="wv-field"><span>What you’re recruiting for</span><input id="wv-df-target" maxlength="120" placeholder="Investment banking summer analyst, NYC"></label>' +
+            '<label class="wv-field"><span>Where you are now</span><select id="wv-df-stage"><option>Just starting</option><option selected>Prepping and networking</option><option>Applications open</option><option>Interviewing</option></select></label>' +
+            '<label class="wv-field"><span>School <em class="wv-optional">optional</em></span><input id="wv-df-school" maxlength="120" placeholder="Boston College"></label>';
         if (kind.needs === 'org') h += '<label class="wv-field"><span>Club</span><select id="wv-df-org">' + managed.map(function (o) { return '<option value="' + esc(o.id) + '">' + esc(o.name) + '</option>'; }).join('') + '</select></label>';
         h += '<label class="wv-field"><span>Anything to add <em class="wv-optional">optional</em></span><textarea id="wv-df-notes" rows="3" maxlength="500" placeholder="e.g. Mention I’m applying to the RX group. Keep it under 100 words."></textarea></label>' +
             '<button type="submit" class="wv-btn wv-btn-primary">Write it</button></form></div>';
@@ -602,6 +609,7 @@
             if ($('wv-df-contact')) body.contactId = $('wv-df-contact').value;
             if ($('wv-df-firm')) body.firm = $('wv-df-firm').value;
             if ($('wv-df-org')) body.orgId = $('wv-df-org').value;
+            if ($('wv-df-year')) body.plan = { classYear: $('wv-df-year').value, target: $('wv-df-target').value, stage: $('wv-df-stage').value, school: $('wv-df-school').value };
             generateDoc(body, this.querySelector('button[type=submit]'));
         };
     }

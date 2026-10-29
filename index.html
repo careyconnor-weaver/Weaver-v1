@@ -44,7 +44,7 @@
       <p class="hero-sub">Every member gets one place to run recruiting: their network, follow-ups, prep and outcomes, with AI that works from their own notes. Leaders see who is networking, where, and what it is turning into.</p>
       <div class="hero-actions">
         <a href="#" class="btn-primary-landing" onclick="openAuthModal('signup'); return false;">Start your club</a>
-        <a href="#" class="btn-ghost" onclick="openAuthModal('signup'); return false;">I'm a student</a>
+        <a href="#" class="btn-ghost" onclick="openAuthModal('signup'); return false;">I'm a student, start free</a>
       </div>
       <div class="hero-assurance">
         <div class="assurance-item">
@@ -90,6 +90,21 @@
       <div class="rg-item"><div class="rg-num">85%</div><div class="rg-unit">of Jobs</div><div class="rg-desc">Filled through networking according to a survey of 3,000 professionals by Lou Adler</div></div>
     </div>
     <div class="rg-source">Sources: Woodpecker, Journal of Applied Psychology (Wolff &amp; Moser), MIT/LinkedIn Science Study, Lou Adler Survey</div>
+  </div>
+</section>
+
+<section class="grinders" id="grinders">
+  <div class="grinders-inner">
+    <div class="grinders-lead">
+      <h2>Built for grinders</h2>
+      <p>If your school isn’t a target, nobody hands you a pipeline. You build it one conversation at a time, and the students who get the offers are the ones who keep showing up. Weaver is for them.</p>
+    </div>
+    <div class="grinders-points">
+      <div class="gp"><h3>Relationships, not a contact count</h3><p>Weaver remembers what each person told you, so every follow-up sounds like you were listening. Because you were.</p></div>
+      <div class="gp"><h3>A method that works in the background</h3><p>The timing, the wording, the prep and when to ask for a referral are built into every draft, plan and reminder. You focus on the person in front of you.</p></div>
+      <div class="gp"><h3>Start here, not in a spreadsheet</h3><p>Add the first person you want to talk to and Weaver writes the first email with you. Your tracker builds itself as you go.</p></div>
+      <div class="gp"><h3>You still do the talking</h3><p>Weaver prepares you and tells you what to research. It never pretends to be you, and every draft is yours to make your own.</p></div>
+    </div>
   </div>
 </section>
 
@@ -330,6 +345,9 @@
             <h1 class="wv-greeting" id="wv-greeting">What should we work on?</h1>
             <p class="wv-home-sub" id="wv-home-sub">Ask about your network, log a conversation in plain words, or plan this week's outreach.</p>
           </div>
+
+          <!-- First run: start from Weaver, no spreadsheet needed -->
+          <div class="wv-start" id="wv-start" hidden></div>
 
           <!-- Conversation thread -->
           <div class="wv-thread" id="wv-thread" aria-live="polite"></div>
@@ -661,15 +679,14 @@
       <!-- ═══ TIPS & TRICKS ═══ -->
       <section id="tips-tricks" class="section">
         <div class="top-bar"><h1>Playbook</h1></div>
-        <p style="color:var(--slate);font-size:14px;margin-bottom:1.5rem;">Master the art of networking with these proven strategies and best practices.</p>
+        <p style="color:var(--slate);font-size:14px;margin-bottom:1.5rem;max-width:44em;">The principles behind Weaver. The detailed method is built into every draft, prep sheet, plan and reminder Weaver makes for you, so you can focus on the people.</p>
         <div class="tips-accordion">
-          <div class="accordion-item"><button class="accordion-header"><span>Call structure</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Take paper notes on every call</strong> so you can reference specifics later.</li><li><strong>Come prepared with questions, but prioritize follow-ups</strong> so the conversation feels natural.</li><li><strong>Start light for 1–3 minutes</strong> (how they are, how they like their city, etc.).</li><li><strong>Do not let them take over the entire call</strong>—proactively transition into your background early.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Outreach timing and execution</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Do not send first-touch emails Friday–Sunday.</strong></li><li><strong>Do not send emails before 9:00am or after 5:00pm.</strong></li><li><strong>Schedule-send emails</strong> with slightly "random" timestamps (e.g., 9:02 or 3:24).</li><li><strong>Always attach a typo-free resume</strong>, titled clearly.</li><li>Put <strong>your name in the subject line</strong> so they can find your thread easily.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Calendar invites</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Send the calendar invite immediately</strong> once a time is agreed.</li><li>Use <strong>Google Calendar</strong> (not Apple Calendar).</li><li>Title format: <strong>"Their Name / Your Name Chat."</strong></li><li>Set <strong>Location = their phone number</strong>, add them as a guest, and remove the Google Meet link.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>After the call: follow-up and staying in touch</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Send thank-you emails every time</strong>, ideally within a few hours.</li><li><strong>Always end the call by asking for a referral</strong> and reinforce that ask in the thank-you email.</li><li>Maintain momentum with your <strong>top 2–3 contacts per firm</strong> every 1–2 months.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>No response and rescheduling</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>If they don't pick up, <strong>wait 10–15 minutes and email</strong> asking to reschedule.</li><li>If no response to email, <strong>wait 7–10 days</strong> and follow up; after two follow-ups, pause.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Referral introductions</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>When introduced by email, <strong>reply-all</strong>, move introducer to <strong>BCC</strong>, keep referral in <strong>CC</strong>.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Expanding your pipeline</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li>Don't limit yourself to one alumni channel—network across schools and cities for unexpected introductions.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Every conversation is a person, not a transaction</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Be curious about them first.</strong> People remember how a conversation felt more than what you asked.</li><li><strong>Write down specifics</strong> so you can bring them up later. It shows you were listening.</li><li><strong>Share your own story honestly</strong>, not a rehearsed pitch.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Reaching out</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Have a real reason</strong> for choosing each person, and say it.</li><li><strong>Keep it short and easy to say yes to.</strong></li><li><strong>Timing and presentation matter.</strong> Weaver builds this into every draft for you.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Running the call</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Prepare, then listen.</strong> Your best questions will come from what they say.</li><li><strong>Make sure they learn who you are</strong> before the time runs out.</li><li><strong>End with a clear next step.</strong></li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>After the call</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Thank them, specifically.</strong></li><li><strong>Act on their advice, then tell them you did.</strong></li><li><strong>Stay in touch with the people who matter most.</strong> Weaver reminds you when.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Referrals</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Earn it through the relationship</strong> before you ask.</li><li><strong>Ask clearly, and make it easy</strong> for them to help.</li><li><strong>Close the loop</strong>: tell them how it turned out.</li></ul></div></div></div>
+          <div class="accordion-item"><button class="accordion-header"><span>Built for grinders</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Consistency beats bursts.</strong> A steady weekly rhythm wins a season.</li><li><strong>Every good conversation should lead to the next one.</strong></li><li><strong>Go wide:</strong> more than one school network, more than one city.</li></ul></div></div></div>
         </div>
       </section>
 
