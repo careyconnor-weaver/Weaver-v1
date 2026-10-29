@@ -455,15 +455,15 @@ function checkAuth() {
         showLandingView();
         return;
     }
-    enterApp();
+    enterApp({ sessionVerified: false });
     refreshSessionUser().then(function (u) {
         if (!u) {
-            setCurrentUser(null);
-            showLandingView();
+            endSession('Your session ended. Sign in again to continue.');
             return;
         }
         updateSidebarUser();
         if (window.wvApplyRole) window.wvApplyRole();
+        maybeShowOnboarding();
     });
 }
 
@@ -843,14 +843,17 @@ async function handleAuth(e) {
 }
 
 // Show the app immediately and hydrate data in the background.
-function enterApp() {
+// opts.sessionVerified: false when entering from a remembered login on page load; the
+// server hasn't confirmed the session yet, so onboarding waits until it does.
+function enterApp(opts) {
+    const verified = !opts || opts.sessionVerified !== false;
     showAppView();
     updateUserDisplay();
     updateSidebarUser();
     updateDashboard();
     filterContacts();
     if (window.wvApplyRole) window.wvApplyRole();
-    maybeShowOnboarding();
+    if (verified) maybeShowOnboarding();
     Promise.allSettled([loadContactsFromAPI(), loadSettingsFromAPI()]).then(() => {
         updateUserDisplay();
         updateSidebarUser();
@@ -978,10 +981,7 @@ function logout() {
                 var url = typeof input === 'string' ? input : (input && input.url) || '';
                 if (res.status === 401 && /\/api\//.test(url) && !/\/api\/auth\/(login|signup|me)/.test(url) && getCurrentUser() && !handling) {
                     handling = true;
-                    setCurrentUser(null);
-                    showLandingView();
-                    showAuthModal('login');
-                    setAuthStatus('Your session ended. Sign in again to continue.', 'info');
+                    endSession('Your session ended. Sign in again to continue.');
                     setTimeout(function () { handling = false; }, 2000);
                 }
             } catch (e) { /* never break the caller */ }
@@ -7308,6 +7308,21 @@ function updateCurrentUserFields(fields) {
     setCurrentUser({ ...u, ...fields });
 }
 
+// Sign the browser out locally and leave exactly one thing on screen: the sign-in dialog.
+// Closes every other open dialog (onboarding, upgrade, notes...) so nothing is left
+// covering the page with buttons that can no longer work.
+function endSession(message) {
+    setCurrentUser(null);
+    document.querySelectorAll('.modal.active').forEach(function (m) { m.classList.remove('active'); });
+    document.querySelectorAll('.wv-dialog-backdrop, .wv-confirm-backdrop').forEach(function (el) { el.remove(); });
+    showLandingView();
+    if (message) {
+        showAuthModal('login');
+        if (typeof setAuthStatus === 'function') setAuthStatus(message, 'info');
+    }
+}
+window.endSession = endSession;
+
 function showOnboardingModal() {
     const m = document.getElementById('onboarding-modal');
     if (!m) return;
@@ -7339,7 +7354,7 @@ function onboardSetStep(step) {
 
 window.chooseAccountType = async function (type) {
     const u = getCurrentUser();
-    if (!u) return;
+    if (!u) { endSession('Sign in to continue.'); return; }
     // Persist the choice (best-effort; UI proceeds regardless of DB availability)
     try {
         await fetch('/api/users/account-type', {
