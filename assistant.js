@@ -354,8 +354,7 @@
     }
 
     function runWorkflow(title, list) {
-        var all = (list || WORKFLOWS).concat(load(customWorkflowsKey(), []));
-        var w = all.find(function (x) { return x.title === title; });
+        var w = (list || WORKFLOWS).find(function (x) { return x.title === title; });
         if (!w) return;
         goToAssistant();
         if (w.sources) setSources(Array.from(new Set(activeSources().concat(w.sources))));
@@ -613,40 +612,122 @@
     window.wvShowHome = function () { renderThread(); renderGreeting(); };
 
     // ---------- Library ----------
+    // Two tabs: "Default" (Weaver's built-in prompts) and "Custom" (prompts the user writes).
+    // Custom prompts are stored in this browser, per account.
+    function libTabKey() { var u = user(); return 'weaver_library_tab_' + (u ? u.id : 'anon'); }
+    function customPrompts() {
+        var list = load(customWorkflowsKey(), []);
+        if (!Array.isArray(list)) return [];
+        var changed = false;
+        list = list.filter(function (w) { return w && typeof w.prompt === 'string' && w.prompt.trim(); }).map(function (w) {
+            if (!w.id) { changed = true; w.id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+            return { id: String(w.id).slice(0, 40), title: String(w.title || 'Untitled prompt').slice(0, 80), desc: String(w.desc || '').slice(0, 160), prompt: String(w.prompt).slice(0, 4000) };
+        });
+        if (changed) store(customWorkflowsKey(), list);
+        return list;
+    }
+    function runCustom(id) {
+        var w = customPrompts().find(function (x) { return x.id === id; });
+        if (!w) return;
+        goToAssistant();
+        var input = $('wv-input');
+        input.value = w.prompt;
+        autoGrow();
+        input.focus();
+        var s = w.prompt.indexOf('['), e = w.prompt.indexOf(']', s);
+        if (s !== -1 && e !== -1) input.setSelectionRange(s, e + 1);
+    }
+
+    var libEditing = null; // id of the custom prompt being edited, or 'new'
+
     window.wvRenderLibrary = function () {
         var box = $('wv-library');
         if (!box) return;
-        var groups = {};
-        workflowsFor(!!state.club).forEach(function (w) { (groups[w.group] = groups[w.group] || []).push(w); });
-        var saved = load(customWorkflowsKey(), []);
-        var html = '';
-        Object.keys(groups).forEach(function (g) {
-            html += '<div class="wv-lib-group"><h2>' + esc(g) + '</h2><ul class="wv-wf-list">' + groups[g].map(function (w) {
-                return '<li><button type="button" class="wv-wf" data-wf="' + esc(w.title) + '"><span class="wv-wf-name">' + esc(w.title) + '</span><span class="wv-wf-desc">' + esc(w.desc) + '</span></button></li>';
-            }).join('') + '</ul></div>';
-        });
-        html += '<div class="wv-lib-group"><h2>Saved by you</h2>' + (saved.length ? '<ul class="wv-wf-list">' + saved.map(function (w, i) {
-            return '<li class="wv-wf-row"><button type="button" class="wv-wf" data-wf="' + esc(w.title) + '"><span class="wv-wf-name">' + esc(w.title) + '</span><span class="wv-wf-desc">' + esc(w.prompt) + '</span></button><button type="button" class="wv-linkbtn" data-del="' + i + '">Remove</button></li>';
-        }).join('') + '</ul>' : '<p class="wv-muted">Save a request you use often and it will appear here.</p>') +
-            '<form class="wv-save-form" id="wv-save-form"><input id="wv-save-title" placeholder="Name, e.g. Monday outreach plan" aria-label="Workflow name"><input id="wv-save-prompt" placeholder="The request to run" aria-label="Request"><button type="submit" class="wv-btn">Save workflow</button></form></div>';
+        var tab = load(libTabKey(), 'default') === 'custom' ? 'custom' : 'default';
+        var mine = customPrompts();
+        var html = '<div class="wv-tabs" role="tablist" aria-label="Library">' +
+            '<button type="button" role="tab" class="wv-tab' + (tab === 'default' ? ' is-active' : '') + '" aria-selected="' + (tab === 'default') + '" data-tab="default">Default</button>' +
+            '<button type="button" role="tab" class="wv-tab' + (tab === 'custom' ? ' is-active' : '') + '" aria-selected="' + (tab === 'custom') + '" data-tab="custom">Custom' + (mine.length ? ' <span class="wv-tab-count">' + mine.length + '</span>' : '') + '</button>' +
+            '</div><div class="wv-tabpanel" role="tabpanel">';
+
+        if (tab === 'default') {
+            var groups = {};
+            workflowsFor(!!state.club).forEach(function (w) { (groups[w.group] = groups[w.group] || []).push(w); });
+            Object.keys(groups).forEach(function (g) {
+                html += '<div class="wv-lib-group"><h2>' + esc(g) + '</h2><ul class="wv-wf-list">' + groups[g].map(function (w) {
+                    return '<li class="wv-wf-row"><button type="button" class="wv-wf" data-wf="' + esc(w.title) + '"><span class="wv-wf-name">' + esc(w.title) + '</span><span class="wv-wf-desc">' + esc(w.desc) + '</span></button>' +
+                        '<button type="button" class="wv-linkbtn" data-copyto="' + esc(w.title) + '" title="Copy to Custom and edit">Customize</button></li>';
+                }).join('') + '</ul></div>';
+            });
+        } else {
+            var editing = libEditing === 'new' ? { id: 'new', title: '', desc: '', prompt: '' } : mine.find(function (w) { return w.id === libEditing; });
+            if (editing) {
+                html += '<form class="wv-panel wv-prompt-editor" id="wv-prompt-form">' +
+                    '<h2 class="wv-panel-title">' + (editing.id === 'new' ? 'New prompt' : 'Edit prompt') + '</h2>' +
+                    '<label class="wv-field"><span>Name</span><input id="wv-pe-title" required maxlength="80" value="' + esc(editing.title) + '" placeholder="Monday outreach plan"></label>' +
+                    '<label class="wv-field"><span>Short description <em class="wv-optional">optional</em></span><input id="wv-pe-desc" maxlength="160" value="' + esc(editing.desc) + '" placeholder="Who to email this week, with drafts"></label>' +
+                    '<label class="wv-field"><span>Prompt</span><textarea id="wv-pe-prompt" required maxlength="4000" rows="7" placeholder="Who should I follow up with at [firm] this week? Draft the two most important emails.">' + esc(editing.prompt) + '</textarea></label>' +
+                    '<p class="wv-muted wv-pe-hint">Put anything that changes each time in [square brackets]. Weaver selects the first one so you can type over it.</p>' +
+                    '<div class="wv-pe-actions"><button type="submit" class="wv-btn wv-btn-primary">Save prompt</button><button type="button" class="wv-btn" id="wv-pe-cancel">Cancel</button></div></form>';
+            } else {
+                html += '<div class="wv-custom-head"><p class="wv-muted">Prompts you write yourself. They are saved in this browser for your account.</p><button type="button" class="wv-btn wv-btn-primary" id="wv-pe-new">New prompt</button></div>';
+                html += mine.length ? '<ul class="wv-wf-list wv-wf-single">' + mine.map(function (w) {
+                    return '<li class="wv-wf-row"><button type="button" class="wv-wf" data-custom="' + esc(w.id) + '"><span class="wv-wf-name">' + esc(w.title) + '</span><span class="wv-wf-desc">' + esc(w.desc || w.prompt) + '</span></button>' +
+                        '<button type="button" class="wv-linkbtn" data-edit="' + esc(w.id) + '">Edit</button><button type="button" class="wv-linkbtn" data-del="' + esc(w.id) + '">Delete</button></li>';
+                }).join('') + '</ul>' : '<div class="wv-empty"><h2>No custom prompts yet</h2><p>Write a request you use often, or open the Default tab and choose Customize on one of Weaver’s prompts.</p></div>';
+            }
+        }
+        html += '</div>';
+
         var th = threads();
-        html += '<div class="wv-lib-group" id="wv-lib-history"><h2>Past chats</h2>' + (th.length ? '<ul class="wv-hist">' + th.map(function (t) {
+        html += '<div class="wv-lib-group wv-lib-history" id="wv-lib-history"><h2>Past chats</h2>' + (th.length ? '<ul class="wv-hist">' + th.map(function (t) {
             return '<li><button type="button" class="wv-thread-open" data-id="' + esc(t.id) + '">' + esc(t.title) + '</button><span class="wv-muted">' + new Date(t.updatedAt || Date.now()).toLocaleDateString() + '</span></li>';
         }).join('') + '</ul>' : '<p class="wv-muted">Your chats with the assistant will be listed here.</p>') + '</div>';
         box.innerHTML = html;
-        box.querySelectorAll('.wv-wf').forEach(function (b) { b.onclick = function () { runWorkflow(b.getAttribute('data-wf')); }; });
+
+        box.querySelectorAll('[data-tab]').forEach(function (b) {
+            b.onclick = function () { store(libTabKey(), b.getAttribute('data-tab')); libEditing = null; window.wvRenderLibrary(); };
+        });
+        box.querySelectorAll('[data-wf]').forEach(function (b) { b.onclick = function () { runWorkflow(b.getAttribute('data-wf'), WORKFLOWS); }; });
+        box.querySelectorAll('[data-custom]').forEach(function (b) { b.onclick = function () { runCustom(b.getAttribute('data-custom')); }; });
+        box.querySelectorAll('[data-copyto]').forEach(function (b) {
+            b.onclick = function () {
+                var w = WORKFLOWS.find(function (x) { return x.title === b.getAttribute('data-copyto'); });
+                if (!w) return;
+                var list = customPrompts();
+                var copy = { id: 'c' + Date.now().toString(36), title: w.title + ' (my version)', desc: w.desc, prompt: w.prompt };
+                list.unshift(copy);
+                store(customWorkflowsKey(), list.slice(0, 60));
+                store(libTabKey(), 'custom');
+                libEditing = copy.id;
+                window.wvRenderLibrary();
+            };
+        });
+        box.querySelectorAll('[data-edit]').forEach(function (b) { b.onclick = function () { libEditing = b.getAttribute('data-edit'); window.wvRenderLibrary(); }; });
         box.querySelectorAll('[data-del]').forEach(function (b) {
-            b.onclick = function () { var s = load(customWorkflowsKey(), []); s.splice(+b.getAttribute('data-del'), 1); store(customWorkflowsKey(), s); window.wvRenderLibrary(); };
+            b.onclick = function () {
+                var id = b.getAttribute('data-del');
+                store(customWorkflowsKey(), customPrompts().filter(function (w) { return w.id !== id; }));
+                if (typeof wvToast === 'function') wvToast('Prompt deleted.', 'info');
+                window.wvRenderLibrary();
+            };
         });
         box.querySelectorAll('.wv-thread-open').forEach(function (b) { b.onclick = function () { openThread(b.getAttribute('data-id')); }; });
-        var form = $('wv-save-form');
+        var nb = $('wv-pe-new');
+        if (nb) nb.onclick = function () { libEditing = 'new'; window.wvRenderLibrary(); var t = $('wv-pe-title'); if (t) t.focus(); };
+        var cancel = $('wv-pe-cancel');
+        if (cancel) cancel.onclick = function () { libEditing = null; window.wvRenderLibrary(); };
+        var form = $('wv-prompt-form');
         if (form) form.onsubmit = function (e) {
             e.preventDefault();
-            var t = $('wv-save-title').value.trim(), p = $('wv-save-prompt').value.trim();
+            var t = $('wv-pe-title').value.trim(), d = $('wv-pe-desc').value.trim(), p = $('wv-pe-prompt').value.trim();
             if (!t || !p) return;
-            var s = load(customWorkflowsKey(), []);
-            s.unshift({ group: 'Saved', title: t, desc: p, prompt: p });
-            store(customWorkflowsKey(), s.slice(0, 40));
+            var list = customPrompts();
+            if (libEditing === 'new') list.unshift({ id: 'c' + Date.now().toString(36), title: t, desc: d, prompt: p });
+            else list = list.map(function (w) { return w.id === libEditing ? { id: w.id, title: t, desc: d, prompt: p } : w; });
+            store(customWorkflowsKey(), list.slice(0, 60));
+            libEditing = null;
+            if (typeof wvToast === 'function') wvToast('Prompt saved.', 'success');
             window.wvRenderLibrary();
         };
     };

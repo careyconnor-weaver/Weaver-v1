@@ -454,3 +454,50 @@ checked at desktop and phone width with no page errors.
 - The original detailed tips remain in the public repository's history (earlier versions
   of `index.html`) and were visible on the live site until this deploy. Making the
   repository private is the remaining step for trade-secret protection.
+
+---
+
+# Change set 6: Library tabs, security check, launch of change sets 5-6
+
+**Product direction by:** shindon@bc.edu ("add a default tab for the prompts we already have
+for the library and a custom tab where you can write your own"; "put it live"; "conduct
+security check after")
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
+
+## Your contribution (shindon@bc.edu)
+- The Library design: Weaver's prompts under **Default**, the user's own under **Custom**.
+- The release decision: ship change sets 5 and 6 to studentweaver.com after a security check.
+
+## Built (Claude)
+- **Library tabs** (`assistant.js`, `app-theme.css`): Default lists Weaver's prompts by group,
+  each with **Customize**, which copies it into Custom for editing. Custom has a full editor
+  (name, short description, prompt) with edit and delete; text in [square brackets] is selected
+  when the prompt runs so the user types over it. The chosen tab is remembered. Past chats stay
+  below both tabs. Custom prompts are stored in the user's browser, per account (as before);
+  earlier saved prompts carry over automatically.
+- Custom prompts now run by their own id, so a custom prompt can't be shadowed by a default
+  one with the same name.
+
+## Security check
+- **Found and fixed:** fixed lookup tables (document types, checklist templates, review columns,
+  outcome stages, Pro price plans) used plain object lookups on request values, so the values
+  `__proto__` or `constructor` were treated as valid. For document types this started an AI
+  request with an empty brief (spending the user's allowance). All such lookups now accept only
+  the table's own keys (`own()` in `routes/workspace.js`; same check in `routes/stripe.js`).
+- **Confirmed:** no keys or secrets in the changes; the confidential playbook is git-ignored
+  and absent from every committed file; `private/`, `lib/` and `weaver-playbook.md` return 404;
+  no page or script served to browsers contains playbook details; all new user-entered text
+  (custom prompts, the first-run form, season-plan inputs) is escaped or clipped; documents
+  can't be generated from another user's contact; new routes require a session.
+- **Dependencies:** unchanged since change set 4, 8 moderate advisories, none in code paths
+  Weaver uses in production (esbuild is local tooling; the uuid issue needs a buffer argument
+  Weaver never passes).
+- **Tests run:** 18 end-to-end, 6 metering, 5 playbook-confidentiality, 4 new security probes,
+  production cookie and error-detail checks, a browser test with hostile data across every
+  screen (no injected code ran), and a browser test of the Library tabs (create, customize,
+  edit, delete, run, hostile prompt name rendered as text).
+
+## Deploy notes
+- Until the `weaver-playbook.md` Secret File is added in Render, the AI uses a short generic
+  fallback (see CLUB_BILLING_SETUP.md section 7).
+- The GitHub repository is public and its history still contains the earlier public tips page.

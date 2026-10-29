@@ -252,6 +252,12 @@ const DOCUMENTS = {
         brief: 'A report for a club leader. Sections: Club in numbers; Top performers; Members who need support (inactive 14+ days, with a suggested message); Outcomes shared this season; Three actions for leadership this week.' },
 };
 
+// Look up a key in one of the fixed tables above. Only the table's own keys count, so
+// request values like "__proto__" or "constructor" never match.
+function own(table, key) {
+    return typeof key === 'string' && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
+}
+
 function newId(prefix) {
     return prefix + crypto.randomBytes(9).toString('base64url');
 }
@@ -361,7 +367,7 @@ module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI }) {
     });
 
     function outcomeOut(r) {
-        return { id: r.id, firm: r.firm, role: r.role, stage: r.stage, stageLabel: STAGE_LABEL[r.stage] || r.stage, stageDate: r.stage_date, contactId: r.contact_id, notes: r.notes, shareWithClub: r.share_with_club, updatedAt: r.updated_at };
+        return { id: r.id, firm: r.firm, role: r.role, stage: r.stage, stageLabel: own(STAGE_LABEL, r.stage) || r.stage, stageDate: r.stage_date, contactId: r.contact_id, notes: r.notes, shareWithClub: r.share_with_club, updatedAt: r.updated_at };
     }
 
     function outcomeInput(body) {
@@ -432,7 +438,7 @@ module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI }) {
             if (!c) return null;
             const cells = {};
             r.columns.forEach((col) => {
-                if (col.type === 'computed' && REVIEW_COLUMNS[col.key]) cells[col.key] = { value: computedCell(col.key, c) };
+                if (col.type === 'computed' && own(REVIEW_COLUMNS, col.key)) cells[col.key] = { value: computedCell(col.key, c) };
                 else cells[col.key] = (r.cells[id] && r.cells[id][col.key]) || null;
             });
             return { contactId: c.id, name: c.name, cells };
@@ -460,7 +466,7 @@ module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI }) {
                 if (!label || !question || custom >= 3) continue;
                 custom += 1;
                 out.push({ key: 'custom_' + custom, label, question, type: 'ai' });
-            } else if (col && REVIEW_COLUMNS[col.key] && !seen.has(col.key)) {
+            } else if (col && own(REVIEW_COLUMNS, col.key) && !seen.has(col.key)) {
                 seen.add(col.key);
                 out.push({ key: col.key, label: REVIEW_COLUMNS[col.key].label, type: REVIEW_COLUMNS[col.key].kind });
             }
@@ -586,7 +592,7 @@ If the data cannot answer a question, the value is exactly "Not enough informati
     router.post('/checklists', async (req, res) => {
         try {
             const key = (req.body && req.body.templateKey) || '';
-            const t = key ? CHECKLISTS[key] : { title: 'Untitled checklist', items: [] };
+            const t = key ? own(CHECKLISTS, key) : { title: 'Untitled checklist', items: [] };
             if (!t) return res.status(400).json({ error: 'Choose a checklist.' });
             const { rows: count } = await pool.query('SELECT COUNT(*)::int AS n FROM checklists WHERE user_id=$1', [req.user.id]);
             if (count[0].n >= 100) return res.status(400).json({ error: 'You have reached the limit of 100 checklists.' });
@@ -629,7 +635,7 @@ If the data cannot answer a question, the value is exactly "Not enough informati
     });
 
     function docOut(r, withBody) {
-        const o = { id: r.id, kind: r.kind, kindLabel: (DOCUMENTS[r.kind] || {}).label || r.kind, title: r.title, contactId: r.contact_id, orgId: r.org_id, updatedAt: r.updated_at, email: !!(DOCUMENTS[r.kind] || {}).email };
+        const o = { id: r.id, kind: r.kind, kindLabel: (own(DOCUMENTS, r.kind) || {}).label || r.kind, title: r.title, contactId: r.contact_id, orgId: r.org_id, updatedAt: r.updated_at, email: !!(own(DOCUMENTS, r.kind) || {}).email };
         if (withBody) o.body = r.body;
         return o;
     }
@@ -652,7 +658,7 @@ If the data cannot answer a question, the value is exactly "Not enough informati
     router.post('/documents/generate', async (req, res) => {
         try {
             const body = req.body || {};
-            const kind = DOCUMENTS[body.kind];
+            const kind = own(DOCUMENTS, body.kind);
             if (!kind) return res.status(400).json({ error: 'Choose a document type.' });
             const { plan, orgs } = await planFor(req.user);
             const name = await firstName(req.user.id);
@@ -811,7 +817,7 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
                     stages: STAGE_LABEL,
                     byStage,
                     sharingMembers: new Set(shared.map((s) => s.user_id)).size,
-                    rows: shared.slice(0, 100).map((s) => ({ member: nameOf.get(s.user_id) || 'Member', firm: s.firm, role: s.role, stage: s.stage, stageLabel: STAGE_LABEL[s.stage] || s.stage, date: s.stage_date })),
+                    rows: shared.slice(0, 100).map((s) => ({ member: nameOf.get(s.user_id) || 'Member', firm: s.firm, role: s.role, stage: s.stage, stageLabel: own(STAGE_LABEL, s.stage) || s.stage, date: s.stage_date })),
                 },
             });
         } catch (e) { fail(res, e, 'Could not load the console'); }

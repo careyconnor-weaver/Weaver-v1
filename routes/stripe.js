@@ -22,8 +22,9 @@ const LEGACY_IDS = { price_1StXttQZZ2GMzWg9cj6s4DXD: 'monthly', price_1StXtnQZZ2
 
 function planFromRequest(body) {
     const b = body || {};
-    if (PRO_PRICES[b.plan]) return b.plan;
-    if (b.priceId && LEGACY_IDS[b.priceId]) return LEGACY_IDS[b.priceId];
+    const has = (t, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(t, k) && !!t[k];
+    if (has(PRO_PRICES, b.plan)) return b.plan;
+    if (has(LEGACY_IDS, b.priceId)) return LEGACY_IDS[b.priceId];
     return null;
 }
 
