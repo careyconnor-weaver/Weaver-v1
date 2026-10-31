@@ -187,7 +187,8 @@
     } else if (/^\/app(\/|$)/.test(location.pathname)) {
         // Signed out on an app address: show the landing page and ask them to sign in.
         try { sessionStorage.setItem(PENDING_KEY, location.pathname); } catch (e) {}
-        history.replaceState(null, '', '/');
+        // Keep the query (for example ?checkout=success from Stripe) for the rest of the app to read.
+        history.replaceState(null, '', '/' + location.search);
         setTimeout(function () {
             if (!appVisible() && typeof window.openAuthModal === 'function') window.openAuthModal('login');
         }, 300);

@@ -16,6 +16,9 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # Must match an authorized redirect URI on the Google OAuth client exactly.
+      # The live value is set in Render → Environment; to move it to
+      # https://studentweaver.com/api/gmail/callback, add that URI in Google Cloud first.
       - key: GOOGLE_REDIRECT_URI
         value: https://weaver-kuwd.onrender.com/api/gmail/callback
       - key: OPENAI_API_KEY

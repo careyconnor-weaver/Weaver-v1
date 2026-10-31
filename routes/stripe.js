@@ -6,7 +6,11 @@ const dbAPI = require('../db/api');
 // All Stripe routes except /pricing and /webhook require a signed-in user (server.js);
 // they always act for req.user, never for an id sent by the browser.
 
-function appUrl() { return process.env.WEAVER_URL || 'http://localhost:3000'; }
+// Where Stripe sends people back to. WEAVER_URL overrides; production defaults to the real domain.
+function appUrl() {
+    const url = process.env.WEAVER_URL || (process.env.NODE_ENV === 'production' ? 'https://studentweaver.com' : 'http://localhost:' + (process.env.PORT || 3000));
+    return url.replace(/\/+$/, '').replace(/^https?:\/\/[^/]*\.onrender\.com$/i, 'https://studentweaver.com');
+}
 function configured() { return !!process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('not_configured') && !process.env.STRIPE_SECRET_KEY.includes('demo_placeholder'); }
 
 // Pro prices. The browser sends a plan key; only these prices can be bought.
@@ -47,8 +51,8 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
             allow_promotion_codes: true,
             line_items: [{ price: PRO_PRICES[plan], quantity: 1 }],
             subscription_data: { metadata: { userId: user.id, plan } },
-            success_url: `${appUrl()}/?checkout=success#settings`,
-            cancel_url: `${appUrl()}/?checkout=canceled#settings`,
+            success_url: `${appUrl()}/app/settings?checkout=success`,
+            cancel_url: `${appUrl()}/app/settings?checkout=canceled`,
             metadata: { userId: user.id, plan },
         });
         res.json({ url: session.url });
@@ -62,7 +66,7 @@ router.post('/create-portal-session', express.json(), async (req, res) => {
     try {
         const user = await dbAPI.getUserById(req.user.id);
         if (!user || !user.stripeCustomerId) return res.status(404).json({ error: 'You don’t have a billing account yet.' });
-        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${appUrl()}/#settings` });
+        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${appUrl()}/app/settings` });
         res.json({ url: session.url });
     } catch (error) {
         console.error('Stripe portal error:', error.message);
@@ -142,8 +146,8 @@ router.post('/club-checkout', express.json(), async (req, res) => {
             line_items: [{ price: process.env.CLUB_SEAT_PRICE_ID, quantity: seats }],
             subscription_data: { metadata: { orgId: org.id, type: 'organization' } },
             metadata: { orgId: org.id, type: 'organization' },
-            success_url: `${appUrl()}/?club_billing=success&org_id=${encodeURIComponent(org.id)}#console`,
-            cancel_url: `${appUrl()}/?club_billing=canceled&org_id=${encodeURIComponent(org.id)}#console`,
+            success_url: `${appUrl()}/app/console?club_billing=success&org_id=${encodeURIComponent(org.id)}`,
+            cancel_url: `${appUrl()}/app/console?club_billing=canceled&org_id=${encodeURIComponent(org.id)}`,
         });
         res.json({ url: session.url, seats });
     } catch (error) {
@@ -160,7 +164,7 @@ router.post('/club-portal', express.json(), async (req, res) => {
         if (check.error) return res.status(check.status).json({ error: check.error });
         const org = await dbAPI.getOrganizationById(orgId);
         if (!org || !org.stripeCustomerId) return res.status(404).json({ error: 'This club has no billing account yet.' });
-        const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: `${appUrl()}/#console` });
+        const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: `${appUrl()}/app/console` });
         res.json({ url: session.url });
     } catch (error) {
         console.error('Club portal error:', error.message);

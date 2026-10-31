@@ -649,3 +649,25 @@ Pages, scripts and the admin page redirect with path and query kept; health, Gma
 pricing, Stripe webhook and sign-in are not redirected; studentweaver.com, www and local
 addresses are unaffected; a lookalike host isn't matched; the redirect always targets
 studentweaver.com (no open redirect). 18 end-to-end checks re-run.
+
+---
+
+# Change set 12: Address cleanup (Stripe return links)
+
+**Product direction by:** shindon@bc.edu ("cleanup", after the onrender redirect)
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
+
+## Changed
+- **Stripe return addresses** (`routes/stripe.js`): checkout and billing-portal returns now go
+  to `/app/settings` (Pro) and `/app/console` (clubs) on studentweaver.com. Without
+  `WEAVER_URL`, production now defaults to `https://studentweaver.com` (previously
+  `http://localhost:3000`), and an onrender `WEAVER_URL` is replaced with the real domain.
+- **Bug fixed** (`router.js`): opening any `/app/...` address briefly reset the address to `/`
+  and dropped the query, so after Stripe checkout the "Checkout canceled" / "Welcome to Pro"
+  message never showed. The query is now kept.
+- `render.yaml`: comment explaining that the Gmail callback address must be changed in
+  Google Cloud before Render. The value itself is unchanged so Gmail connecting keeps working.
+
+## Verified
+4 browser checks for Stripe returns (Pro checkout message and Settings, billing-portal return,
+club checkout to the console, old-style return links), 22 address checks, 18 end-to-end checks.
