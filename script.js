@@ -788,8 +788,7 @@ function storeSessionUser(u) {
         subscriptionStatus: u.subscriptionStatus || 'free',
         subscriptionPlan: u.subscriptionPlan || null,
         hasBillingAccount: !!u.hasBillingAccount,
-        onboardedAt: u.onboardedAt || null,
-        isAdmin: u.isAdmin === true
+        onboardedAt: u.onboardedAt || null
     });
 }
 window.storeSessionUser = storeSessionUser;
@@ -7475,7 +7474,7 @@ window.renderClubView = async function () {
     }
 
     const org = orgs.find(function (o) { return o.id === u.primaryOrgId; }) || orgs[0];
-    const isAdmin = org.role === 'owner' || org.role === 'admin';
+    const isClubManager = org.role === 'owner' || org.role === 'admin';
 
     let members = [];
     try {
@@ -7495,7 +7494,7 @@ window.renderClubView = async function () {
     html += '<div class="wv-console-meta">' + (org.school ? e(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + e(org.role) + '</div></div>';
     html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + e(org.joinCode || '') + '</code>' +
         '<button type="button" class="wv-btn wv-btn-sm" onclick="window.copyJoinCode(\'' + e(org.joinCode) + '\')">Copy</button></div></div>';
-    if (isAdmin) {
+    if (isClubManager) {
         html += '<div class="wv-note">You manage this club. Invites, member activity, shared outcomes and billing are in the <a href="#console" onclick="event.preventDefault(); var l=document.querySelector(\'.nav-link[href=&quot;#console&quot;]\'); if(l) l.click();">club console</a>.</div>';
     }
     if (!org.verified) {

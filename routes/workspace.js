@@ -864,7 +864,7 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
 
     // ================= admin (Weaver staff, ADMIN_EMAILS) =================
     function requireAdmin(req, res) {
-        if (!isAdmin(req.user)) { res.status(403).json({ error: 'Not allowed.' }); return false; }
+        if (!isAdmin(req.user)) { res.status(404).json({ error: 'Not found' }); return false; }
         return true;
     }
 

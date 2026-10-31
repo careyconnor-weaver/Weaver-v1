@@ -600,3 +600,30 @@ chose the in-app dashboard over querying the database)
 no emails or personal data in the response; admin deep link opens the page; phone layout.
 Full regression re-run (18 end-to-end, 6 metering, 5 confidentiality, 4 security probes,
 22 address checks, Library, hostile-data browser test).
+
+---
+
+# Change set 10: Admin dashboard moved out of the public site
+
+**Product direction by:** shindon@bc.edu ("why is the admin page on the website that other
+people use. can we hide it")
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
+
+## Changed
+- The dashboard is now its own page at **`studentweaver.com/admin`** (`admin/admin.html`,
+  `admin/admin.js`). The server sends the page and its script only to signed-in accounts in
+  `ADMIN_EMAILS`; for everyone else it falls through to the same "Cannot GET" response as any
+  address that doesn't exist, so the page can't be discovered. Responses are `no-store` and
+  marked `noindex`.
+- Removed from the public site: the Admin section and sidebar link (`index.html`), the
+  dashboard code (`workspace-ui.js`), its styles (`app-theme.css`), the `/app/admin` route
+  (`router.js`) and the admin flag sent with every signed-in user (`routes/auth.js`,
+  `script.js`). An unrelated club-role variable named `isAdmin` was renamed `isClubManager`.
+- `/api/admin/orgs` now answers 404 (was 403) to non-staff, like `/api/admin/stats`.
+
+## Verified
+5 checks: signed-out visitors and students get the identical not-found response for `/admin`
+and its script, and 404 from the admin APIs; no public page, script or stylesheet mentions the
+admin page and no admin flag is sent to users; staff get the page uncached and unindexed; the
+dashboard loads all sections; phone layout. Regression: 18 end-to-end (updated for the 404),
+22 address checks, Library, production cookie/error checks, hostile-data browser test.

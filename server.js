@@ -108,6 +108,25 @@ app.get('/:file', (req, res, next) => {
     res.sendFile(path.join(__dirname, file), { headers: { 'Cache-Control': isPage ? 'no-cache' : 'public, max-age=300' } });
 });
 
+// ---------- Staff admin page ----------
+// /admin and its script are sent only to signed-in Weaver staff (ADMIN_EMAILS). Everyone
+// else gets the same 404 as any unknown address, so the page isn't part of the public site.
+async function staffOnly(req, res, next) {
+    try {
+        const token = auth.sessionToken(req);
+        const userId = token && pool ? await auth.getSessionUserId(pool, token) : null;
+        const u = userId ? await dbAPI.getUserById(userId) : null;
+        if (u && auth.isAdmin(u)) {
+            res.set('Cache-Control', 'no-store');
+            res.set('X-Robots-Tag', 'noindex, nofollow');
+            return next();
+        }
+    } catch (e) { /* treat as not staff */ }
+    next('route'); // continue as if this route didn't exist: same 404 as any unknown address
+}
+app.get(['/admin', '/admin/'], staffOnly, (req, res) => res.sendFile(path.join(__dirname, 'admin', 'admin.html')));
+app.get('/admin/admin.js', staffOnly, (req, res) => res.sendFile(path.join(__dirname, 'admin', 'admin.js')));
+
 // ---------- Sessions ----------
 // Every /api route requires a signed-in user except the few below.
 const PUBLIC_API = new Set([
