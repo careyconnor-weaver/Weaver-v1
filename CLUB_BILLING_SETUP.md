@@ -24,6 +24,7 @@ Tune any value without code:
 | `PLAN_CLUB_PLUS_AI_MICROS` | `750000` | Club sponsored allowance ($0.75) |
 | `PLAN_PRO_AI_MICROS` | `1500000` | Pro allowance ($1.50) |
 | `PLAN_STARTER_CONTACTS`, `PLAN_CLUB_CONTACTS`, `PLAN_CLUB_PLUS_CONTACTS`, `PLAN_PRO_CONTACTS` | 20 / 150 / 1000 / 5000 | Contact limits |
+| `AI_ALERT_EMAIL` | `ADMIN_EMAILS` | Who gets an email when OpenAI refuses requests (out of credit, bad key). Comma-separated. At most one email per cause every 6 hours. |
 | `AI_MONTHLY_GLOBAL_CAP_USD` | none | Kill switch: pauses all AI features for the month once total spend reaches this. Recommended: set it, e.g. `150`. |
 | `OPENAI_ASSISTANT_MODEL` | `gpt-4o-mini` | Model for the assistant, review tables and Starter/Club documents |
 | `OPENAI_QUALITY_MODEL` | `gpt-4o` | Model for documents on Club sponsored and Pro |

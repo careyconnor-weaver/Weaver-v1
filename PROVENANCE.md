@@ -536,3 +536,35 @@ unknown screen and missing contact, Library to assistant, log out), plus the ful
 suite: 18 end-to-end, 6 metering, 5 playbook confidentiality, 4 security probes, production
 cookie/error checks, the hostile-data browser test and the Library test. Requests such as
 `/app/../server.js` return the app page, not the file.
+
+---
+
+# Change set 8: Clear handling when OpenAI refuses requests
+
+**Product direction by:** shindon@bc.edu, after the live assistant failed with a generic
+error. Render logs showed `429 You have no credits remaining`. He approved the proposed fix
+("add that").
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
+
+## Built (`lib/usage.js`, `server.js`)
+- OpenAI failures are classified: no credit, rejected API key, model not enabled, OpenAI rate
+  limit, OpenAI down or unreachable. Anything else (a bad request or a bug) is still reported
+  as an error, so real bugs aren't hidden.
+- Students see "Weaver’s AI is paused for a moment. Try again shortly. Everything else in
+  Weaver works as normal." (or "busy" for a rate limit) instead of "hit an error". The
+  response never mentions OpenAI, credit or billing.
+- The Render log gets a `[AI PROVIDER]` line naming the cause and the exact fix.
+- Admins get one email per cause per 6 hours (`AI_ALERT_EMAIL`, else `ADMIN_EMAILS`, via Resend).
+- For causes that won't fix themselves in seconds (credit, key, model access), Weaver stops
+  calling OpenAI for 2 minutes and answers instantly, then tries again automatically, so AI
+  returns on its own once the account is fixed. Temporary outages are not paused.
+- Failed requests are never charged to a student's AI allowance (unchanged; now tested).
+- Applies to every AI feature: assistant, improve prompt, documents, review tables, notes
+  photos, firm detection.
+
+## Verified
+Simulated OpenAI out of credit, rejected key and server outage: correct message and status,
+no provider details in responses, cause and fix in the log, no repeat OpenAI calls while
+paused, no usage charged, immediate recovery after a temporary outage, one admin alert for
+repeated failures. Full regression suite re-run (18 end-to-end, 6 metering, 5
+confidentiality, 4 security probes, 22 address checks, production cookie/error checks).

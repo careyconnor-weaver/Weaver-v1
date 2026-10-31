@@ -188,6 +188,21 @@ if (process.env.RESEND_API_KEY) {
     console.warn('   Get your API key at https://resend.com/api-keys');
 }
 
+// Email Weaver's admins (at most once every 6 hours per cause) when OpenAI refuses requests,
+// e.g. the account is out of credit. Recipients: AI_ALERT_EMAIL, else ADMIN_EMAILS.
+usage.onProviderOutage(async ({ kind, fix, detail }) => {
+    const to = String(process.env.AI_ALERT_EMAIL || process.env.ADMIN_EMAILS || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (!resend || !to.length) return;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
+    const title = kind === 'no_credit' ? 'Weaver AI is paused: OpenAI is out of credit' : kind === 'bad_key' ? 'Weaver AI is paused: OpenAI rejected the API key' : 'Weaver AI is paused: OpenAI model access';
+    await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject: title,
+        text: `${title}.\n\nStudents see "Weaver's AI is paused for a moment" and everything else keeps working.\n\nFix: ${fix}\n\nOpenAI said: ${detail}\n\nWeaver retries automatically every 2 minutes, so AI comes back on its own once this is fixed. You will get at most one of these emails every 6 hours.`,
+    });
+});
+
 // Web search function using DuckDuckGo Instant Answer API (free, no API key needed)
 async function searchWeb(query) {
     try {
