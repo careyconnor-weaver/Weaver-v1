@@ -627,3 +627,25 @@ and its script, and 404 from the admin APIs; no public page, script or styleshee
 admin page and no admin flag is sent to users; staff get the page uncached and unindexed; the
 dashboard loads all sections; phone layout. Regression: 18 end-to-end (updated for the 404),
 22 address checks, Library, production cookie/error checks, hostile-data browser test.
+
+---
+
+# Change set 11: One public address
+
+**Product direction by:** shindon@bc.edu (noticed the site opening at weaver-kuwd.onrender.com
+and asked for it to be fixed)
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
+
+## Changed (`server.js`)
+- Page requests (GET/HEAD) to any `*.onrender.com` address are permanently redirected (301)
+  to the same path and query on `https://studentweaver.com`, so there is one public address,
+  one sign-in, and one copy for search engines.
+- `/api/*` is never redirected, so Render's health check, the Stripe webhook and the Gmail
+  sign-in callback keep working if they are configured with the onrender address.
+- `CANONICAL_HOST` overrides the domain; `CANONICAL_HOST=off` disables the redirect.
+
+## Verified
+Pages, scripts and the admin page redirect with path and query kept; health, Gmail callback,
+pricing, Stripe webhook and sign-in are not redirected; studentweaver.com, www and local
+addresses are unaffected; a lookalike host isn't matched; the redirect always targets
+studentweaver.com (no open redirect). 18 end-to-end checks re-run.

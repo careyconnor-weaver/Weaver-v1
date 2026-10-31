@@ -59,6 +59,21 @@ try {
     console.warn('   File uploads may not work properly.');
 }
 
+// ---------- One public address ----------
+// Render also serves the app at its own *.onrender.com address. Send people who open pages
+// there to the same page on the real domain. API calls (health check, Stripe webhook, Gmail
+// sign-in callback) are left alone so nothing configured with the old address breaks.
+// CANONICAL_HOST overrides the domain; set it to "off" to disable.
+const CANONICAL_HOST = String(process.env.CANONICAL_HOST || 'studentweaver.com').trim().toLowerCase();
+app.use((req, res, next) => {
+    if (CANONICAL_HOST === 'off' || !CANONICAL_HOST) return next();
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (req.path === '/api' || req.path.startsWith('/api/')) return next();
+    const host = String(req.hostname || '').toLowerCase();
+    if (!host.endsWith('.onrender.com')) return next();
+    return res.redirect(301, 'https://' + CANONICAL_HOST + req.originalUrl);
+});
+
 // ---------- Security headers ----------
 app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
