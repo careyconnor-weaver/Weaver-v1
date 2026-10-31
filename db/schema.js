@@ -35,6 +35,9 @@ const organizations = pgTable('organizations', {
     // Verification: members only get the free club allowance once Weaver has verified the
     // club (prevents people creating fake clubs to get free AI usage).
     verified: boolean('verified').default(false),
+    // Clubs apply to join Weaver; staff approve (verified) or decline them in /admin.
+    application: jsonb('application'),
+    declinedAt: timestamp('declined_at', { mode: 'date' }),
     // 'club' or 'career_center'
     orgType: text('org_type').default('club'),
     // 'none' or 'campus' (a career-center contract that sponsors every member)

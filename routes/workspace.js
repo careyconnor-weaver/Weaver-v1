@@ -234,6 +234,8 @@ const CHECKLISTS = {
 const DOCUMENTS = {
     cold_outreach: { label: 'First email to an alum', needs: 'contact', email: true, maxTokens: 500,
         brief: 'The first email to someone the student has not spoken with. Short and human: who the student is, the specific and true reason they chose this person (shared school, club, hometown, path), and one easy ask for a brief call. If the data has no specific reason, leave a bracketed placeholder such as [why you chose them: shared club, a deal they worked on] instead of inventing one. Include a subject line that makes the thread easy to find. Under 120 words.' },
+    scout_report: { label: 'Scout report', needs: 'contact', email: false, maxTokens: 1500, scout: true,
+        brief: 'A scout report to prepare for a conversation with this contact. Use ONLY: the contact data, the BIO the student pasted (if any), and the numbered SOURCES (recent public news about the firm and group). Sections: ## At a glance (3 bullets: who they are per the data and bio, how warm the relationship is and why, the one thing to accomplish in the next conversation); ## The firm right now (3-6 bullets from SOURCES, each ending with its citation like [2] and the date; if there are no sources, say no recent news was found and suggest what to look up); ## Their group and work (what the group does, from SOURCES or the bio; say plainly when it is not covered); ## Common ground (only from the bio and logged notes: shared school, clubs, path, interests; never guess); ## Smart questions (5 questions specific to the firm news and their path); ## Before the call (a short checklist of what the student should verify themselves). End with ## Sources listing each used source as "[n] [Title](URL), Source, Date". Never state anything about the person that is not in the data or the bio, and never present a news item as being about the person unless it names them.' },
     coffee_chat_brief: { label: 'Coffee chat prep: questions and research', needs: 'contact', email: false, maxTokens: 1100,
         brief: 'A one-page prep sheet for an upcoming call. Sections: ## Who they are (only what the data says); ## Our history (dates and what was discussed, or "First conversation"); ## Do your own research (a checklist of 4-6 specific things the student must look up themselves before the call, e.g. their career path, their group, recent deals or news; never state these as facts); ## Questions to ask (6-8 questions specific to this person and their path, ordered from light openers to deeper ones, plus 2 follow-up prompts to go deeper on whatever they say); ## Your story (3 bullet prompts to help the student share their own background naturally); ## Building the relationship (2-3 short reminders on making a genuine connection and closing the call well). Questions must be ones a search engine cannot answer.' },
     thank_you: { label: 'Thank-you note', needs: 'contact', email: true, maxTokens: 500,
@@ -271,8 +273,14 @@ function lastTouch(c) {
 }
 
 // Compact, model-ready view of one contact from the database.
+const Warmth = require('../warmth');
+const { scoutFirm } = require('../lib/scout');
+
 function contactForModel(c) {
+    const w = Warmth.assess(c);
     return {
+        warmth: w.label,
+        warmth_reason: w.reason,
         id: c.id,
         name: c.name,
         firm: c.firm || c.company || null,
@@ -314,7 +322,7 @@ function computedCell(key, c) {
     return '';
 }
 
-module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI }) {
+module.exports = function workspaceRoutes({ pool, dbAPI, getOpenAI, notifyOwner }) {
     const router = express.Router();
 
     async function planFor(user) {
@@ -669,6 +677,14 @@ If the data cannot answer a question, the value is exactly "Not enough informati
                 if (!c) return res.status(400).json({ error: 'Choose a contact.' });
                 contactId = c.id;
                 data = { contact: contactForModel(c) };
+                if (kind.scout) {
+                    let scouted = { sources: [], group: null };
+                    try { scouted = await scoutFirm(c.firm || c.company, c.position); } catch (e) { console.warn('Scout news unavailable:', e.message); }
+                    data.SOURCES = scouted.sources;
+                    data.group_guess = scouted.group;
+                    const bio = clip(String(body.bio || '').trim(), 4000);
+                    if (bio) data.BIO = bio;
+                }
                 title = `${kind.label}: ${c.name}`;
             } else if (kind.needs === 'firm') {
                 const firm = clip(String(body.firm || '').trim(), 120);
@@ -792,7 +808,10 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
             res.json({
                 success: true,
                 org: {
-                    id: org.id, name: org.name, school: org.school, joinCode: org.joinCode, role: org.role,
+                    id: org.id, name: org.name, school: org.school, role: org.role,
+                    // The join code only exists for members once Weaver has approved the club.
+                    joinCode: org.verified ? org.joinCode : null,
+                    reviewStatus: org.verified ? 'approved' : org.declinedAt ? 'declined' : 'pending',
                     verified: !!org.verified, orgType: org.orgType || 'club', planStatus: org.planStatus || 'none',
                     license: org.license || 'none', licenseExpiresAt: org.licenseExpiresAt || null,
                 },
@@ -939,6 +958,57 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
                 })),
             });
         } catch (e) { fail(res, e, 'Could not load the stats'); }
+    });
+
+    // Club applications: pending first, then recently decided.
+    router.get('/admin/applications', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            const { rows } = await pool.query(`SELECT o.id, o.name, o.school, o.org_type, o.verified, o.declined_at, o.created_at, o.application,
+                    u.email AS owner_email, (SELECT COUNT(*)::int FROM org_members m WHERE m.org_id = o.id) AS members
+                FROM organizations o JOIN users u ON u.id = o.owner_id
+                WHERE o.verified = false OR o.created_at > now() - interval '30 days'
+                ORDER BY (o.verified = false AND o.declined_at IS NULL) DESC, o.created_at DESC LIMIT 200`);
+            res.json({ success: true, applications: rows.map((r) => ({
+                id: r.id, name: r.name, school: r.school, type: r.org_type || 'club', createdAt: r.created_at, ownerEmail: r.owner_email, members: r.members,
+                status: r.verified ? 'approved' : r.declined_at ? 'declined' : 'pending',
+                memberCount: r.application && r.application.memberCount || null,
+                website: r.application && r.application.website || null,
+                about: r.application && r.application.about || null,
+            })) });
+        } catch (e) { fail(res, e, 'Could not list applications'); }
+    });
+
+    router.post('/admin/orgs/:orgId/decision', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            const approve = req.body && req.body.decision === 'approve';
+            const decline = req.body && req.body.decision === 'decline';
+            if (!approve && !decline) return res.status(400).json({ error: 'Choose approve or decline.' });
+            const { rows } = await pool.query(
+                approve ? 'UPDATE organizations SET verified = true, declined_at = NULL WHERE id = $1 RETURNING id, name, owner_id, verified, declined_at'
+                    : 'UPDATE organizations SET verified = false, declined_at = now() WHERE id = $1 RETURNING id, name, owner_id, verified, declined_at',
+                [req.params.orgId]);
+            if (!rows.length) return res.status(404).json({ error: 'Club not found.' });
+            if (notifyOwner) notifyOwner(rows[0].owner_id, rows[0].name, approve).catch((e) => console.error('Decision email failed:', e.message));
+            res.json({ success: true, status: approve ? 'approved' : 'declined' });
+        } catch (e) { fail(res, e, 'Could not save the decision'); }
+    });
+
+    router.get('/admin/demo-requests', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            const { rows } = await pool.query('SELECT id, name, email, school, organization, role, message, created_at, handled_at FROM demo_requests ORDER BY created_at DESC LIMIT 200');
+            res.json({ success: true, requests: rows });
+        } catch (e) { fail(res, e, 'Could not list demo requests'); }
+    });
+
+    router.post('/admin/demo-requests/:id/handled', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            await pool.query('UPDATE demo_requests SET handled_at = CASE WHEN handled_at IS NULL THEN now() ELSE NULL END WHERE id = $1', [req.params.id]);
+            res.json({ success: true });
+        } catch (e) { fail(res, e, 'Could not update the request'); }
     });
 
     router.get('/admin/orgs', async (req, res) => {

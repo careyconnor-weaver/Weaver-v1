@@ -671,3 +671,66 @@ studentweaver.com (no open redirect). 18 end-to-end checks re-run.
 ## Verified
 4 browser checks for Stripe returns (Pro checkout message and Settings, billing-portal return,
 club checkout to the console, old-style return links), 22 address checks, 18 end-to-end checks.
+
+---
+
+# Change set 13: Warmth, scout reports, admissions, redesigned landing, analytics
+
+**Product direction by:** shindon@bc.edu. His brainstorm: warmth from context, editable drafts,
+a "scout report" on each contact, an Apple/Palantir-style landing with a moving hero and
+scroll animations, less text, exclusivity and an admissions process, Book a demo, sidebar
+sections, removing the Playbook page, "Dashboard", bigger type to fill the white space,
+verified checkmarks, a navy accent, switching between clubs like accounts, credibility for
+non-users, and Python/SQL/R/Microsoft work. His decisions in this session: students sign up
+freely and clubs join by application; Book a demo is a request form; the hero is an animated
+network drawn in code; the Playbook page is removed.
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-31
+
+## Built
+- **Contact warmth** (`warmth.js`, shared by browser and server): New, Cold, Warming, Warm or
+  Strong from logged calls, replies and recency, with the reason in plain words, a "going quiet"
+  downgrade after 90 days without two-way contact, and a suggested next step. Shown in My
+  network and on each contact, with **Draft the next email** (opens an editable draft in the
+  assistant) and **Scout their firm**. The assistant and documents receive the same rating.
+- **Scout reports** (`lib/scout.js`, new document type): recent Google News results for the
+  contact's **firm and group only** (the person's name is never searched), numbered and dated,
+  plus a bio the student pastes. The AI may only use those sources, the bio and logged notes,
+  and must cite them.
+- **App:** sidebar grouped into Network, Prepare, Results and Club; Overview renamed Dashboard
+  (old links redirect); Playbook page removed; navy accent across the app and emails; pages
+  centered with larger type on wide screens; verified checkmarks; a club switcher in the
+  sidebar that remembers the choice.
+- **Admissions:** creating a club is an application (school required; size, website, about).
+  Until approved, the club has no join code, can't invite, and its code can't be used to join.
+  Staff approve or decline in `/admin`; leaders and staff are emailed.
+- **Book a demo:** a form on the landing page (validated, rate limited, honeypot against bots),
+  stored in `demo_requests`, emailed to staff and listed in `/admin`.
+- **Landing page** (`landing.css`, `landing.js`, `index.html`): Geist type, navy hero with a live
+  network animation where introductions travel along connections, statements that reveal line
+  by line on scroll, product examples, trust, the admissions process, short pricing, closing.
+  Motion pauses off screen and is replaced by a still version for reduced-motion users.
+  Examples are labeled as examples, and no news is attributed to real firms.
+- **Analytics** (`analytics/`): SQL views (CTEs, window functions, LATERAL joins, FILTER
+  aggregates); a Python report that builds an Excel workbook with live formulas, conditional
+  formatting and a chart; an R logistic regression on what gets replies, with Wilson intervals;
+  Python unit tests; a README with run steps and suggested next steps for the student to own.
+
+## Not built, and why
+- **Searching the internet about the person** for scout reports: compiling records about a
+  private individual is profiling. Reports cover the firm and group, plus what the student pastes.
+- **LinkedIn integration:** LinkedIn doesn't give third-party apps access to members' networks.
+- **Review tables:** already in Weaver.
+
+## Verified
+New: 8 app checks (warmth, scout shortcut, Dashboard, sidebar, switcher, verified badge, phone),
+3 scout checks (firm-only queries, sources and bio passed, saved), 6 application checks (pending
+state, no code, join blocked, staff-only review, approve/decline), 11 landing checks (animation,
+reveals, nav, demo form, Escape, sign-in, phone, reduced motion), 5 admin-page checks, 3 Python
+unit tests, Excel formulas recalculated in LibreOffice and matched to the database, R script run
+end to end. Regression: 18 end-to-end (updated for applications), 6 metering, 5 confidentiality,
+4 security probes, 22 address checks, Library, Stripe returns, production cookie/error checks,
+hostile-data browser test.
+
+## Deploy status
+Committed to the `feature/ai-native` branch. Not yet live: deploying to studentweaver.com
+waits for the owner's go-ahead.

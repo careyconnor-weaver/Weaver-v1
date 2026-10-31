@@ -42,6 +42,19 @@ body { margin: 0; background: var(--wv-paper); font-family: var(--wv-ui); color:
 .wv-meter span { display: block; height: 100%; background: var(--wv-ledger); }
 .wv-note-warn { border-color: #E8C9A0; background: #FBF4EA; color: #6B4A1E; }
 @media (max-width: 860px) { .wv-admin-grid { grid-template-columns: 1fr; } .wv-kpis.wv-kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wv-kpis.wv-kpis-4 .wv-kpi:nth-child(2) { border-right: 0; } .wv-kpis.wv-kpis-4 .wv-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--wv-hair); } }
+
+.wv-count { font-family: var(--wv-ui); font-size: 13px; font-weight: 500; background: var(--wv-ledger-tint); color: var(--wv-ledger-deep); border-radius: 999px; padding: 2px 9px; vertical-align: 4px; margin-left: 6px; }
+.wv-app-card { margin-bottom: 12px; }
+.wv-app-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.wv-app-head h3 { margin: 0 0 2px; font-size: 16px; font-weight: 600; }
+.wv-app-actions { display: flex; gap: 8px; }
+.wv-app-facts { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 14px 0 0; font-size: 14px; }
+.wv-app-facts dt { color: var(--wv-graphite); }
+.wv-app-facts dd { margin: 0; overflow-wrap: anywhere; }
+.wv-admin-details { margin-top: 12px; }
+.wv-admin-details summary { cursor: pointer; color: var(--wv-graphite); font-size: 14px; margin-bottom: 8px; }
+.wv-msg-cell { max-width: 360px; white-space: pre-wrap; }
+tr.is-done { opacity: 0.55; }
 </style>
 </head>
 <body>

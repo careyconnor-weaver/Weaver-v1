@@ -108,3 +108,15 @@ no code change or commit is needed. For a local run, put the same file at
 The playbook is applied silently to every AI feature, the AI is instructed never to
 reveal it, and every AI output is scrubbed of sentences that repeat its wording. The
 in-app Playbook page shows principles only.
+
+## 8. Club applications and demo requests
+
+Clubs and career centers now **apply**. A new club has no join code and can't invite
+anyone until Weaver approves it. Open `studentweaver.com/admin` (staff only) to:
+
+- **Approve or decline** applications under "Club applications". Approving gives the
+  club its join code and verified badge and emails the leader; declining emails them too.
+  Clubs created before this change that were never verified also appear here.
+- **Follow up on demo requests** from the landing page's "Book a demo" form, and mark them handled.
+
+New applications and demo requests are emailed to `ADMIN_EMAILS` (needs `RESEND_API_KEY`).

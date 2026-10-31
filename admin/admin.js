@@ -8,8 +8,8 @@
     function empty(title, text) { return '<div class="wv-empty"><h2>' + esc(title) + '</h2><p>' + esc(text) + '</p></div>'; }
     function loading(text) { return '<p class="wv-loading">' + esc(text) + '</p>'; }
     function failMessage(e) { return (e && e.message) || 'Something went wrong. Try again.'; }
-    async function api(method, path) {
-        var res = await fetch(path, { method: method, headers: { Accept: 'application/json' } });
+    async function api(method, path, body) {
+        var res = await fetch(path, { method: method, headers: body ? { Accept: 'application/json', 'Content-Type': 'application/json' } : { Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined });
         var data = await res.json().catch(function () { return {}; });
         if (!res.ok) { var err = new Error(res.status === 401 ? 'Your session ended. Sign in on studentweaver.com, then reload this page.' : data.error || 'Something went wrong.'); err.status = res.status; throw err; }
         return data;
@@ -49,15 +49,60 @@
             '<line x1="' + pad + '" x2="' + (W - pad) + '" y1="' + (H - 28) + '" y2="' + (H - 28) + '" class="wv-axis"></line>' + bars + '</svg>';
     }
 
+    function alertBox(msg) { var n = document.createElement('div'); n.className = 'wv-note wv-note-warn'; n.textContent = msg; $('wv-admin-root').prepend(n); }
+    function when(d) { var t = new Date(d); return isNaN(t) ? '' : t.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    function safeUrl(u) {
+        u = String(u || '').trim(); if (!u) return '';
+        var href = /^https?:\/\//i.test(u) ? u : 'https://' + u.replace(/^\/+/, '');
+        try { var p = new URL(href); if (p.protocol !== 'http:' && p.protocol !== 'https:') return esc(u); } catch (e) { return esc(u); }
+        return '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer nofollow">' + esc(u) + '</a>';
+    }
+
+    function applicationsHtml(apps) {
+        var pending = apps.filter(function (x) { return x.status === 'pending'; });
+        var decided = apps.filter(function (x) { return x.status !== 'pending'; }).slice(0, 10);
+        var h = '<h2 class="wv-admin-h">Club applications' + (pending.length ? ' <span class="wv-count">' + pending.length + ' waiting</span>' : '') + '</h2>';
+        if (!pending.length) h += '<p class="wv-muted">No applications waiting.</p>';
+        pending.forEach(function (x) {
+            h += '<div class="wv-panel wv-app-card"><div class="wv-app-head"><div><h3>' + esc(x.name) + '</h3><div class="wv-muted">' + esc(x.school || 'No school given') + ' · ' + (x.type === 'career_center' ? 'Career center' : 'Club') + ' · applied ' + esc(when(x.createdAt)) + '</div></div>' +
+                '<div class="wv-app-actions"><button type="button" class="wv-btn wv-btn-primary" data-decide="approve:' + esc(x.id) + '">Approve</button><button type="button" class="wv-btn" data-decide="decline:' + esc(x.id) + '">Decline</button></div></div>' +
+                '<dl class="wv-app-facts"><dt>Applicant</dt><dd>' + esc(x.ownerEmail) + '</dd><dt>Members</dt><dd>' + esc(x.memberCount || 'Not given') + '</dd><dt>Website</dt><dd>' + (x.website ? safeUrl(x.website) : 'Not given') + '</dd>' +
+                (x.about ? '<dt>About</dt><dd>' + esc(x.about) + '</dd>' : '') + '</dl></div>';
+        });
+        if (decided.length) {
+            h += '<details class="wv-admin-details"><summary>Recently decided (' + decided.length + ')</summary><table class="wv-table wv-table-plain"><tbody>' + decided.map(function (x) {
+                return '<tr><th scope="row">' + esc(x.name) + '</th><td>' + esc(x.school || '') + '</td><td>' + (x.status === 'approved' ? 'Approved' : 'Declined') + '</td><td class="num"><button type="button" class="wv-btn wv-btn-sm" data-decide="' + (x.status === 'approved' ? 'decline' : 'approve') + ':' + esc(x.id) + '">' + (x.status === 'approved' ? 'Revoke' : 'Approve') + '</button></td></tr>';
+            }).join('') + '</tbody></table></details>';
+        }
+        return h;
+    }
+
+    function demosHtml(list) {
+        var open = list.filter(function (x) { return !x.handled_at; });
+        var h = '<h2 class="wv-admin-h">Demo requests' + (open.length ? ' <span class="wv-count">' + open.length + ' new</span>' : '') + '</h2>';
+        if (!list.length) return h + '<p class="wv-muted">No demo requests yet.</p>';
+        h += '<div class="wv-table-scroll"><table class="wv-table"><thead><tr><th>Who</th><th>School and club</th><th>Message</th><th>Received</th><th></th></tr></thead><tbody>' + list.slice(0, 50).map(function (x) {
+            return '<tr' + (x.handled_at ? ' class="is-done"' : '') + '><th scope="row">' + esc(x.name) + '<div class="wv-muted"><a href="mailto:' + esc(x.email) + '">' + esc(x.email) + '</a></div></th>' +
+                '<td>' + esc(x.school || '') + (x.organization ? '<div class="wv-muted">' + esc(x.organization) + (x.role ? ', ' + esc(x.role) : '') + '</div>' : '') + '</td>' +
+                '<td class="wv-msg-cell">' + esc(x.message || '') + '</td><td>' + esc(when(x.created_at)) + '</td>' +
+                '<td class="num"><button type="button" class="wv-btn wv-btn-sm" data-handled="' + esc(x.id) + '">' + (x.handled_at ? 'Reopen' : 'Mark handled') + '</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+        return h;
+    }
+
     async function renderAdmin() {
         var root = $('wv-admin-root');
         if (!root) return;
         root.innerHTML = loading('Loading usage…');
-        var d;
-        try { d = await api('GET', '/api/admin/stats'); }
+        var d, apps = [], demos = [];
+        try {
+            var all = await Promise.all([api('GET', '/api/admin/stats'), api('GET', '/api/admin/applications'), api('GET', '/api/admin/demo-requests')]);
+            d = all[0]; apps = all[1].applications || []; demos = all[2].requests || [];
+        }
         catch (e) { root.innerHTML = empty('Couldn’t load usage', failMessage(e)); return; }
         var us = d.users, a = d.active, e = d.engagement, total = us.total;
         var h = '';
+        h += applicationsHtml(apps) + demosHtml(demos);
         h += '<div class="wv-admin-head"><span class="wv-muted">Updated ' + esc(new Date(d.generatedAt).toLocaleString()) + '</span><button type="button" class="wv-btn" id="wv-admin-refresh">Refresh</button></div>';
 
         h += '<h2 class="wv-admin-h">People</h2><div class="wv-kpis wv-kpis-4">' +
@@ -92,6 +137,21 @@
         }).join('') + '</tbody></table></div>' : '<p class="wv-muted">No clubs yet.</p>');
         h += '<p class="wv-muted wv-admin-note">“Active” means signed in and used Weaver in that period. Everyone was signed out once at the v2 launch, so activity before then isn’t counted.</p>';
         root.innerHTML = h;
+        root.querySelectorAll('[data-decide]').forEach(function (b) {
+            b.onclick = async function () {
+                var parts = b.getAttribute('data-decide').split(':');
+                b.disabled = true;
+                try { await api('POST', '/api/admin/orgs/' + encodeURIComponent(parts[1]) + '/decision', { decision: parts[0] }); renderAdmin(); }
+                catch (err) { b.disabled = false; alertBox(failMessage(err)); }
+            };
+        });
+        root.querySelectorAll('[data-handled]').forEach(function (b) {
+            b.onclick = async function () {
+                b.disabled = true;
+                try { await api('POST', '/api/admin/demo-requests/' + encodeURIComponent(b.getAttribute('data-handled')) + '/handled', {}); renderAdmin(); }
+                catch (err) { b.disabled = false; alertBox(failMessage(err)); }
+            };
+        });
         $('wv-admin-refresh').onclick = function () { renderAdmin(); };
     }
 

@@ -109,10 +109,12 @@
             var last = dates.length ? dates[dates.length - 1] : null;
             var since = last ? daysSince(last) : null;
             var isEst = r > 0 || emails.length > 1 || notes.length > 0;
+            var warmth = null; try { warmth = window.WeaverWarmth ? window.WeaverWarmth.assess(c) : null; } catch (e) {}
             var threshold = isEst ? established : cold;
             return {
                 name: c.name, firm: c.firm || c.company || null, position: c.position || null, email: c.email || null,
                 priority: c.priority || null, vip: !!c.vip, status: isEst ? 'established' : 'cold',
+                warmth: warmth ? warmth.label : null, warmth_reason: warmth ? warmth.reason : null,
                 emails_sent: s, replies: r, calls: notes.length, last_interaction: last, days_since: since,
                 overdue: since != null && since >= threshold,
                 recent_notes: notes.slice(-2).map(function (n) { return { date: n.date, summary: String(n.summary || '').slice(0, 300) }; }),
@@ -133,6 +135,8 @@
         s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
         s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        // Bare web addresses (for example in a Sources list) become links too.
+        s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)"]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
         return s;
     }
     function md(src) {
@@ -733,6 +737,48 @@
     };
 
     // ---------- workspace (club / school) ----------
+    var VERIFIED = '<svg class="wv-verified" width="14" height="14" viewBox="0 0 24 24" role="img" aria-label="Verified club"><title>Verified by Weaver</title><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    window.wvVerifiedIcon = VERIFIED;
+
+    // Club switcher: members of several clubs switch between them, like switching accounts.
+    function closeSwitcher() { var m = $('wv-club-switcher'); if (m) m.remove(); document.removeEventListener('click', outside, true); }
+    function outside(e) { var m = $('wv-club-switcher'); if (m && !m.contains(e.target) && !($('wv-workspace') || {}).contains(e.target)) closeSwitcher(); }
+    window.wvOpenClubSwitcher = function (ev) {
+        if (ev) ev.stopPropagation();
+        if ($('wv-club-switcher')) { closeSwitcher(); return; }
+        var orgs = state.orgs || [], cur = state.club;
+        var card = $('wv-workspace');
+        var m = document.createElement('div');
+        m.id = 'wv-club-switcher'; m.className = 'wv-switcher'; m.setAttribute('role', 'menu');
+        m.innerHTML = (orgs.length ? '<div class="wv-switcher-label">Switch club</div>' + orgs.map(function (o) {
+            var on = cur && o.id === cur.id;
+            return '<button type="button" role="menuitemradio" aria-checked="' + (on ? 'true' : 'false') + '" class="wv-switcher-item' + (on ? ' is-on' : '') + '" data-org="' + esc(o.id) + '">' +
+                '<span class="wv-ws-mark">' + esc(String(o.name).trim().charAt(0).toUpperCase()) + '</span>' +
+                '<span class="wv-switcher-text"><span class="wv-switcher-name">' + esc(o.name) + (o.verified ? VERIFIED : '') + '</span><span class="wv-switcher-sub">' + esc(o.school || (o.role === 'member' ? 'Member' : o.role === 'owner' ? 'Owner' : 'Admin')) + '</span></span>' +
+                (on ? '<svg class="wv-switcher-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5 9-10"/></svg>' : '') + '</button>';
+        }).join('') : '<p class="wv-switcher-empty">You’re not in a club yet.</p>') +
+            '<button type="button" role="menuitem" class="wv-switcher-item wv-switcher-join" data-join="1"><span class="wv-ws-mark">+</span><span class="wv-switcher-text"><span class="wv-switcher-name">Join or create a club</span></span></button>';
+        card.parentNode.insertBefore(m, card);
+        m.querySelectorAll('[data-org]').forEach(function (b) {
+            b.onclick = function () {
+                var id = b.getAttribute('data-org');
+                if (typeof updateCurrentUserFields === 'function') updateCurrentUserFields({ primaryOrgId: id });
+                closeSwitcher();
+                loadWorkspace().then(function () {
+                    var active = document.querySelector('#app-container .section.active');
+                    if (active && active.id === 'club' && window.renderClubView) window.renderClubView();
+                    if (active && active.id === 'console') { var l = document.querySelector('.nav-link[href="#console"]'); if (l) l.click(); }
+                    if (window.wvToast) wvToast('Switched to ' + ((state.club && state.club.name) || 'your club') + '.', 'info');
+                });
+            };
+        });
+        var j = m.querySelector('[data-join]');
+        if (j) j.onclick = function () { closeSwitcher(); var l = document.querySelector('.nav-link[href="#club"]'); if (l) l.click(); };
+        setTimeout(function () { document.addEventListener('click', outside, true); }, 0);
+        var first = m.querySelector('button'); if (first) first.focus();
+        m.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeSwitcher(); card.focus(); } });
+    };
+    window.wvReloadWorkspace = function () { return loadWorkspace(); };
     async function loadWorkspace() {
         var u = user();
         if (!u) return;
@@ -740,11 +786,12 @@
             var res = await fetch('/api/orgs/mine?userId=' + encodeURIComponent(u.id), { signal: timeout(8000) });
             var data = await res.json();
             var orgs = (data && data.orgs) || [];
+            state.orgs = orgs;
             state.club = orgs.find(function (o) { return o.id === u.primaryOrgId; }) || orgs[0] || null;
-        } catch (e) { state.club = null; }
+        } catch (e) { state.club = null; state.orgs = []; }
         var name = $('wv-ws-name'), sub = $('wv-ws-sub'), mark = $('wv-ws-mark');
         if (state.club) {
-            if (name) name.textContent = state.club.name;
+            if (name) name.innerHTML = esc(state.club.name) + (state.club.verified ? VERIFIED : '');
             if (sub) sub.textContent = state.club.school || (state.club.role === 'member' ? 'Club member' : 'Club ' + state.club.role);
             if (mark) mark.textContent = String(state.club.name).trim().charAt(0).toUpperCase();
         } else {

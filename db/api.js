@@ -60,7 +60,7 @@ function generateJoinCode() {
     return `WVR-${code}`;
 }
 
-async function createOrganization({ id, name, ownerId, school }) {
+async function createOrganization({ id, name, ownerId, school, application }) {
     if (!db) throw new Error('Database not initialized');
     // Ensure a unique join code
     let joinCode = generateJoinCode();
@@ -76,6 +76,7 @@ async function createOrganization({ id, name, ownerId, school }) {
         joinCode,
         ownerId: String(ownerId),
         school: school || null,
+        application: application || null,
     }).returning();
     const org = result[0];
 

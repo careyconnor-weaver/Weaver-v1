@@ -139,6 +139,8 @@
         var u = user();
         var managed = (u && u.orgs ? u.orgs : []).filter(function (o) { return o.role === 'owner' || o.role === 'admin'; });
         if (!managed.length) { root.innerHTML = createOrgForm(); bindCreateOrg(); return; }
+        // Follow the club picked in the club switcher when it's one they manage.
+        if (u && u.primaryOrgId && managed.some(function (o) { return o.id === u.primaryOrgId; })) consoleState.orgId = u.primaryOrgId;
         if (!consoleState.orgId || !managed.some(function (o) { return o.id === consoleState.orgId; })) consoleState.orgId = managed[0].id;
         root.innerHTML = loading('Loading your club…');
         try {
@@ -153,15 +155,18 @@
 
     function createOrgForm() {
         return '<div class="wv-panel wv-narrow">' +
-            '<h2 class="wv-panel-title">Set up your workspace</h2>' +
-            '<p class="wv-panel-sub">Create a workspace for your club or career center, then invite members with a code.</p>' +
+            '<h2 class="wv-panel-title">Apply for a club workspace</h2>' +
+            '<p class="wv-panel-sub">Weaver admits clubs and career centers by application. We review each one, usually within two days. Once you’re approved you get a join code to invite members.</p>' +
             '<form id="wv-create-org" class="wv-form">' +
-            '<label class="wv-field"><span>Name</span><input id="wv-org-name" required maxlength="120" placeholder="BC Finance Society"></label>' +
-            '<label class="wv-field"><span>School</span><input id="wv-org-school" maxlength="120" placeholder="Boston College"></label>' +
+            '<label class="wv-field"><span>Club name</span><input id="wv-org-name" required maxlength="120" placeholder="BC Finance Society"></label>' +
+            '<label class="wv-field"><span>School</span><input id="wv-org-school" required maxlength="120" placeholder="Boston College"></label>' +
             '<fieldset class="wv-field"><legend>Type</legend><div class="wv-seg">' +
             '<label><input type="radio" name="wv-org-type" value="club" checked> Club</label>' +
             '<label><input type="radio" name="wv-org-type" value="career_center"> Career center</label></div></fieldset>' +
-            '<button type="submit" class="wv-btn wv-btn-primary">Create workspace</button></form></div>';
+            '<label class="wv-field"><span>About how many members?</span><input id="wv-org-members" type="number" min="1" max="100000" inputmode="numeric" placeholder="60"></label>' +
+            '<label class="wv-field"><span>Club website or Instagram <em class="wv-optional">optional</em></span><input id="wv-org-website" maxlength="300" placeholder="bcfinancesociety.org"></label>' +
+            '<label class="wv-field"><span>What does your club do? <em class="wv-optional">optional</em></span><textarea id="wv-org-about" rows="3" maxlength="1000" placeholder="Recruiting prep for sophomores and juniors going into banking and consulting."></textarea></label>' +
+            '<button type="submit" class="wv-btn wv-btn-primary">Submit application</button></form></div>';
     }
 
     function bindCreateOrg() {
@@ -170,22 +175,34 @@
         f.onsubmit = async function (e) {
             e.preventDefault();
             var btn = f.querySelector('button[type=submit]');
-            busy(btn, true, 'Creating…');
+            busy(btn, true, 'Submitting…');
             try {
                 var type = (f.querySelector('input[name=wv-org-type]:checked') || {}).value || 'club';
-                var data = await api('POST', '/api/orgs', { name: $('wv-org-name').value, school: $('wv-org-school').value, orgType: type });
+                var data = await api('POST', '/api/orgs', { name: $('wv-org-name').value, school: $('wv-org-school').value, orgType: type,
+                    memberCount: $('wv-org-members').value, website: $('wv-org-website').value, about: $('wv-org-about').value });
                 consoleState.orgId = data.org.id;
+                if (typeof updateCurrentUserFields === 'function') updateCurrentUserFields({ primaryOrgId: data.org.id });
                 await refreshSessionUser();
                 if (window.wvApplyRole) window.wvApplyRole();
+                if (window.wvReloadWorkspace) window.wvReloadWorkspace();
                 updateSidebarUser();
+                toast('Application received. We’ll email you when it’s approved.', 'success');
                 renderConsole();
             } catch (err) { busy(btn, false); reportError(err); }
         };
     }
 
+    // Status note for a club Weaver hasn't approved yet.
+    function reviewNote(org) {
+        if (org.verified) return '';
+        if (org.reviewStatus === 'declined') return '<div class="wv-note wv-note-warn">Weaver couldn’t approve this club. If something has changed, email <a href="mailto:info@studentweaver.com">info@studentweaver.com</a> and we’ll take another look.</div>';
+        return '<div class="wv-note wv-review-note"><strong>Application under review.</strong> We review every club, usually within two days, and email you when it’s approved. Then you’ll get a join code and can invite members. You can use Weaver yourself in the meantime.</div>';
+    }
+    window.wvReviewNote = reviewNote;
+
     function statusPill(org) {
         var pills = [];
-        pills.push(org.verified ? '<span class="wv-pill wv-pill-ok">Verified</span>' : '<span class="wv-pill wv-pill-warn">Pending verification</span>');
+        pills.push(org.verified ? '<span class="wv-pill wv-pill-ok">' + (window.wvVerifiedIcon || '') + 'Verified</span>' : org.reviewStatus === 'declined' ? '<span class="wv-pill wv-pill-warn">Not approved</span>' : '<span class="wv-pill wv-pill-warn">Under review</span>');
         if (org.license === 'campus') pills.push('<span class="wv-pill wv-pill-ok">Campus license</span>');
         else if (org.planStatus === 'active' || org.planStatus === 'trialing') pills.push('<span class="wv-pill wv-pill-ok">Club plan active</span>');
         else if (org.planStatus === 'past_due') pills.push('<span class="wv-pill wv-pill-warn">Payment due</span>');
@@ -204,11 +221,9 @@
             html += '<h2 class="wv-console-name">' + esc(org.name) + '</h2>';
         }
         html += '<div class="wv-console-meta">' + (org.school ? esc(org.school) + ' · ' : '') + (org.orgType === 'career_center' ? 'Career center' : 'Club') + ' · you are ' + esc(org.role) + ' ' + statusPill(org) + '</div></div>';
-        html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + esc(org.joinCode) + '</code><button type="button" class="wv-btn wv-btn-sm" id="wv-copy-code">Copy</button></div>';
+        if (org.joinCode) html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + esc(org.joinCode) + '</code><button type="button" class="wv-btn wv-btn-sm" id="wv-copy-code">Copy</button></div>';
         html += '</div>';
-        if (!org.verified) {
-            html += '<div class="wv-note wv-note-warn">Weaver verifies each club before members get the free club allowance. Email <a href="mailto:info@studentweaver.com?subject=Verify%20' + encodeURIComponent(org.name) + '">info@studentweaver.com</a> from your school address with your club’s page or adviser contact. Members can join and use Weaver in the meantime.</div>';
-        }
+        html += reviewNote(org);
         html += '<div class="wv-kpis">' +
             kpi('Members', k.members) +
             kpi('Active, last 30 days', k.active30) +
@@ -216,7 +231,8 @@
             kpi('Reply rate', k.replyRate + '%') +
             kpi('Calls logged', k.calls) +
             kpi('Offers shared', k.offers) + '</div>';
-        var tabs = [['members', 'Members'], ['outcomes', 'Outcomes'], ['invites', 'Invites'], ['billing', 'Billing']];
+        var tabs = org.verified ? [['members', 'Members'], ['outcomes', 'Outcomes'], ['invites', 'Invites'], ['billing', 'Billing']] : [['members', 'Members'], ['outcomes', 'Outcomes']];
+        if (!tabs.some(function (t) { return t[0] === consoleState.tab; })) consoleState.tab = 'members';
         html += '<div class="wv-tabs" role="tablist">' + tabs.map(function (t) {
             return '<button type="button" role="tab" class="wv-tab' + (consoleState.tab === t[0] ? ' is-on' : '') + '" aria-selected="' + (consoleState.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + '</button>';
         }).join('') + '<span class="wv-tabs-spacer"></span><button type="button" class="wv-btn wv-btn-sm" id="wv-club-report">Create club report</button></div>';
@@ -225,7 +241,7 @@
 
         var sel = $('wv-console-org');
         if (sel) sel.onchange = function () { consoleState.orgId = sel.value; renderConsole(); };
-        $('wv-copy-code').onclick = function () {
+        if ($('wv-copy-code')) $('wv-copy-code').onclick = function () {
             (navigator.clipboard ? navigator.clipboard.writeText(org.joinCode) : Promise.reject()).then(function () { toast('Join code copied.', 'success'); }).catch(function () { toast('Join code: ' + org.joinCode, 'info'); });
         };
         root.querySelectorAll('.wv-tab').forEach(function (b) {
@@ -550,6 +566,7 @@
     }
 
     var KIND_DESC = {
+        scout_report: 'Recent news on their firm and group, common ground, and smart questions, with sources.',
         cold_outreach: 'A short, personal first email to someone you haven’t met. You add the real reason you chose them.',
         coffee_chat_brief: 'Questions to ask, plus a list of what to research yourself before the call.',
         recruiting_plan: 'Your season mapped out: the prep phase, the weeks in the midst, and this week’s moves.',
@@ -565,6 +582,10 @@
         var root = $('wv-documents-root');
         if (!root) return;
         if (docState.open) return openDoc(docState.open);
+        if (docState.preset) {
+            var pre = docState.preset; docState.preset = null;
+            try { var ks = await docKinds(); var k0 = ks.find(function (k) { return k.key === pre.kind; }); if (k0) return docForm(k0, pre); } catch (e) { /* fall through */ }
+        }
         root.innerHTML = loading();
         var data, kinds;
         try { var both = await Promise.all([api('GET', '/api/documents'), docKinds()]); data = both[0]; kinds = both[1]; }
@@ -586,14 +607,15 @@
         });
     }
 
-    function docForm(kind) {
+    function docForm(kind, preset) {
         var root = $('wv-documents-root');
         if (!kind) return;
         var u = user();
         var managed = (u && u.orgs || []).filter(function (o) { return o.role === 'owner' || o.role === 'admin'; });
         var h = '<div class="wv-panel wv-narrow"><div class="wv-builder-head"><h2 class="wv-panel-title">' + esc(kind.label) + '</h2><button type="button" class="wv-linkbtn" id="wv-df-cancel">Cancel</button></div>' +
             '<p class="wv-panel-sub">' + esc(KIND_DESC[kind.key] || '') + '</p><form id="wv-doc-form" class="wv-form">';
-        if (kind.needs === 'contact') h += '<label class="wv-field"><span>Contact</span><select id="wv-df-contact" required>' + contactOptions('', 'Choose a contact') + '</select></label>';
+        if (kind.needs === 'contact') h += '<label class="wv-field"><span>Contact</span><select id="wv-df-contact" required>' + contactOptions(preset && preset.contactId || '', 'Choose a contact') + '</select></label>';
+        if (kind.key === 'scout_report') h += '<label class="wv-field"><span>Their bio <em class="wv-optional">optional: paste from their firm page or LinkedIn</em></span><textarea id="wv-df-bio" rows="5" maxlength="4000" placeholder="Paste their public bio here. Weaver searches news about the firm and group, never the person."></textarea></label>';
         if (kind.needs === 'firm') h += '<label class="wv-field"><span>Firm</span><input id="wv-df-firm" required maxlength="120" placeholder="Evercore"></label>';
         if (kind.needs === 'plan') h +=
             '<label class="wv-field"><span>Class year</span><select id="wv-df-year"><option>Freshman</option><option selected>Sophomore</option><option>Junior</option><option>Senior</option></select></label>' +
@@ -611,10 +633,20 @@
             if ($('wv-df-contact')) body.contactId = $('wv-df-contact').value;
             if ($('wv-df-firm')) body.firm = $('wv-df-firm').value;
             if ($('wv-df-org')) body.orgId = $('wv-df-org').value;
+            if ($('wv-df-bio')) body.bio = $('wv-df-bio').value;
             if ($('wv-df-year')) body.plan = { classYear: $('wv-df-year').value, target: $('wv-df-target').value, stage: $('wv-df-stage').value, school: $('wv-df-school').value };
             generateDoc(body, this.querySelector('button[type=submit]'));
         };
     }
+
+    // Open a document form directly (for example "Scout their firm" on a contact page).
+    // Call before navigating to Documents: the page opens straight to that form.
+    window.wvOpenDocForm = function (kindKey, preset) {
+        docState.open = null;
+        docState.preset = Object.assign({ kind: kindKey }, preset || {});
+        var docs = $('documents');
+        if (docs && docs.classList.contains('active')) renderDocuments();
+    };
 
     async function generateDoc(body, btn) {
         busy(btn, true, 'Writing…');

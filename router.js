@@ -26,8 +26,7 @@
         ['club', 'club', 'Club'],
         ['console', 'console', 'Club console'],
         ['upload-notes', 'add-contacts', 'Add contacts'],
-        ['tips-tricks', 'playbook', 'Playbook'],
-        ['dashboard', 'overview', 'Overview'],
+        ['dashboard', 'dashboard', 'Dashboard'],
         ['settings', 'settings', 'Settings'],
     ];
     var BY_SECTION = {}, BY_SLUG = {};
@@ -52,6 +51,8 @@
                 if (parts[2] === 'map') return { section: 'network-map' };
                 return { section: 'contact-detail', contactId: decodeURIComponent(parts[2]).slice(0, 100) };
             }
+            var OLD = { overview: 'dashboard', playbook: 'assistant' }; // renamed or removed screens
+            if (own(OLD, slug)) return { section: OLD[slug] };
             var r = own(BY_SLUG, slug);
             return { section: r ? r[0] : DEFAULT };
         }

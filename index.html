@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Weaver — Networking for Students</title>
+<title>Weaver | The networking workspace for students and clubs</title>
+<meta name="description" content="Weaver is the private networking workspace for students and the clubs that train them. Know who’s warm, say the right thing, and walk into every conversation prepared.">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png">
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -11,6 +12,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/app-theme.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/landing.css">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/api.js"></script>
@@ -20,166 +24,120 @@
 <!-- ═══════════════════════════════════════════ -->
 <!-- LANDING PAGE (visible when not logged in)   -->
 <!-- ═══════════════════════════════════════════ -->
-<div id="landing-page">
+<div id="landing-page" class="lp">
 
-<nav class="landing-nav">
-  <a href="#" class="nav-brand">
-    <img src="/weaver-badge.png" alt="Student Weaver logo" class="brand-logo">
-    <span>Student Weaver</span>
-  </a>
-  <div class="landing-nav-right">
-    <a href="#features">Product</a>
-    <a href="#clubs">For clubs</a>
-    <a href="#pricing">Pricing</a>
-    <a href="#" class="nav-login" onclick="openAuthModal('login'); return false;">Log in</a>
-    <a href="#" class="nav-cta" onclick="openAuthModal('signup'); return false;">Get started</a>
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-in">
+    <a href="#" class="lp-brand" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"><img src="/weaver-badge.png" alt="">Weaver</a>
+    <nav class="lp-links" aria-label="Main">
+      <a href="#product">Product</a>
+      <a href="#admissions">Clubs</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#" class="lp-login" onclick="openAuthModal('login'); return false;">Log in</a>
+      <a href="#" class="lp-btn lp-btn-light lp-btn-sm" onclick="return openDemo(event)">Book a demo</a>
+    </nav>
   </div>
-</nav>
+</header>
 
-<section class="hero">
-  <img class="hero-bg-photo" src="/hero-network.jpg" alt="">
-  <div class="hero-inner">
-    <div class="hero-content">
-      <h1>The recruiting operating system for student clubs and career centers</h1>
-      <p class="hero-sub">Every member gets one place to run recruiting: their network, follow-ups, prep and outcomes, with AI that works from their own notes. Leaders see who is networking, where, and what it is turning into.</p>
-      <div class="hero-actions">
-        <a href="#" class="btn-primary-landing" onclick="openAuthModal('signup'); return false;">Start your club</a>
-        <a href="#" class="btn-ghost" onclick="openAuthModal('signup'); return false;">I'm a student, start free</a>
+<section class="lp-hero" aria-label="Weaver">
+  <canvas id="lp-network" aria-hidden="true"></canvas>
+  <div class="lp-wrap lp-hero-in">
+    <h1>Recruiting runs on relationships.</h1>
+    <p class="lp-hero-sub">Weaver is the private networking workspace for students and the clubs that train them. Know who’s warm, say the right thing, and walk into every conversation prepared.</p>
+    <div class="lp-hero-cta">
+      <a href="#" class="lp-btn lp-btn-light" onclick="return openDemo(event)">Book a demo</a>
+      <a href="#" class="lp-btn lp-btn-ghost" onclick="openAuthModal('signup'); return false;">Start as a student</a>
+    </div>
+    <div class="lp-hero-note"><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Clubs join by application.</div>
+  </div>
+</section>
+
+<section class="lp-statements" id="product" aria-label="What Weaver does">
+  <div class="lp-wrap">
+    <div class="lp-st" data-reveal>
+      <div class="lp-st-text">
+        <h2><span class="lp-line"><span>Know who’s</span></span><span class="lp-line"><span>warm.</span></span></h2>
+        <p class="lp-fade">Every contact gets a warmth rating from what actually happened: calls, replies, and how long it’s been. You always know who’s ready for the next step.</p>
       </div>
-      <div class="hero-assurance">
-        <div class="assurance-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Free for members of verified clubs
-        </div>
-        <div class="assurance-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Fixed AI allowance on every plan
-        </div>
-        <div class="assurance-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Export your data anytime
-        </div>
-      </div>
-    </div>
-    <div class="hero-visual">
-      <figure class="hero-preview" aria-label="Example review table in Weaver">
-        <div class="hp-bar"><span class="hp-title">Referral readiness</span><span class="hp-meta">6 contacts · Evercore, Lazard, Centerview</span></div>
-        <table class="hp-table">
-          <thead><tr><th>Contact</th><th>Strength</th><th>Next step</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Daniel Ortiz</strong><span>Evercore, Associate</span></td><td>Strong</td><td>Ask about a referral to RX before Dec 1<em>Call note, Oct 11</em></td></tr>
-            <tr><td><strong>Sophie Laurent</strong><span>Lazard, Analyst</span></td><td>Warming</td><td>Book the mock interview she offered<em>Call note, Oct 15</em></td></tr>
-            <tr><td><strong>Hannah Wright</strong><span>Centerview, Analyst</span></td><td>New</td><td>Follow up once, briefly, next Tuesday<em>Email, Oct 19</em></td></tr>
-          </tbody>
-        </table>
-        <figcaption class="hp-foot">Every answer cites the note or email it came from.</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section class="why-section" id="research">
-  <div class="why-inner">
-    <h2>In recruiting, networking is the job</h2>
-    <p class="why-sub">How you maintain relationships matters more than how many you have. Weaver makes the follow-through systematic.</p>
-    <div class="why-photo"><img src="/networking-event.jpg" alt="Students networking at an event"></div>
-    <div class="research-grid">
-      <div class="rg-item"><div class="rg-num">44%</div><div class="rg-unit">Higher Reply Rate</div><div class="rg-desc">Average reply rate jumps from 9% to 13% when you add even one follow-up email</div></div>
-      <div class="rg-item"><div class="rg-num">#1</div><div class="rg-unit">Networking Behavior</div><div class="rg-desc">Maintaining contacts had the highest impact on salary growth among all networking behaviors studied</div></div>
-      <div class="rg-item"><div class="rg-num">20M</div><div class="rg-unit">User Study</div><div class="rg-desc">Moderately weak ties were the most effective for job mobility in a landmark LinkedIn experiment</div></div>
-      <div class="rg-item"><div class="rg-num">85%</div><div class="rg-unit">of Jobs</div><div class="rg-desc">Filled through networking according to a survey of 3,000 professionals by Lou Adler</div></div>
-    </div>
-    <div class="rg-source">Sources: Woodpecker, Journal of Applied Psychology (Wolff &amp; Moser), MIT/LinkedIn Science Study, Lou Adler Survey</div>
-  </div>
-</section>
-
-<section class="grinders" id="grinders">
-  <div class="grinders-inner">
-    <div class="grinders-lead">
-      <h2>Built for grinders</h2>
-      <p>If your school isn’t a target, nobody hands you a pipeline. You build it one conversation at a time, and the students who get the offers are the ones who keep showing up. Weaver is for them.</p>
-    </div>
-    <div class="grinders-points">
-      <div class="gp"><h3>Relationships, not a contact count</h3><p>Weaver remembers what each person told you, so every follow-up sounds like you were listening. Because you were.</p></div>
-      <div class="gp"><h3>A method that works in the background</h3><p>The timing, the wording, the prep and when to ask for a referral are built into every draft, plan and reminder. You focus on the person in front of you.</p></div>
-      <div class="gp"><h3>Start here, not in a spreadsheet</h3><p>Add the first person you want to talk to and Weaver writes the first email with you. Your tracker builds itself as you go.</p></div>
-      <div class="gp"><h3>You still do the talking</h3><p>Weaver prepares you and tells you what to research. It never pretends to be you, and every draft is yours to make your own.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="features-landing" id="features">
-  <div class="section-center">
-    <h2>Everything a recruit does, in one tab</h2>
-    <p>Drafting an email is easy now. Keeping fifty relationships moving, prepared and on time is the hard part. That is what Weaver is for.</p>
-  </div>
-  <div class="features-photo">
-    <img src="/student-laptop.jpg" alt="Student working on a laptop">
-    <div class="features-photo-caption"><strong>Built for the coffee-chat grind.</strong><span>From the first cold email to the offer, one place keeps every relationship moving.</span></div>
-  </div>
-  <div class="features-grid-landing">
-    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg></div><h3>Assistant</h3><p>Log a coffee chat in plain words, ask who to follow up with, or get a draft written from what they told you. It answers from your own network.</p></div>
-    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16"/></svg></div><h3>Review tables</h3><p>Pick contacts and questions, such as relationship strength or referral potential. Weaver fills the table and cites the note behind every answer.</p></div>
-    <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg></div><h3>Documents</h3><p>Coffee-chat briefs, thank-you notes, referral requests and firm briefs, written from your notes and ready to send or print.</p></div>
-    <div class="f-card"><div class="f-icon f-indigo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div><h3>Prep and checklists</h3><p>Superday, technicals and coffee-chat checklists, plus mock interviews and drills in the assistant.</p></div>
-    <div class="f-card"><div class="f-icon f-teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg></div><h3>Follow-ups</h3><p>Cold and warm contacts on their own clocks, with reminders before anyone goes quiet.</p></div>
-    <div class="f-card"><div class="f-icon f-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-4M11 16V8M16 16v-6M21 16V5"/></svg></div><h3>Outcomes</h3><p>Log applications, interviews and offers. Share them with your club only if you choose.</p></div>
-  </div>
-</section>
-
-<section class="b2b" id="clubs">
-  <div class="b2b-inner">
-    <h2>Built for the people who run recruiting</h2>
-    <p class="b2b-lede">One workspace for your members, with the visibility leaders need and billing that only counts people who show up.</p>
-    <div class="b2b-cols">
-      <div class="b2b-col">
-        <h3>Student clubs</h3>
-        <p>Finance, consulting and tech clubs running a recruiting season together.</p>
-        <ul>
-          <li>Members join with a code and get a free allowance once the club is verified</li>
-          <li>A console of every member’s activity, with who has gone quiet</li>
-          <li>Outcomes members choose to share, in one place for the board</li>
-          <li>A club plan expands every member’s allowance, billed only for active members</li>
+      <div class="lp-card lp-fade" aria-label="Example: contacts by warmth">
+        <p class="lp-card-h">Your network <span style="color:#B0B8C7">(example)</span></p>
+        <ul class="lp-rows">
+          <li><strong>Daniel Ortiz</strong><span class="lp-w lp-w-strong"><i></i>Strong</span><small>Evercore · 2 conversations, last heard from him 4 days ago</small></li>
+          <li><strong>Sophie Laurent</strong><span class="lp-w lp-w-warm"><i></i>Warm</span><small>Lazard · 1 conversation, offered a mock interview</small></li>
+          <li><strong>Hannah Wright</strong><span class="lp-w lp-w-warming"><i></i>Warming</span><small>Centerview · replied last week</small></li>
+          <li><strong>Marcus Bell</strong><span class="lp-w lp-w-cold"><i></i>Cold</span><small>PJT · 1 email sent, no reply yet</small></li>
         </ul>
-        <a href="#" class="b2b-link" onclick="openAuthModal('signup'); return false;">Start your club</a>
       </div>
-      <div class="b2b-col">
-        <h3>University career centers</h3>
-        <p>Advisors supporting every student and club on campus.</p>
-        <ul>
-          <li>A campus license covers every student and club at your school</li>
-          <li>See which clubs and students are networking, and who needs outreach</li>
-          <li>Outcomes students choose to share, without collecting their private notes</li>
-          <li>Onboarding for your clubs and advisors</li>
-        </ul>
-        <a href="mailto:info@studentweaver.com?subject=Weaver%20for%20our%20career%20center" class="b2b-link">Talk to us about your campus</a>
+    </div>
+
+    <div class="lp-st" data-reveal>
+      <div class="lp-st-text">
+        <h2><span class="lp-line"><span>Say the</span></span><span class="lp-line"><span>right thing.</span></span></h2>
+        <p class="lp-fade">Drafts written from your own notes, in your voice, matched to where the relationship stands. You edit every word before it goes out.</p>
+      </div>
+      <div class="lp-card lp-mail lp-fade" aria-label="Example: a drafted email">
+        <p class="lp-card-h">Draft · to Sophie Laurent <span style="color:#B0B8C7">(example)</span></p>
+        <p class="lp-mail-sub">Thank you, and a quick follow-up</p>
+        <p>Hi Sophie,</p>
+        <p>Thank you again for Tuesday. Your advice to <mark>practice a paper LBO before the superday</mark> changed how I’m preparing.</p>
+        <p>If the offer still stands, I’d love to take you up on the mock interview in November.</p>
+        <div class="lp-mail-foot"><span>Make it sound like you before you send it.</span><span>Edit</span></div>
+      </div>
+    </div>
+
+    <div class="lp-st" data-reveal>
+      <div class="lp-st-text">
+        <h2><span class="lp-line"><span>Walk in</span></span><span class="lp-line"><span>prepared.</span></span></h2>
+        <p class="lp-fade">A scout report on their firm and group before every call: recent news with sources, common ground, and questions a search engine can’t answer.</p>
+      </div>
+      <div class="lp-card lp-scout lp-fade" aria-label="Example: a scout report">
+        <p class="lp-card-h">Scout report · Northgate Partners, Restructuring <span style="color:#B0B8C7">(example)</span></p>
+        <h4>The firm right now</h4>
+        <ul><li>Advised on a cross-border healthcare merger<sup>1</sup></li><li>Restructuring team expanded in New York<sup>2</sup></li></ul>
+        <h4>Common ground</h4>
+        <ul><li>Same finance club, three years apart</li></ul>
+        <h4>Ask</h4>
+        <ul><li>What surprised you most moving from M&amp;A to restructuring?</li></ul>
       </div>
     </div>
   </div>
 </section>
 
-<section class="trust">
-  <div class="trust-inner">
-    <div class="trust-item"><div class="trust-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Private by default</h3><p>Your contacts, notes and emails are visible only to you. Clubs see activity totals and the outcomes you choose to share.</p></div>
-    <div class="trust-item"><div class="trust-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></div><h3>Fixed usage limits</h3><p>Every plan has a set AI allowance, so clubs and students never get a surprise bill.</p></div>
-    <div class="trust-item"><div class="trust-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><h3>No lock-in</h3><p>Export your full network to Excel at any time. If you leave, your data leaves with you.</p></div>
+<section class="lp-trust" aria-labelledby="lp-trust-h">
+  <div class="lp-wrap" data-reveal>
+    <h2 class="lp-kicker" id="lp-trust-h"><span class="lp-line"><span>You get one shot.</span></span><span class="lp-line"><span>We take that seriously.</span></span></h2>
+    <div class="lp-trust-grid lp-fade">
+      <div><h3>Private by default</h3><p>Your contacts, notes and emails are yours alone. Clubs see activity totals and only the outcomes you choose to share.</p></div>
+      <div><h3>Closed, purpose-built AI</h3><p>Weaver’s recruiting method runs inside a private, metered system. It works from your notes and cites its sources, and it never invents facts.</p></div>
+      <div><h3><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified clubs</h3><p>Every club is reviewed by the Weaver team before it can invite a single member.</p></div>
+    </div>
   </div>
 </section>
 
-<section class="pricing-landing" id="pricing">
-  <div class="section-center">
-    <h2>Free for club members. Pro for students who want more.</h2>
-    <p>Clubs and career centers are billed only for members active in the last 30 days. Every plan has a fixed AI allowance.</p>
+<section class="lp-admit" id="admissions" aria-labelledby="lp-admit-h">
+  <div class="lp-wrap" data-reveal>
+    <h2 class="lp-kicker" id="lp-admit-h"><span class="lp-line"><span>Clubs join</span></span><span class="lp-line"><span>by application.</span></span></h2>
+    <p class="lp-admit-lede lp-fade">Weaver is built for clubs that take recruiting seriously, especially at schools without a pipeline. Students can start on their own today.</p>
+    <ol class="lp-steps lp-fade">
+      <li><h3>Apply</h3><p>Tell us about your club and your members. It takes two minutes.</p></li>
+      <li><h3>We review</h3><p>Our team verifies every club, usually within two days.</p></li>
+      <li><h3>Invite your members</h3><p>Approved clubs get a private code, a console, and a verified badge.</p></li>
+    </ol>
+    <div class="lp-admit-cta lp-fade">
+      <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Apply as a club</a>
+      <a href="#" class="lp-btn lp-btn-ghost" onclick="return openDemo(event)">Book a demo</a>
+    </div>
   </div>
-  <div class="pricing-grid-landing b2b-price-grid">
-    <div class="price-card featured"><div class="price-name">Club plan</div><div class="price-desc">For student clubs</div><div class="price-amount" id="club-seat-price">Per active member<span class="price-period"> / month</span></div><ul class="price-features"><li>A larger AI allowance for every member</li><li>Billed only for members active in the last 30 days</li><li>Club console, reports and shared outcomes</li><li>Invite codes and member management</li><li>Manage or cancel anytime</li></ul><button class="price-btn price-btn-fill" onclick="openAuthModal('signup')">Start your club</button></div>
-    <div class="price-card"><div class="price-name">Career center</div><div class="price-desc">For your whole campus</div><div class="price-amount">Custom</div><ul class="price-features"><li>Campus license for every student and club</li><li>Advisor view across clubs</li><li>Outcomes students choose to share</li><li>Onboarding for clubs and advisors</li><li>Priority support</li></ul><a class="price-btn price-btn-outline" href="mailto:info@studentweaver.com?subject=Weaver%20for%20our%20career%20center">Talk to us</a></div>
-  </div>
-  <h3 class="pricing-sub">For individual students</h3>
-  <div class="pricing-grid-landing">
-    <div class="price-card"><div class="price-name">Starter</div><div class="price-desc">On your own</div><div class="price-amount">$0</div><ul class="price-features"><li>Up to 20 contacts</li><li>Follow-ups, checklists and outcomes</li><li>Spreadsheet import</li><li>A small AI sample to try the assistant</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal('signup')">Start free</button></div>
-    <div class="price-card"><div class="price-name">Club member</div><div class="price-desc">Through a verified club</div><div class="price-amount">$0</div><ul class="price-features"><li>Up to 150 contacts</li><li>A monthly AI allowance for the assistant, reviews and documents</li><li>Your club’s roster and leaderboard</li><li>Larger allowance if your club has a plan</li></ul><button class="price-btn price-btn-outline" onclick="openAuthModal('signup')">Join your club</button></div>
-    <div class="price-card"><div class="price-name">Pro</div><div class="price-desc">Monthly, quarterly or annual</div><div class="price-amount" id="pro-price"><span class="price-period">Price shown at checkout</span></div><ul class="price-features"><li>Up to 5,000 contacts</li><li>The full AI allowance</li><li>The stronger writing model for documents</li><li>Email reminders</li></ul><button class="price-btn price-btn-fill" onclick="openAuthModal('signup')">Get Pro</button></div>
+</section>
+
+<section class="lp-pricing" id="pricing" aria-labelledby="lp-price-h">
+  <div class="lp-wrap" data-reveal>
+    <h2 class="lp-kicker" id="lp-price-h"><span class="lp-line"><span>Simple pricing.</span></span></h2>
+    <div class="lp-plans lp-fade">
+      <div class="lp-plan"><h3>Student</h3><div class="lp-price">$0</div><ul><li>Up to 20 contacts</li><li>Warmth, follow-ups and checklists</li><li>A sample of the AI</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="openAuthModal('signup'); return false;">Start free</a></div>
+      <div class="lp-plan is-featured"><h3>Pro</h3><div class="lp-price" id="pro-price"><small>Price shown at checkout</small></div><ul><li>Up to 5,000 contacts</li><li>The full AI allowance</li><li>Drafts, scout reports and documents</li><li>Free for members of verified clubs</li></ul><a href="#" class="lp-btn lp-btn-dark" onclick="openAuthModal('signup'); return false;">Get Pro</a></div>
+      <div class="lp-plan"><h3>Clubs and career centers</h3><div class="lp-price" id="club-seat-price"><small>By application</small></div><ul><li>A console for every member’s activity</li><li>Shared outcomes and club reports</li><li>Billed only for active members</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="return openDemo(event)">Book a demo</a></div>
+    </div>
   </div>
   <script>
   (function () {
@@ -187,42 +145,57 @@
       fetch('/api/stripe/pricing').then(function (r) { return r.json(); }).then(function (p) {
         if (!p) return;
         var fmt = function (c, cur) { return new Intl.NumberFormat(undefined, { style: 'currency', currency: String(cur || 'usd').toUpperCase(), maximumFractionDigits: c % 100 ? 2 : 0 }).format(c / 100); };
-        var pro = p.pro || {};
-        var pe = document.getElementById('pro-price');
-        if (pe && pro.annual) pe.innerHTML = fmt(Math.round(pro.annual.amount / 12), pro.annual.currency) + '<span class="price-period"> / month, billed yearly</span>';
-        else if (pe && pro.monthly) pe.innerHTML = fmt(pro.monthly.amount, pro.monthly.currency) + '<span class="price-period"> / month</span>';
-        if (!p.clubSeat) return;
+        var pro = p.pro || {}, pe = document.getElementById('pro-price');
+        if (pe && pro.monthly) pe.innerHTML = fmt(pro.monthly.amount, pro.monthly.currency) + '<small> / month</small>';
+        else if (pe && pro.annual) pe.innerHTML = fmt(Math.round(pro.annual.amount / 12), pro.annual.currency) + '<small> / month, billed yearly</small>';
         var el = document.getElementById('club-seat-price');
-        var amt = new Intl.NumberFormat(undefined, { style: 'currency', currency: String(p.clubSeat.currency || 'usd').toUpperCase(), maximumFractionDigits: p.clubSeat.amount % 100 ? 2 : 0 }).format(p.clubSeat.amount / 100);
-        if (el) el.innerHTML = amt + '<span class="price-period"> / active member / ' + (p.clubSeat.interval || 'month') + '</span>';
+        if (el && p.clubSeat) el.innerHTML = fmt(p.clubSeat.amount, p.clubSeat.currency) + '<small> / active member / ' + (p.clubSeat.interval || 'month') + '</small>';
       }).catch(function () {});
     } catch (e) {}
   })();
   </script>
 </section>
 
-<section class="final-cta">
-  <h2>Run this recruiting season<br>from one workspace</h2>
-  <p>Set up your club in two minutes and share the code with members, or start on your own. No credit card needed.</p>
-  <a href="#" class="btn-primary-landing" onclick="openAuthModal('signup'); return false;">Get started</a>
-  <div class="cta-note">Free for members of verified clubs. Clubs are billed per active member.</div>
+<section class="lp-close" aria-label="Get started">
+  <div class="lp-wrap" data-reveal>
+    <h2><span class="lp-line"><span>Make every</span></span><span class="lp-line"><span>conversation count.</span></span></h2>
+    <div class="lp-hero-cta lp-fade">
+      <a href="#" class="lp-btn lp-btn-light" onclick="return openDemo(event)">Book a demo</a>
+      <a href="#" class="lp-btn lp-btn-ghost" onclick="openAuthModal('signup'); return false;">Start as a student</a>
+    </div>
+  </div>
 </section>
 
-<footer class="landing-footer">
-  <div class="footer-inner">
-    <div class="footer-left">&copy; 2026 <strong>Student Weaver</strong>. Built for students who network.</div>
-    <div class="footer-links">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-      <a href="/cookies.html">Cookie Policy</a>
-      <a href="mailto:info@studentweaver.com">Contact</a>
-    </div>
+<footer class="lp-foot">
+  <div class="lp-wrap lp-foot-in">
+    <span>&copy; 2026 Student Weaver</span>
+    <span><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookies.html">Cookies</a><a href="mailto:info@studentweaver.com">Contact</a></span>
   </div>
 </footer>
 
-
-
-
+<div class="lp-dialog" id="lp-demo" role="dialog" aria-modal="true" aria-labelledby="lp-demo-title" aria-hidden="true">
+  <div class="lp-dialog-box">
+    <div id="lp-demo-body">
+      <h2 id="lp-demo-title">Book a demo</h2>
+      <p>For club leaders and career centers. Tell us a little about you and we’ll reach out to set up a time.</p>
+      <form id="lp-demo-form" class="lp-form" novalidate>
+        <label>Name<input name="name" required maxlength="120" autocomplete="name"></label>
+        <label>Email<input name="email" type="email" required maxlength="255" autocomplete="email"></label>
+        <label>School<input name="school" required maxlength="160" autocomplete="organization"></label>
+        <label>Club or office<input name="organization" maxlength="160" placeholder="Finance Society"></label>
+        <label class="lp-span2">Your role<select name="role"><option>Club leader</option><option>Career center</option><option>Student</option><option>Other</option></select></label>
+        <label class="lp-span2">Anything we should know? <span style="font-weight:400;color:#8B97AD">(optional)</span><textarea name="message" rows="3" maxlength="2000"></textarea></label>
+        <div class="lp-hp" aria-hidden="true"><label>Website<input name="website_url" class="lp-hp-input" tabindex="-1" autocomplete="off"></label></div>
+        <div class="lp-form-foot"><span class="lp-form-msg" id="lp-demo-msg" role="alert"></span><span><button type="button" class="lp-btn lp-btn-line" onclick="closeDemo()">Cancel</button> <button type="submit" class="lp-btn lp-btn-dark">Request a demo</button></span></div>
+      </form>
+    </div>
+    <div id="lp-demo-done" class="lp-done" hidden>
+      <h2>Thank you.</h2>
+      <p style="color:#4A5568;line-height:1.5;margin:0 0 20px;">We’ve got your request and will email you shortly to find a time.</p>
+      <button type="button" class="lp-btn lp-btn-dark" onclick="closeDemo()">Done</button>
+    </div>
+  </div>
+</div>
 
 </div><!-- end #landing-page -->
 
@@ -243,32 +216,19 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
         New chat
       </button>
-      <div class="sb-section wv-manager-only" hidden>
-        <a class="sb-item nav-link" href="#console">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          Club console
-        </a>
-      </div>
       <div class="sb-section">
         <a class="sb-item nav-link active" href="#assistant" onclick="window.wvShowHome && setTimeout(window.wvShowHome,0);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8L19 20.6l-.8-2-2-.8 2-.8z"/></svg>
           Assistant
         </a>
         <div class="wv-threads" id="wv-threads"></div>
-        <a class="sb-item nav-link" href="#review">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
-          Review
-        </a>
-        <a class="sb-item nav-link" href="#documents">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
-          Documents
-        </a>
-        <a class="sb-item nav-link" href="#checklists">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          Checklists
+        <a class="sb-item nav-link" href="#dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
         </a>
       </div>
-      <div class="sb-section wv-sb-group">
+      <div class="sb-section">
+        <div class="sb-label">Network</div>
         <a class="sb-item nav-link" href="#contacts">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           My network
@@ -277,32 +237,51 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
           Follow-ups
         </a>
-        <a class="sb-item nav-link" href="#outcomes">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-4M11 16V8M16 16v-6M21 16V5"/></svg>
-          Outcomes
-        </a>
-        <a class="sb-item nav-link" href="#club" id="nav-club" onclick="if(window.renderClubView) setTimeout(window.renderClubView,0);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>
-          Club
-        </a>
         <a class="sb-item nav-link" href="#upload-notes">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add contacts
         </a>
       </div>
-      <div class="sb-section wv-sb-secondary">
+      <div class="sb-section">
+        <div class="sb-label">Prepare</div>
+        <a class="sb-item nav-link" href="#documents">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
+          Documents
+        </a>
+        <a class="sb-item nav-link" href="#review">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
+          Review
+        </a>
+        <a class="sb-item nav-link" href="#checklists">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          Checklists
+        </a>
         <a class="sb-item nav-link" href="#library" onclick="window.wvRenderLibrary && setTimeout(window.wvRenderLibrary,0);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           Library
         </a>
-        <a class="sb-item nav-link" href="#tips-tricks">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
-          Playbook
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Results</div>
+        <a class="sb-item nav-link" href="#outcomes">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-4M11 16V8M16 16v-6M21 16V5"/></svg>
+          Outcomes
         </a>
-        <a class="sb-item nav-link" href="#dashboard">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Overview
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Club</div>
+        <div class="wv-manager-only" hidden>
+          <a class="sb-item nav-link" href="#console">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Club console
         </a>
+        </div>
+        <a class="sb-item nav-link" href="#club" id="nav-club" onclick="if(window.renderClubView) setTimeout(window.renderClubView,0);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>
+          Club
+        </a>
+      </div>
+      <div class="sb-section wv-sb-secondary">
         <a class="sb-item" href="#" onclick="document.getElementById('export-excel').click(); return false;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -312,7 +291,7 @@
           Settings
         </a>
       </div>
-      <div class="wv-workspace" id="wv-workspace" onclick="var l=document.querySelector('.nav-link[href=&quot;#club&quot;]'); if(l) l.click();" title="Open your club">
+      <div class="wv-workspace" id="wv-workspace" role="button" tabindex="0" aria-haspopup="menu" onclick="window.wvOpenClubSwitcher && window.wvOpenClubSwitcher(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.wvOpenClubSwitcher&&window.wvOpenClubSwitcher(event);}" title="Switch club">
         <div class="wv-ws-mark" id="wv-ws-mark">W</div>
         <div class="wv-ws-text">
           <div class="wv-ws-name" id="wv-ws-name">Personal workspace</div>
@@ -401,7 +380,7 @@
       <section id="dashboard" class="section">
         <div class="top-bar">
           <div>
-            <h1>Overview</h1>
+            <h1>Dashboard</h1>
             <p id="dashboard-greeting" style="margin:4px 0 0;font-size:14px;color:var(--slate);">Welcome back</p>
           </div>
         </div>
@@ -676,20 +655,6 @@
 
       </section>
 
-      <!-- ═══ TIPS & TRICKS ═══ -->
-      <section id="tips-tricks" class="section">
-        <div class="top-bar"><h1>Playbook</h1></div>
-        <p style="color:var(--slate);font-size:14px;margin-bottom:1.5rem;max-width:44em;">The principles behind Weaver. The detailed method is built into every draft, prep sheet, plan and reminder Weaver makes for you, so you can focus on the people.</p>
-        <div class="tips-accordion">
-          <div class="accordion-item"><button class="accordion-header"><span>Every conversation is a person, not a transaction</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Be curious about them first.</strong> People remember how a conversation felt more than what you asked.</li><li><strong>Write down specifics</strong> so you can bring them up later. It shows you were listening.</li><li><strong>Share your own story honestly</strong>, not a rehearsed pitch.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Reaching out</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Have a real reason</strong> for choosing each person, and say it.</li><li><strong>Keep it short and easy to say yes to.</strong></li><li><strong>Timing and presentation matter.</strong> Weaver builds this into every draft for you.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Running the call</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Prepare, then listen.</strong> Your best questions will come from what they say.</li><li><strong>Make sure they learn who you are</strong> before the time runs out.</li><li><strong>End with a clear next step.</strong></li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>After the call</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Thank them, specifically.</strong></li><li><strong>Act on their advice, then tell them you did.</strong></li><li><strong>Stay in touch with the people who matter most.</strong> Weaver reminds you when.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Referrals</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Earn it through the relationship</strong> before you ask.</li><li><strong>Ask clearly, and make it easy</strong> for them to help.</li><li><strong>Close the loop</strong>: tell them how it turned out.</li></ul></div></div></div>
-          <div class="accordion-item"><button class="accordion-header"><span>Built for grinders</span><span class="accordion-icon">+</span></button><div class="accordion-content"><div class="accordion-content-inner"><ul class="tips-list"><li><strong>Consistency beats bursts.</strong> A steady weekly rhythm wins a season.</li><li><strong>Every good conversation should lead to the next one.</strong></li><li><strong>Go wide:</strong> more than one school network, more than one city.</li></ul></div></div></div>
-        </div>
-      </section>
-
       <!-- ═══ SETTINGS ═══ -->
 
       <!-- ═══ WORKSPACE (workspace-ui.js) ═══ -->
@@ -864,13 +829,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Library
       </a>
-      <a class="mobile-more-item" href="#tips-tricks" data-section="tips-tricks">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
-        Playbook
-      </a>
       <a class="mobile-more-item" href="#dashboard" data-section="dashboard">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Overview
+        Dashboard
       </a>
       <a class="mobile-more-item" href="#settings" data-section="settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
@@ -1018,28 +979,28 @@
 
     <!-- Step 2b: org — create organization -->
     <div id="onboarding-step-org" style="display:none;">
-      <h2 style="margin-bottom:0.25rem;">Create your workspace</h2>
-      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">You’ll get a code to invite members. Weaver verifies each club before members receive the club allowance.</p>
-      <div class="form-group"><label for="onboard-org-name">Name</label><input type="text" id="onboard-org-name" maxlength="120" placeholder="BC Finance Society"></div>
+      <h2 style="margin-bottom:0.25rem;">Apply for a club workspace</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Weaver admits clubs by application. We review each one, usually within two days. Once you’re approved you get a code to invite members.</p>
+      <div class="form-group"><label for="onboard-org-name">Club name</label><input type="text" id="onboard-org-name" maxlength="120" placeholder="BC Finance Society"></div>
       <div class="form-group"><label for="onboard-org-school">School</label><input type="text" id="onboard-org-school" maxlength="120" placeholder="Boston College"></div>
+      <div class="form-group"><label for="onboard-org-members">About how many members?</label><input type="number" min="1" id="onboard-org-members" placeholder="60"></div>
+      <div class="form-group"><label for="onboard-org-website">Club website or Instagram (optional)</label><input type="text" id="onboard-org-website" maxlength="300"></div>
       <div class="form-group"><span style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Type</span>
         <label style="margin-right:16px;font-size:14px;"><input type="radio" name="onboard-org-type" value="club" checked> Club</label>
         <label style="font-size:14px;"><input type="radio" name="onboard-org-type" value="career_center"> Career center</label></div>
       <div id="onboard-org-status" class="upload-status" style="display:none;"></div>
       <div style="display:flex;gap:0.75rem;margin-top:1rem;">
-        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardCreateOrg()" style="flex:1;">Create club</button>
+        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardCreateOrg()" style="flex:1;">Submit application</button>
         <button type="button" class="tb-btn tb-btn-outline" onclick="window.onboardBack()">Back</button>
       </div>
     </div>
 
-    <!-- Step 3: org created — share code -->
+    <!-- Step 3: club application sent -->
     <div id="onboarding-step-done" style="display:none;text-align:center;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="margin-bottom:0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <h2 style="margin-bottom:0.25rem;">Your workspace is ready</h2>
-      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Share this code with members. As they join and log their networking, they appear in your console.</p>
-      <div style="font-size:24px;font-weight:600;letter-spacing:2px;color:var(--navy);background:#F6F7F9;border:1px solid #E3E6EB;padding:14px 18px;border-radius:8px;" id="onboard-join-code-display">WVR-XXXXXX</div>
-      <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:0.75rem;" onclick="window.copyJoinCode(document.getElementById('onboard-join-code-display').textContent)">Copy code</button>
-      <div style="margin-top:1.25rem;"><button type="button" class="tb-btn tb-btn-primary" style="width:100%;" onclick="window.finishOnboarding()">Open the console</button></div>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" style="margin-bottom:0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h2 style="margin-bottom:0.25rem;">Application received</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">We review every club, usually within two days, and email you when you’re approved. Then you’ll get a join code to invite members. You can start using Weaver yourself now.</p>
+      <div style="margin-top:1.25rem;"><button type="button" class="tb-btn tb-btn-primary" style="width:100%;" onclick="window.finishOnboarding()">Start using Weaver</button></div>
     </div>
 
   </div>
@@ -1055,7 +1016,7 @@
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
       <button type="button" onclick="window.setCookieConsent(false)" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Reject non-essential</button>
       <button type="button" onclick="window.openCookieSettings()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Settings</button>
-      <button type="button" onclick="window.setCookieConsent(true)" style="background:#1E6A55;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Accept all</button>
+      <button type="button" onclick="window.setCookieConsent(true)" style="background:#1F3B73;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Accept all</button>
     </div>
   </div>
 </div>
@@ -1064,7 +1025,7 @@
 <div id="cookie-settings-modal" style="display:none;position:fixed;inset:0;z-index:4100;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:#fff;color:#16203A;max-width:460px;width:100%;border-radius:10px;padding:1.5rem;font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;">
     <h2 style="font-size:1.25rem;margin:0 0 0.5rem;">Cookie preferences</h2>
-    <p style="font-size:13.5px;color:#5B6474;margin:0 0 1rem;">Choose which cookies Weaver may use. You can change this anytime from the <a href="/cookies.html" style="color:#1E6A55;">Cookie Policy</a>.</p>
+    <p style="font-size:13.5px;color:#5B6474;margin:0 0 1rem;">Choose which cookies Weaver may use. You can change this anytime from the <a href="/cookies.html" style="color:#1F3B73;">Cookie Policy</a>.</p>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.75rem 0;border-top:1px solid #E3E6EB;">
       <div><div style="font-weight:600;font-size:14px;">Strictly necessary</div><div style="font-size:12.5px;color:#5B6474;">Required for login, sessions and storing your data. Always on.</div></div>
       <input type="checkbox" checked disabled style="margin-top:4px;">
@@ -1075,7 +1036,7 @@
     </div>
     <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
       <button type="button" onclick="window.closeCookieSettings()" style="background:transparent;border:1px solid #E3E6EB;border-radius:8px;padding:0.5rem 0.9rem;font-family:inherit;font-size:13px;cursor:pointer;">Cancel</button>
-      <button type="button" onclick="window.saveCookieSettings()" style="background:#1E6A55;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Save preferences</button>
+      <button type="button" onclick="window.saveCookieSettings()" style="background:#1F3B73;color:#fff;border:none;border-radius:8px;padding:0.5rem 1.1rem;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Save preferences</button>
     </div>
   </div>
 </div>
@@ -1132,9 +1093,11 @@
 })();
 </script>
 
+<script src="/warmth.js"></script>
 <script src="/script.js"></script>
 <script src="/assistant.js"></script>
 <script src="/workspace-ui.js"></script>
 <script src="/router.js"></script>
+<script src="/landing.js"></script>
 </body>
 </html>

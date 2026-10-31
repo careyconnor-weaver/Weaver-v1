@@ -788,7 +788,13 @@ function storeSessionUser(u) {
         subscriptionStatus: u.subscriptionStatus || 'free',
         subscriptionPlan: u.subscriptionPlan || null,
         hasBillingAccount: !!u.hasBillingAccount,
-        onboardedAt: u.onboardedAt || null
+        onboardedAt: u.onboardedAt || null,
+        // The club picked in the club switcher, kept while they are still a member.
+        primaryOrgId: (function () {
+            const prev = getCurrentUser();
+            const keep = prev && prev.id === u.id ? prev.primaryOrgId : null;
+            return keep && (u.orgs || []).some(function (o) { return o.id === keep; }) ? keep : null;
+        })()
     });
 }
 window.storeSessionUser = storeSessionUser;
@@ -1929,9 +1935,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }, 100);
                 }
                 
-                if (targetId === 'tips-tricks') {
-                    setTimeout(() => initTipsAccordion(), 100);
-                }
                 
                 if (targetId === 'settings' && typeof loadSettingsPage === 'function') {
                     loadSettingsPage();
@@ -3695,6 +3698,7 @@ function displayContacts(contactsToShow = null) {
                 '<span class="wv-sr">' + (contact.vip ? 'VIP' : 'Not VIP') + '</span></button></td>' +
             '<td><div class="wv-cell-strong">' + esc(contact.name) + '</div>' + (contact.email ? '<div class="wv-cell-sub">' + esc(contact.email) + '</div>' : '') + '</td>' +
             '<td>' + (role || '<span class="wv-muted">Not recorded</span>') + '</td>' +
+            '<td>' + warmthBadge(contactWarmth(contact)) + '</td>' +
             '<td>' + last + '</td>' +
             '<td class="num">' + emailsSent + '</td><td class="num">' + emailsReceived + '</td><td class="num">' + callCount + '</td>' +
             '<td class="wv-row-actions">' + (callCount ? '<button type="button" class="wv-linkbtn wv-inline" data-notes="' + id + '">Notes</button>' : '') +
@@ -3702,7 +3706,7 @@ function displayContacts(contactsToShow = null) {
             '</tr>';
     }).join('');
     contactsList.innerHTML = '<div class="wv-table-scroll"><table class="wv-table wv-table-click wv-net-table"><thead><tr>' +
-        '<th scope="col"><span class="wv-sr">VIP</span></th><th scope="col">Name</th><th scope="col">Firm and role</th><th scope="col">Last contact</th>' +
+        '<th scope="col"><span class="wv-sr">VIP</span></th><th scope="col">Name</th><th scope="col">Firm and role</th><th scope="col">Warmth</th><th scope="col">Last contact</th>' +
         '<th scope="col" class="num">Sent</th><th scope="col" class="num">Replies</th><th scope="col" class="num">Calls</th><th scope="col"><span class="wv-sr">Actions</span></th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     contactsList.querySelectorAll('[data-vip]').forEach(b => { b.onclick = (e) => { e.stopPropagation(); toggleVIP(b.getAttribute('data-vip')); }; });
@@ -4165,6 +4169,49 @@ function buildInteractionsList(timeline, contact) {
 // Track which section the user came from when viewing contact detail
 let previousSectionId = 'contacts';
 
+// ---------- Contact warmth (warmth.js) ----------
+function contactWarmth(contact) {
+    try { return window.WeaverWarmth ? window.WeaverWarmth.assess(contact) : null; } catch (e) { return null; }
+}
+function warmthBadge(w) {
+    if (!w) return '';
+    return '<span class="wv-warmth wv-warmth-' + w.level + '" title="' + escapeHtmlClub(w.reason) + '"><i aria-hidden="true"></i>' + escapeHtmlClub(w.label) + '</span>';
+}
+function warmthPanel(contact) {
+    const w = contactWarmth(contact);
+    if (!w) return '';
+    const id = escapeHtmlClub(contact.id);
+    return '<div class="wv-warmth-panel">' +
+        '<div class="wv-warmth-main">' + warmthBadge(w) + '<p class="wv-warmth-reason">' + escapeHtmlClub(w.reason) + '</p></div>' +
+        '<p class="wv-warmth-next"><strong>Next:</strong> ' + escapeHtmlClub(w.next) + '</p>' +
+        '<div class="wv-warmth-actions">' +
+        '<button type="button" class="wv-btn wv-btn-primary" onclick="draftNextEmail(\'' + id + '\')">Draft the next email</button>' +
+        '<button type="button" class="wv-btn" onclick="scoutContactFirm(\'' + id + '\')">Scout their firm</button>' +
+        '</div></div>';
+}
+// Opens the assistant with a request to draft the right next email; the draft is editable there.
+function draftNextEmail(contactId) {
+    const c = getContacts().find(x => String(x.id) === String(contactId));
+    if (!c) return;
+    const w = contactWarmth(c);
+    const link = document.querySelector('.nav-link[href="#assistant"]');
+    if (link) link.click();
+    setTimeout(function () {
+        const input = document.getElementById('wv-input');
+        if (!input) return;
+        input.value = 'Draft my next email to ' + c.name + (c.firm ? ' at ' + c.firm : '') + '. The relationship is ' + (w ? w.label.toLowerCase() + ' (' + w.reason.replace(/\.$/, '') + ')' : 'new') +
+            '. Use what we last talked about from my notes, keep it short and human, and suggest the right next step.';
+        if (window.wvSend) window.wvSend();
+    }, 60);
+}
+function scoutContactFirm(contactId) {
+    if (window.wvOpenDocForm) window.wvOpenDocForm('scout_report', { contactId: contactId });
+    const link = document.querySelector('.nav-link[href="#documents"]');
+    if (link) link.click();
+}
+window.draftNextEmail = draftNextEmail;
+window.scoutContactFirm = scoutContactFirm;
+
 function showContactDetail(contactId) {
     const contacts = getContacts();
     const contact = contacts.find(c => c.id === contactId);
@@ -4292,6 +4339,7 @@ function showContactDetail(contactId) {
                 <h1 id="contact-detail-name">${escapeHtmlClub(contact.name)}</h1>
                 <button class="btn btn-secondary" onclick="toggleEditMode('${contactId}')" id="edit-contact-btn">Edit</button>
             </div>
+            ${warmthPanel(contact)}
             <div class="contact-detail-info" id="contact-detail-info">
                 <div class="info-row">
                     <div class="info-item">
@@ -7398,17 +7446,18 @@ window.onboardCreateOrg = async function () {
     const status = document.getElementById('onboard-org-status');
     const name = (nameEl?.value || '').trim();
     if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
+    if (!(schoolEl?.value || '').trim()) { showInlineStatus(status, 'Enter your school.', 'error'); return; }
     try {
         const res = await fetch('/api/orgs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, school: (schoolEl?.value || '').trim(), orgType: ((document.querySelector('input[name=onboard-org-type]:checked') || {}).value || 'club') })
+            body: JSON.stringify({ name: name, school: (schoolEl?.value || '').trim(), orgType: ((document.querySelector('input[name=onboard-org-type]:checked') || {}).value || 'club'),
+                memberCount: document.getElementById('onboard-org-members')?.value || '',
+                website: document.getElementById('onboard-org-website')?.value || '' })
         });
         const data = await res.json();
-        if (!res.ok) { showInlineStatus(status, data.error || 'Could not create club.', 'error'); return; }
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not send your application.', 'error'); return; }
         updateCurrentUserFields({ accountType: 'org', primaryOrgId: data.org.id });
-        const disp = document.getElementById('onboard-join-code-display');
-        if (disp) disp.textContent = data.org.joinCode;
         onboardSetStep('done');
     } catch (e) {
         showInlineStatus(status, 'Something went wrong. Please try again.', 'error');
@@ -7490,16 +7539,15 @@ window.renderClubView = async function () {
 
     // Header: club identity and join code (same layout as the manager console)
     html += '<div class="wv-console-head"><div class="wv-console-id">';
-    html += '<h2 class="wv-console-name">' + e(org.name) + '</h2>';
+    html += '<h2 class="wv-console-name">' + e(org.name) + (org.verified && window.wvVerifiedIcon ? window.wvVerifiedIcon : '') + '</h2>';
     html += '<div class="wv-console-meta">' + (org.school ? e(org.school) + ' · ' : '') + members.length + ' member' + (members.length === 1 ? '' : 's') + ' · you are ' + e(org.role) + '</div></div>';
-    html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + e(org.joinCode || '') + '</code>' +
-        '<button type="button" class="wv-btn wv-btn-sm" onclick="window.copyJoinCode(\'' + e(org.joinCode) + '\')">Copy</button></div></div>';
+    if (org.joinCode) html += '<div class="wv-console-code"><span class="wv-label">Join code</span><code>' + e(org.joinCode) + '</code>' +
+        '<button type="button" class="wv-btn wv-btn-sm" onclick="window.copyJoinCode(\'' + e(org.joinCode) + '\')">Copy</button></div>';
+    html += '</div>';
     if (isClubManager) {
         html += '<div class="wv-note">You manage this club. Invites, member activity, shared outcomes and billing are in the <a href="#console" onclick="event.preventDefault(); var l=document.querySelector(\'.nav-link[href=&quot;#console&quot;]\'); if(l) l.click();">club console</a>.</div>';
     }
-    if (!org.verified) {
-        html += '<div class="wv-note wv-note-warn">This club is waiting for verification by Weaver. Until then, members are on the Starter plan.</div>';
-    }
+    if (!org.verified && window.wvReviewNote) html += window.wvReviewNote(org);
 
     // The member's own standing
     if (me) {
@@ -7621,12 +7669,16 @@ function clubEmptyStateHtml(u) {
     const isOrg = u.accountType === 'org';
     let html = '<div class="settings-card" style="max-width:560px;">';
     if (isOrg) {
-        html += '<h3 class="settings-card-title">Create your club</h3>';
-        html += '<p style="color:var(--slate);font-size:14px;">Set up a shared space and invite members. You\'ll see who\'s networking most effectively.</p>';
-        html += '<div class="form-group" style="margin-top:0.75rem;"><label for="club-create-name">Club name *</label><input type="text" id="club-create-name" placeholder="e.g. BC Finance Society" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"></div>';
-        html += '<div class="form-group"><label for="club-create-school">School (optional)</label><input type="text" id="club-create-school" placeholder="e.g. Boston College" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"></div>';
+        const inp = 'style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"';
+        html += '<h3 class="settings-card-title">Apply for a club workspace</h3>';
+        html += '<p style="color:var(--slate);font-size:14px;">Weaver admits clubs by application. We review each one, usually within two days, and email you when you’re approved. Then you get a join code to invite members.</p>';
+        html += '<div class="form-group" style="margin-top:0.75rem;"><label for="club-create-name">Club name</label><input type="text" id="club-create-name" maxlength="120" placeholder="e.g. BC Finance Society" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-school">School</label><input type="text" id="club-create-school" maxlength="120" placeholder="e.g. Boston College" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-members">About how many members?</label><input type="number" min="1" id="club-create-members" placeholder="60" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-website">Club website or Instagram (optional)</label><input type="text" id="club-create-website" maxlength="300" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-about">What does your club do? (optional)</label><textarea id="club-create-about" rows="3" maxlength="1000" ' + inp + '></textarea></div>';
         html += '<div id="club-create-status" class="upload-status" style="display:none;margin:0.5rem 0;"></div>';
-        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubCreate()">Create club</button>';
+        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubCreate()">Submit application</button>';
     } else {
         html += '<h3 class="settings-card-title">Join your club</h3>';
         html += '<p style="color:var(--slate);font-size:14px;">Enter your club code to join the roster and see how your networking compares with your peers.</p>';
@@ -7679,10 +7731,14 @@ window.clubCreate = async function () {
     const school = (document.getElementById('club-create-school')?.value || '').trim();
     const status = document.getElementById('club-create-status');
     if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
+    if (!school) { showInlineStatus(status, 'Enter your school.', 'error'); return; }
     try {
         const res = await fetch('/api/orgs', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: u.id, name: name, school: school })
+            body: JSON.stringify({ userId: u.id, name: name, school: school,
+                memberCount: document.getElementById('club-create-members')?.value || '',
+                website: document.getElementById('club-create-website')?.value || '',
+                about: document.getElementById('club-create-about')?.value || '' })
         });
         const data = await res.json();
         if (!res.ok) { showInlineStatus(status, data.error || 'Could not create club.', 'error'); return; }

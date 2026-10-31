@@ -4,7 +4,7 @@
    so the marketing landing page keeps its own styles.
 
    Palette    paper #F6F7F9 · surface #FFFFFF · ink #16203A · graphite #5B6474
-              hairline #E3E6EB · ledger green #1E6A55 (the single accent)
+              hairline #E3E6EB · navy #1F3B73 (the single accent)
    Type       Newsreader (greeting + page titles) · IBM Plex Sans (everything else)
    Principle  The composer is the one elevated object; everything else is flat,
               hairline-structured, and quiet.
@@ -19,9 +19,9 @@
   --wv-muted: #8A93A2;
   --wv-hair: #E3E6EB;
   --wv-hair-strong: #D3D8DF;
-  --wv-ledger: #1E6A55;
-  --wv-ledger-deep: #154C3D;
-  --wv-ledger-tint: #E7F0EC;
+  --wv-ledger: #1F3B73;       /* navy accent (name kept so every rule picks it up) */
+  --wv-ledger-deep: #142A55;
+  --wv-ledger-tint: #E7ECF6;
   --wv-display: 'Newsreader', 'Iowan Old Style', Georgia, serif;
   --wv-ui: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
 
@@ -29,8 +29,8 @@
   --navy: var(--wv-ink);
   --navy-deep: #0F1729;
   --blue: var(--wv-ledger);
-  --blue-bright: #2E8A70;
-  --blue-pale: #CFE2DA;
+  --blue-bright: #2D4F92;
+  --blue-pale: #CDD8EC;
   --blue-ghost: var(--wv-ledger-tint);
   --slate: var(--wv-graphite);
   --slate-light: var(--wv-muted);
@@ -59,7 +59,7 @@
 #app-container .sb-brand span { color: var(--wv-ink); font-family: var(--wv-display); font-weight: 500; font-size: 21px; letter-spacing: -0.01em; }
 #app-container .sb-section { margin-bottom: 10px; padding: 0 10px; }
 #app-container .wv-sb-secondary { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--wv-hair); margin-left: 10px; margin-right: 10px; padding-left: 0; padding-right: 0; }
-#app-container .sb-label { display: none; }
+/* section labels: see "Sidebar sections" below */
 #app-container .sb-item {
   color: var(--wv-graphite); font-size: 14px; font-weight: 450; padding: 7px 10px; border-left: 0;
   border-radius: 8px; gap: 10px; transition: background-color 0.12s, color 0.12s;
@@ -125,7 +125,7 @@
 #app-container .tb-btn-outline:hover { border-color: var(--wv-ink); }
 
 .wv-pill { display: inline-block; vertical-align: 2px; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #EEF0F3; color: var(--wv-graphite, #5B6474); }
-.wv-pill-ok { background: var(--wv-ledger-tint, #E7F0EC); color: var(--wv-ledger-deep, #154C3D); }
+.wv-pill-ok { background: var(--wv-ledger-tint, #E7ECF6); color: var(--wv-ledger-deep, #142A55); }
 
 /* ── Assistant ───────────────────────────────────────────────────── */
 .wv-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -320,7 +320,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 :root {
   --wv-paper: #F6F7F9; --wv-surface: #FFFFFF; --wv-ink: #16203A; --wv-graphite: #5B6474; --wv-muted: #8A93A2;
-  --wv-hair: #E3E6EB; --wv-hair-strong: #D3D8DF; --wv-ledger: #1E6A55; --wv-ledger-deep: #154C3D; --wv-ledger-tint: #E7F0EC;
+  --wv-hair: #E3E6EB; --wv-hair-strong: #D3D8DF; --wv-ledger: #1F3B73; --wv-ledger-deep: #142A55; --wv-ledger-tint: #E7ECF6;
   --wv-amber: #7A5A12; --wv-amber-tint: #FBF5E6; --wv-red: #8A2C1E; --wv-red-tint: #FBF1EF;
   --wv-ui-font: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
   --wv-display-font: 'Newsreader', 'Iowan Old Style', Georgia, serif;
@@ -710,3 +710,49 @@
 .wv-pe-actions { display: flex; gap: 8px; }
 .wv-lib-history { padding-top: 22px; border-top: 1px solid var(--wv-hair); }
 @media (max-width: 640px) { .wv-custom-head { flex-direction: column; align-items: flex-start; } }
+
+
+/* ── Sidebar sections ───────────────────────────────────────────── */
+#app-container .sb-label { display: block; font-size: 12px; font-weight: 500; color: var(--wv-muted); padding: 10px 10px 4px; letter-spacing: 0.01em; text-transform: none; margin: 0; }
+#app-container .sb-section { margin-bottom: 6px; }
+#app-container .wv-workspace { cursor: pointer; }
+#app-container .wv-workspace:focus-visible { outline: 2px solid var(--wv-ledger); outline-offset: -2px; }
+
+/* ── Verified clubs ─────────────────────────────────────────────── */
+.wv-verified { color: var(--wv-ledger, #1F3B73); vertical-align: -2px; margin-left: 5px; flex-shrink: 0; }
+.wv-pill .wv-verified { margin: 0 4px 0 0; width: 12px; height: 12px; }
+
+/* ── Club switcher ──────────────────────────────────────────────── */
+.wv-switcher { margin: 0 10px 6px; background: var(--wv-surface); border: 1px solid var(--wv-hair-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(22, 32, 58, 0.14); padding: 6px; }
+.wv-switcher-label { font-size: 12px; color: var(--wv-muted); padding: 6px 8px 4px; }
+.wv-switcher-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 8px; cursor: pointer; color: var(--wv-ink); font: inherit; }
+.wv-switcher-item:hover, .wv-switcher-item:focus-visible { background: var(--wv-sidebar); outline: none; }
+.wv-switcher-item.is-on { background: var(--wv-ledger-tint); }
+.wv-switcher-item .wv-ws-mark { width: 28px; height: 28px; flex-shrink: 0; }
+.wv-switcher-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.wv-switcher-name { font-size: 14px; font-weight: 500; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-switcher-sub { font-size: 12px; color: var(--wv-graphite); }
+.wv-switcher-check { color: var(--wv-ledger); flex-shrink: 0; }
+.wv-switcher-join { border-top: 1px solid var(--wv-hair); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.wv-switcher-empty { font-size: 13px; color: var(--wv-graphite); margin: 6px 8px; }
+#wv-ws-name { display: flex; align-items: center; }
+
+/* ── Contact warmth ─────────────────────────────────────────────── */
+.wv-warmth { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; color: var(--wv-ink); }
+.wv-warmth i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #C4CAD4; }
+.wv-warmth-new i { background: transparent; box-shadow: inset 0 0 0 1.5px #A3ABB8; }
+.wv-warmth-cold i { background: #9AA6B8; }
+.wv-warmth-warming i { background: #D9A441; }
+.wv-warmth-warm i { background: #D97B36; }
+.wv-warmth-strong i { background: #1F3B73; }
+.wv-warmth-panel { background: var(--wv-surface, #fff); border: 1px solid var(--wv-hair, #E3E6EB); border-radius: 10px; padding: 16px 18px; margin: 14px 0 18px; }
+.wv-warmth-main { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wv-warmth-panel .wv-warmth { font-size: 15px; }
+.wv-warmth-reason { margin: 0; color: var(--wv-graphite, #5B6474); font-size: 14px; }
+.wv-warmth-next { margin: 8px 0 12px; font-size: 14px; color: var(--wv-ink, #16203A); }
+.wv-warmth-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Wide screens: bigger type, centered pages, balanced margins ── */
+#app-container .main-content > .section { max-width: 1240px; margin-left: auto; margin-right: auto; }
+@media (min-width: 1500px) { #app-container .main-content { zoom: 1.08; } }
+@media (min-width: 1800px) { #app-container .main-content { zoom: 1.16; } }

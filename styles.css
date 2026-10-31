@@ -213,7 +213,7 @@ body { font-family: var(--font); color: var(--navy); background: #eef1f5; }
 .price-period { font-size: 14px; color: var(--text-muted-landing); font-weight: 400; }
 .price-features { list-style: none; margin: 24px 0; padding: 0; }
 .price-features li { padding: 8px 0; font-size: 14px; color: var(--text-secondary-landing); display: flex; align-items: center; gap: 10px; }
-.price-features li::before { content: ''; flex-shrink: 0; width: 8px; height: 4px; margin-top: 7px; border-left: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); color: var(--wv-ledger, #1E6A55); }
+.price-features li::before { content: ''; flex-shrink: 0; width: 8px; height: 4px; margin-top: 7px; border-left: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); color: var(--wv-ledger, #1F3B73); }
 .price-features li.off { color: var(--text-muted-landing); text-decoration: line-through; opacity: 0.5; }
 .price-features li.off::before { content: '—'; color: var(--text-muted-landing); }
 .price-btn { display: block; width: 100%; text-align: center; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.25s; border: none; cursor: pointer; font-family: var(--font-landing); }

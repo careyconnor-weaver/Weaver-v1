@@ -105,7 +105,7 @@ app.use('/api', (req, res, next) => {
 // exposed server code, config files and the Gmail token backup.)
 const PUBLIC_FILES = new Set([
     'index.html', 'privacy.html', 'terms.html', 'cookies.html', 'success.html', 'cancel.html',
-    'script.js', 'assistant.js', 'workspace-ui.js', 'router.js', 'api.js', 'styles.css', 'app-theme.css',
+    'script.js', 'assistant.js', 'workspace-ui.js', 'router.js', 'warmth.js', 'landing.js', 'landing.css', 'api.js', 'styles.css', 'app-theme.css',
     'weaver-badge.png', 'hero-network.jpg', 'networking-event.jpg', 'student-laptop.jpg',
     'favicon.ico', 'favicon.png', 'apple-touch-icon.png',
 ]);
@@ -149,6 +149,7 @@ const PUBLIC_API = new Set([
     'POST /api/users/signup', 'POST /api/users/login',
     'GET /api/auth/me', 'GET /api/health', 'GET /api/stripe/pricing',
     'POST /api/stripe/webhook', 'GET /api/gmail/callback',
+    'POST /api/demo-request',
 ]);
 app.use('/api', async (req, res, next) => {
     try {
@@ -192,7 +193,48 @@ app.use('/api', (req, res, next) => {
 
 // Accounts, plans and workspace features
 app.use('/api', authRoutes({ pool, dbAPI }));
-app.use('/api', workspaceRoutes({ pool, openai: null, dbAPI, getOpenAI: () => openai }));
+// "Book a demo" form on the landing page. Public, rate limited, with a hidden honeypot field.
+app.post('/api/demo-request', async (req, res) => {
+    try {
+        const b = req.body || {};
+        if (b.website_url) return res.json({ success: true }); // honeypot: bots fill every field
+        const limit = auth.hit('demo-ip:' + req.ip, 5, 3600000);
+        if (!limit.allowed) return res.status(429).json({ error: 'Thanks, we already have your request. We’ll be in touch soon.' });
+        const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
+        const name = clean(b.name, 120), email = clean(b.email, 255).toLowerCase();
+        const school = clean(b.school, 160), organization = clean(b.organization, 160), role = clean(b.role, 80);
+        const message = String(b.message == null ? '' : b.message).trim().slice(0, 2000);
+        if (!name) return res.status(400).json({ error: 'Enter your name.' });
+        if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+        if (!school) return res.status(400).json({ error: 'Enter your school.' });
+        const id = 'demo_' + crypto.randomBytes(9).toString('base64url');
+        await pool.query('INSERT INTO demo_requests (id, name, email, school, organization, role, message) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, name, email, school, organization || null, role || null, message || null]);
+        emailAdmins(`Demo request: ${organization || school}`, `${name} <${email}>\n${role || ''}${role && organization ? ', ' : ''}${organization || ''}\n${school}\n\n${message || '(no message)'}\n\nSee all requests at ${(process.env.WEAVER_URL || 'https://studentweaver.com').replace(/\/+$/, '')}/admin`)
+            .catch((e) => console.error('Demo request email failed:', e.message));
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Demo request error:', error.message);
+        res.status(500).json({ error: 'Could not send your request. Email info@studentweaver.com instead.' });
+    }
+});
+
+// Tell a club's owner that Weaver approved or declined their application.
+async function notifyOwner(ownerId, clubName, approved) {
+    if (!resend) return;
+    const owner = await dbAPI.getUserById(ownerId);
+    if (!owner || !owner.email) return;
+    const url = (process.env.WEAVER_URL || 'https://studentweaver.com').replace(/\/+$/, '');
+    await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>',
+        to: owner.email,
+        subject: approved ? `${clubName} is approved on Weaver` : `Your Weaver application for ${clubName}`,
+        text: approved
+            ? `Good news: ${clubName} has been approved on Weaver.\n\nOpen your club console to get your join code and invite members: ${url}/app/console\n\nThe Weaver team`
+            : `Thanks for applying to bring ${clubName} to Weaver. We aren't able to approve it right now.\n\nIf you think this is a mistake, or your club has changed, reply to info@studentweaver.com and we'll take another look.\n\nThe Weaver team`,
+    });
+}
+
+app.use('/api', workspaceRoutes({ pool, openai: null, dbAPI, getOpenAI: () => openai, notifyOwner }));
 
 // Initialize OpenAI (optional - only if API key is provided)
 let openai = null;
@@ -1954,7 +1996,7 @@ function generateEmailBody(contacts) {
         const priority = c.priority === 'high' ? 'High' : c.priority === 'low' ? 'Low' : 'Medium';
         return `<tr>
             <td style="padding:12px 16px;${border}">
-              <div style="font-weight:600;color:#16203A;font-size:14px;">${escapeHtml(c.name)}${c.vip ? ' <span style="font-weight:500;color:#1E6A55;font-size:12px;">VIP</span>' : ''}</div>
+              <div style="font-weight:600;color:#16203A;font-size:14px;">${escapeHtml(c.name)}${c.vip ? ' <span style="font-weight:500;color:#1F3B73;font-size:12px;">VIP</span>' : ''}</div>
               ${c.firm ? `<div style="color:#5B6474;font-size:13px;margin-top:2px;">${escapeHtml(c.firm)}</div>` : ''}
             </td>
             <td align="right" style="padding:12px 16px;${border}color:#16203A;font-size:14px;white-space:nowrap;">${Number(c.daysSinceLastContact) || 0} days</td>
@@ -1986,7 +2028,7 @@ function generateEmailBody(contacts) {
           ${more}
         </td></tr>
         <tr><td style="padding:24px;">
-          <a href="${escapeHtml(weaverUrl)}/app/follow-ups" style="display:inline-block;background:#1E6A55;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open follow-ups</a>
+          <a href="${escapeHtml(weaverUrl)}/app/follow-ups" style="display:inline-block;background:#1F3B73;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:6px;">Open follow-ups</a>
         </td></tr>
         <tr><td style="padding:16px 24px;border-top:1px solid #E3E6EB;color:#5B6474;font-size:12px;line-height:1.5;">
           You get these reminders because they are turned on in Weaver. Change the time or turn them off in Settings.
@@ -2368,6 +2410,7 @@ Rules:
 - Follow-up plans: prioritize VIP/high-priority and the most overdue contacts, give a one-line reason for each, and include draft_email actions for the top ones (max 5).
 - Keep replies short and scannable: one-line lead, then bullets or a compact table, then next steps. Do not repeat draft text in the reply — drafts render as cards. When you log something, confirm it in one line.
 - If who/when is ambiguous, make a sensible assumption (e.g. today's date) and state it.
+- Each contact has a "warmth" (New, Cold, Warming, Warm, Strong) with "warmth_reason", computed by Weaver from the logged history. When asked how warm a relationship is, use it and explain the reason in plain words; match drafts to it (a Cold contact gets a brief, friendly nudge; a Strong one can take a bigger ask). Never contradict it with invented history.
 - Human connection first: Weaver exists to help students build real relationships, not to automate them. Drafts must sound like a specific student wrote them to a specific person, mention something true and specific about the recipient when the data has it, and never use generic flattery or buzzwords. When a draft depends on facts you don't have (what they discussed, why this person), leave a short [bracketed] placeholder for the student to fill in rather than inventing it.
 - Many users are at semi-target or non-target schools and win through consistency and relationships. Be encouraging and practical, never condescending.
 - When preparing someone for a call, give questions and tell them what to research themselves (the person's background, group, recent deals or news); do not present guesses about the person as facts.
@@ -2454,9 +2497,20 @@ app.post('/api/users/account-type', async (req, res) => {
 // Owners and admins are "managers". Members can see the roster and leaderboard;
 // only managers see member emails, billing and invites.
 
+// What members see about a club. Until Weaver approves a club, its join code is hidden,
+// so nobody can be brought into a club that hasn't been accepted.
 function stripOrg(o) {
-    const { stripeCustomerId, stripeSubscriptionId, billingEmail, ...rest } = o;
-    return rest;
+    const { stripeCustomerId, stripeSubscriptionId, billingEmail, application, ...rest } = o;
+    const status = rest.verified ? 'approved' : rest.declinedAt ? 'declined' : 'pending';
+    return { ...rest, reviewStatus: status, joinCode: rest.verified ? rest.joinCode : null };
+}
+
+async function emailAdmins(subject, text) {
+    const to = String(process.env.ADMIN_EMAILS || process.env.AI_ALERT_EMAIL || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (!resend || !to.length) return false;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>';
+    await resend.emails.send({ from: fromEmail, to, subject, text });
+    return true;
 }
 
 async function membershipFor(userId, orgId) {
@@ -2471,10 +2525,16 @@ function isManagerRole(role) {
 // Create a club or career-center workspace. The creator becomes the owner.
 app.post('/api/orgs', async (req, res) => {
     try {
-        const name = String((req.body && req.body.name) || '').trim().slice(0, 120);
-        const school = String((req.body && req.body.school) || '').trim().slice(0, 120) || null;
-        const orgType = req.body && req.body.orgType === 'career_center' ? 'career_center' : 'club';
+        const b = req.body || {};
+        const name = String(b.name || '').trim().slice(0, 120);
+        const school = String(b.school || '').trim().slice(0, 120) || null;
+        const orgType = b.orgType === 'career_center' ? 'career_center' : 'club';
         if (!name) return res.status(400).json({ error: 'Enter your club’s name.' });
+        if (!school) return res.status(400).json({ error: 'Enter your school.' });
+        const size = Math.max(0, Math.min(100000, parseInt(b.memberCount, 10) || 0)) || null;
+        const website = String(b.website || '').trim().slice(0, 300) || null;
+        const about = String(b.about || '').trim().slice(0, 1000) || null;
+        const application = { memberCount: size, website, about, applicantEmail: req.user.email, submittedAt: new Date().toISOString() };
         const owned = (await dbAPI.getOrgsForUser(req.user.id)).filter((o) => o.role === 'owner');
         if (owned.length >= 3) return res.status(400).json({ error: 'You can run up to 3 clubs. Contact us if you need more.' });
         const org = await dbAPI.createOrganization({
@@ -2482,9 +2542,13 @@ app.post('/api/orgs', async (req, res) => {
             name,
             ownerId: req.user.id,
             school,
+            application,
         });
         if (orgType === 'career_center') await dbAPI.setOrgBilling(org.id, { orgType });
         await dbAPI.setUserAccountType(req.user.id, 'org');
+        emailAdmins(`New ${orgType === 'career_center' ? 'career center' : 'club'} application: ${name}`,
+            `${name} (${school}) applied to Weaver.\n\nApplicant: ${req.user.email}\nMembers: ${size || 'not given'}\nWebsite: ${website || 'not given'}\n\n${about || ''}\n\nReview it at ${(process.env.WEAVER_URL || 'https://studentweaver.com').replace(/\/+$/, '')}/admin`)
+            .catch((e) => console.error('Application email failed:', e.message));
         res.json({ success: true, org: stripOrg({ ...org, orgType, role: 'owner' }) });
     } catch (error) {
         console.error('Error creating organization:', error.message);
@@ -2539,6 +2603,7 @@ app.post('/api/orgs/join', async (req, res) => {
         if (!limit.allowed) return res.status(429).json({ error: 'Too many attempts. Try again in an hour, or ask your club leader for the code.' });
         const org = await dbAPI.getOrganizationByJoinCode(joinCode);
         if (!org) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
+        if (!org.verified) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
         await dbAPI.addOrgMember({ orgId: org.id, userId: req.user.id, role: 'member', displayName });
         try { await pool.query("UPDATE org_invites SET status = 'accepted' WHERE org_id = $1 AND email = $2", [org.id, req.user.email]); } catch (e) { /* invites optional */ }
         res.json({ success: true, org: stripOrg(org) });
@@ -2580,6 +2645,7 @@ app.post('/api/orgs/:orgId/invite', async (req, res) => {
         const me = await membershipFor(req.user.id, req.params.orgId);
         if (!me) return res.status(404).json({ error: 'Club not found.' });
         if (!isManagerRole(me.role)) return res.status(403).json({ error: 'Only club owners and admins can invite members.' });
+        if (!me.verified) return res.status(403).json({ error: 'You can invite members once Weaver approves your club.' });
         const email = String((req.body && req.body.email) || '').trim().toLowerCase();
         if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
         const limit = auth.hit('invite:' + me.id, 200, 86400000);
@@ -2606,7 +2672,7 @@ app.post('/api/orgs/:orgId/invite', async (req, res) => {
                         <p style="font-size:16px;margin:0 0 16px;">You’ve been invited to join <strong>${orgName}</strong> on Weaver, the recruiting workspace your club uses to track networking and share progress.</p>
                         <p style="font-size:15px;margin:0 0 8px;">Create an account, choose <strong>Student</strong>, and enter this club code:</p>
                         <p style="font-size:20px;font-weight:600;letter-spacing:2px;background:#F6F7F9;border:1px solid #E3E6EB;padding:12px 16px;border-radius:6px;text-align:center;margin:0 0 20px;">${escapeHtml(me.joinCode)}</p>
-                        <p style="margin:0 0 24px;"><a href="${escapeHtml(weaverUrl)}" style="display:inline-block;background:#1E6A55;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;">Open Weaver</a></p>
+                        <p style="margin:0 0 24px;"><a href="${escapeHtml(weaverUrl)}" style="display:inline-block;background:#1F3B73;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;">Open Weaver</a></p>
                         <p style="font-size:12px;color:#5B6474;margin:0;">You received this because a leader of ${orgName} invited this address. If you weren’t expecting it, you can ignore this email.</p>
                     </div>`,
                 });
