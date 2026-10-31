@@ -29,6 +29,7 @@
         ['tips-tricks', 'playbook', 'Playbook'],
         ['dashboard', 'overview', 'Overview'],
         ['settings', 'settings', 'Settings'],
+        ['admin', 'admin', 'Admin'],
     ];
     var BY_SECTION = {}, BY_SLUG = {};
     ROUTES.forEach(function (r) { BY_SECTION[r[0]] = r; BY_SLUG[r[1]] = r; });

@@ -568,3 +568,35 @@ no provider details in responses, cause and fix in the log, no repeat OpenAI cal
 paused, no usage charged, immediate recovery after a temporary outage, one admin alert for
 repeated failures. Full regression suite re-run (18 end-to-end, 6 metering, 5
 confidentiality, 4 security probes, 22 address checks, production cookie/error checks).
+
+---
+
+# Change set 9: Admin usage dashboard
+
+**Product direction by:** shindon@bc.edu ("how can i check how many users use weaver";
+chose the in-app dashboard over querying the database)
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
+
+## Built
+- **`GET /api/admin/stats`** (`routes/workspace.js`): accounts (total, new today, 7 and 30 days,
+  club leaders), sign-ups per week for 12 weeks, active people today, this week and this month
+  (from sign-in sessions), what people do (added contacts, logged calls, used AI, documents,
+  outreach, outcomes and offers), AI spend this month by feature against the cap and whether
+  AI is currently paused, plans (resolved exactly as the app resolves them), and each club's
+  members and active members. Counts only: no emails, names of individuals, contacts or notes.
+- **Admin page** at `/app/admin` (`workspace-ui.js`, `index.html`, `app-theme.css`), with a
+  sign-ups chart, KPI row, plan split, engagement table, AI meter and clubs table. Works at
+  phone width.
+- **Access:** only accounts in `ADMIN_EMAILS` see the Admin link (`isAdmin` on the session
+  user). The server checks on every request; anyone else gets 404, signed-out visitors 401.
+
+## Fixed along the way
+- Club leaders opening a link to a specific screen (for example `/app/library`) were sent to
+  the club console instead. Leaders now start in the console only when they didn't open a
+  specific screen.
+
+## Verified
+5 admin checks: students get 404 and no link; numbers match direct database counts;
+no emails or personal data in the response; admin deep link opens the page; phone layout.
+Full regression re-run (18 end-to-end, 6 metering, 5 confidentiality, 4 security probes,
+22 address checks, Library, hostile-data browser test).

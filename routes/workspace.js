@@ -868,6 +868,79 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
         return true;
     }
 
+    // Usage dashboard for Weaver staff. Counts only: no one's contacts, notes or emails.
+    // Non-admins get 404 so the page's existence isn't revealed.
+    router.get('/admin/stats', async (req, res) => {
+        if (!isAdmin(req.user)) return res.status(404).json({ error: 'Not found' });
+        try {
+            const q = async (sql, params) => (await pool.query(sql, params || [])).rows;
+            const [users] = await q(`SELECT COUNT(*)::int AS total,
+                    COUNT(*) FILTER (WHERE created_at > now() - interval '1 day')::int AS new_1d,
+                    COUNT(*) FILTER (WHERE created_at > now() - interval '7 days')::int AS new_7d,
+                    COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS new_30d,
+                    COUNT(*) FILTER (WHERE account_type = 'org')::int AS leaders
+                FROM users`);
+            const weekly = await q(`SELECT to_char(date_trunc('week', created_at), 'YYYY-MM-DD') AS week, COUNT(*)::int AS n
+                FROM users WHERE created_at > date_trunc('week', now()) - interval '11 weeks' GROUP BY 1 ORDER BY 1`);
+            const [active] = await q(`SELECT
+                    COUNT(DISTINCT user_id) FILTER (WHERE seen > now() - interval '1 day')::int AS daily,
+                    COUNT(DISTINCT user_id) FILTER (WHERE seen > now() - interval '7 days')::int AS weekly,
+                    COUNT(DISTINCT user_id) FILTER (WHERE seen > now() - interval '30 days')::int AS monthly
+                FROM (SELECT user_id, COALESCE(last_seen_at, created_at) AS seen FROM sessions) s`);
+            const [engagement] = await q(`SELECT
+                    (SELECT COUNT(DISTINCT user_id)::int FROM contacts) AS with_contacts,
+                    (SELECT COUNT(*)::int FROM contacts) AS contacts,
+                    (SELECT COUNT(DISTINCT c.user_id)::int FROM notes n JOIN contacts c ON c.id = n.contact_id) AS logged_calls,
+                    (SELECT COUNT(*)::int FROM notes) AS calls,
+                    (SELECT COUNT(*)::int FROM emails WHERE direction = 'sent') AS emails_sent,
+                    (SELECT COUNT(DISTINCT user_id)::int FROM ai_usage WHERE created_at > now() - interval '30 days') AS used_ai_30d,
+                    (SELECT COUNT(*)::int FROM documents) AS documents,
+                    (SELECT COUNT(*)::int FROM outcomes) AS outcomes,
+                    (SELECT COUNT(*)::int FROM outcomes WHERE stage = 'offer') AS offers`);
+            const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+            const ai = await q(`SELECT feature, COUNT(*)::int AS requests, COALESCE(SUM(cost_micros),0)::bigint AS micros
+                FROM ai_usage WHERE created_at >= $1 GROUP BY 1 ORDER BY 3 DESC`, [monthStart]);
+            const aiMicros = ai.reduce((t, r) => t + Number(r.micros), 0);
+            const capUsd = parseFloat(process.env.AI_MONTHLY_GLOBAL_CAP_USD || '');
+            const clubs = await q(`SELECT o.name, o.school, o.verified, o.org_type, o.plan_status, o.license, o.license_expires_at,
+                    COUNT(m.user_id)::int AS members,
+                    COUNT(DISTINCT s.user_id)::int AS active_30d
+                FROM organizations o
+                LEFT JOIN org_members m ON m.org_id = o.id
+                LEFT JOIN sessions s ON s.user_id = m.user_id AND COALESCE(s.last_seen_at, s.created_at) > now() - interval '30 days'
+                GROUP BY o.id ORDER BY members DESC, o.created_at DESC LIMIT 200`);
+            // Plans: resolve each user's plan the same way the app does.
+            const people = await q(`SELECT id, subscription_status FROM users`);
+            const memberships = await q(`SELECT m.user_id, o.verified, o.plan_status, o.license, o.license_expires_at
+                FROM org_members m JOIN organizations o ON o.id = m.org_id`);
+            const byUser = new Map();
+            for (const m of memberships) {
+                if (!byUser.has(m.user_id)) byUser.set(m.user_id, []);
+                byUser.get(m.user_id).push({ verified: m.verified, planStatus: m.plan_status, license: m.license, licenseExpiresAt: m.license_expires_at });
+            }
+            const plans = { starter: 0, club: 0, club_plus: 0, pro: 0 };
+            for (const u of people) {
+                const key = resolvePlan({ subscriptionStatus: u.subscription_status }, byUser.get(u.id) || []).key;
+                plans[key] = (plans[key] || 0) + 1;
+            }
+            res.json({
+                success: true,
+                generatedAt: new Date().toISOString(),
+                users,
+                weekly,
+                active,
+                engagement,
+                ai: { monthUsd: aiMicros / 1e6, capUsd: Number.isFinite(capUsd) && capUsd > 0 ? capUsd : null, byFeature: ai.map((r) => ({ feature: r.feature, requests: r.requests, usd: Number(r.micros) / 1e6 })), provider: usage.providerStatus() },
+                plans,
+                clubs: clubs.map((c) => ({
+                    name: c.name, school: c.school, verified: !!c.verified, type: c.org_type || 'club',
+                    sponsored: ['active', 'trialing', 'past_due'].includes(c.plan_status) || (c.license === 'campus' && (!c.license_expires_at || new Date(c.license_expires_at) > new Date())),
+                    members: c.members, active30d: c.active_30d,
+                })),
+            });
+        } catch (e) { fail(res, e, 'Could not load the stats'); }
+    });
+
     router.get('/admin/orgs', async (req, res) => {
         if (!requireAdmin(req, res)) return;
         try {

@@ -788,7 +788,8 @@ function storeSessionUser(u) {
         subscriptionStatus: u.subscriptionStatus || 'free',
         subscriptionPlan: u.subscriptionPlan || null,
         hasBillingAccount: !!u.hasBillingAccount,
-        onboardedAt: u.onboardedAt || null
+        onboardedAt: u.onboardedAt || null,
+        isAdmin: u.isAdmin === true
     });
 }
 window.storeSessionUser = storeSessionUser;

@@ -44,6 +44,8 @@ function publicUser(u, plan, orgs) {
         // Kept for older parts of the client: true when a club pays for this member.
         clubCovered: plan.key === 'club_plus',
         orgs: memberships,
+        // Weaver staff (ADMIN_EMAILS). Only shows the Admin link; every admin route checks on the server.
+        isAdmin: auth.isAdmin(u),
     };
 }
 

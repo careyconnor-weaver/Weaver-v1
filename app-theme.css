@@ -710,3 +710,28 @@
 .wv-pe-actions { display: flex; gap: 8px; }
 .wv-lib-history { padding-top: 22px; border-top: 1px solid var(--wv-hair); }
 @media (max-width: 640px) { .wv-custom-head { flex-direction: column; align-items: flex-start; } }
+
+/* ── Admin dashboard ────────────────────────────────────────────── */
+.wv-admin-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.wv-admin-h { font-family: var(--wv-display); font-weight: 400; font-size: 22px; color: var(--wv-ink); margin: 28px 0 12px; }
+.wv-kpis.wv-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.wv-admin-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
+.wv-admin-grid .wv-panel { margin: 0; }
+.wv-admin-grid h3, .wv-admin-panel-head h3 { font-size: 14px; font-weight: 600; color: var(--wv-ink); margin: 0 0 10px; }
+.wv-admin-panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wv-admin-panel-head h3 { margin: 0; }
+.wv-chart { width: 100%; height: auto; display: block; margin-top: 8px; }
+.wv-chart .wv-bar { fill: var(--wv-hair-strong); }
+.wv-chart .wv-bar.is-current { fill: var(--wv-ledger); }
+.wv-chart .wv-axis { stroke: var(--wv-hair-strong); stroke-width: 1; }
+.wv-chart .wv-bar-val { font: 600 11px var(--wv-ui); fill: var(--wv-ink); text-anchor: middle; }
+.wv-chart .wv-bar-label { font: 10.5px var(--wv-ui); fill: var(--wv-graphite); text-anchor: middle; }
+.wv-table-plain { background: var(--wv-surface); border: 1px solid var(--wv-hair); border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+.wv-table-plain tbody th { font-weight: 500; }
+.wv-admin-note { font-size: 13px; margin: 10px 0 0; }
+.wv-admin-spend { font-size: 15px; margin: 0 0 8px; color: var(--wv-graphite); }
+.wv-admin-spend strong { font-size: 24px; color: var(--wv-ink); font-weight: 600; margin-right: 4px; }
+.wv-meter { height: 8px; border-radius: 999px; background: var(--wv-sidebar); overflow: hidden; max-width: 420px; margin-bottom: 14px; }
+.wv-meter span { display: block; height: 100%; background: var(--wv-ledger); }
+.wv-note-warn { border-color: #E8C9A0; background: #FBF4EA; color: #6B4A1E; }
+@media (max-width: 860px) { .wv-admin-grid { grid-template-columns: 1fr; } .wv-kpis.wv-kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wv-kpis.wv-kpis-4 .wv-kpi:nth-child(2) { border-right: 0; } .wv-kpis.wv-kpis-4 .wv-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--wv-hair); } }
