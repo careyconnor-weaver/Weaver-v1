@@ -766,3 +766,40 @@ users to sign up; deploy"). He chose to deploy change sets 13 and 14 together.
 ## Verified
 11 landing checks, 8 app checks, 18 end-to-end and 22 address checks re-run before deploy.
 The headline is checked to sit on two lines on desktop, wide and tablet screens.
+
+---
+
+# Change set 15: No admissions gate; landing page dark throughout
+
+**Product direction by:** shindon@bc.edu ("scratch the exclusivity"; "the hero page is a
+flashbang, gonna give people epilepsy").
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-11-02
+
+## Exclusivity removed
+- Clubs get their join code the moment they are created; joining and invites work at once
+  (`server.js`, `routes/workspace.js`). School and member count are optional again.
+- Verification is back to its original job: it unlocks the free club allowance for members
+  and the verified badge, and stops people making clubs just to get free AI. Unverified
+  clubs work normally with members on Starter.
+- Copy updated everywhere: onboarding ("Set up your club", the join code is shown at once),
+  the club screens and console ("Verification pending"), staff emails, `/admin` ("Clubs to
+  verify", "Verify", "Can’t verify"), and the landing page ("Bring your whole club": create,
+  share the code, see who’s moving; club pricing "Per active member").
+- Pricing cards corrected: the free club allowance is listed on the Student card, not on Pro.
+
+## Flashing fixed (`landing.css`, `landing.js`, `index.html`)
+- The whole landing page is now dark (navy surfaces, light text). Previously scrolling out
+  of the navy hero jumped to near-white sections. Measured average screen brightness while
+  scrolling (0 black, 255 white): before, it swung from 35 to 246 with jumps of up to 77
+  between steps; after, it stays between 27 and 46 with jumps of 11 at most.
+- The nav stays dark when it becomes solid; the page background is dark before styles load.
+- Hero animation calmed: dimmer lines and dots, introductions travel at a third less speed,
+  at most one at a time and less often, and they fade in and out instead of appearing.
+  Reduced-motion users still get a still image.
+- The demo dialog stays light for readable form fields.
+
+## Verified
+Brightness measured at every scroll step on desktop and phone; 11 landing checks, 8 app
+checks, 18 end-to-end (updated: a new club gets its code at once), 5 club verification checks
+(join and invite work immediately, members stay on Starter until verified, verifying unlocks
+the allowance, removing verification keeps the club working).

@@ -160,7 +160,7 @@
 .lp-dialog.is-open { display: flex; }
 .lp-dialog-box { background: #fff; color: #0E1A33; border-radius: 20px; width: min(520px, 100%); max-height: calc(100svh - 32px); overflow: auto; padding: 30px 30px 26px; box-shadow: 0 40px 100px rgba(7, 15, 34, .45); }
 .lp-dialog-box h2 { font-size: 28px; letter-spacing: -0.03em; margin: 0 0 6px; font-weight: 600; }
-.lp-dialog-box > p { margin: 0 0 20px; color: #4A5568; line-height: 1.5; }
+.lp-dialog-box p { margin: 0 0 20px; color: #4A5568; line-height: 1.5; }
 .lp-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .lp-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #2A3550; }
 .lp-form .lp-span2 { grid-column: 1 / -1; }
@@ -192,3 +192,43 @@
 @media (prefers-reduced-motion: reduce) {
   .lp-line > span, .lp-fade { transform: none !important; opacity: 1 !important; transition: none !important; }
 }
+
+/* ═══ Dark throughout ═══════════════════════════════════════════════
+   One dark palette for the whole page, so scrolling out of the hero never
+   jumps to a bright white screen. Tokens are remapped, so every rule above
+   picks them up; the demo dialog keeps its light palette. */
+#landing-page.lp {
+  --lp-paper: #0B1630;      /* section background */
+  --lp-white: #111F42;      /* cards and raised surfaces */
+  --lp-ink: #E9EEF8;        /* main text */
+  --lp-graphite: #A6B1C7;   /* secondary text */
+  --lp-steel: #7F8BA3;      /* labels */
+  --lp-hair: rgba(255, 255, 255, .09);
+  --lp-navy: #9DB4E6;       /* accent, lightened for dark backgrounds */
+  background: var(--lp-paper);
+  color: var(--lp-ink);
+}
+.lp-statements { background: #0B1630; }
+.lp-trust { background: #0D1A38; border-top-color: transparent; }
+.lp-admit { background: #0B1630; }
+.lp-pricing { background: #0D1A38; }
+.lp-close { background: #0B1630; }
+.lp-hero::after { background: linear-gradient(90deg, rgba(11,22,48,.88) 0%, rgba(11,22,48,.62) 38%, rgba(11,22,48,0) 70%), linear-gradient(to top, #0B1630, transparent 40%); }
+.lp-trust-grid { border-top-color: rgba(255, 255, 255, .22); }
+.lp-card { box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .55); }
+.lp-mail p, .lp-scout ul, .lp-plan ul { color: #CDD5E4; }
+.lp-mail mark { background: rgba(157, 180, 230, .18); color: #fff; }
+.lp-nav.is-solid { background: rgba(11, 22, 48, .82); color: #fff; box-shadow: 0 1px 0 rgba(255, 255, 255, .08); }
+.lp-nav.is-solid .lp-brand img { filter: brightness(0) invert(1); }
+#landing-page.lp .lp-nav.is-solid .lp-btn-light, .lp-nav.is-solid .lp-btn-light { background: #fff; color: #0B1630; }
+#landing-page.lp .lp-btn-dark, .lp-btn-dark { background: #fff; color: #0B1630; }
+.lp-btn-dark:hover { background: #E7ECF6; }
+#landing-page.lp .lp-btn-line, .lp-btn-line { color: #fff; border-color: rgba(255, 255, 255, .3); }
+.lp-btn-line:hover { border-color: #fff; }
+.lp-plan.is-featured { border-color: rgba(157, 180, 230, .7); }
+.lp-w-cold i { background: #6F7C95; }
+
+/* The demo dialog stays light and readable. */
+.lp-dialog-box { --lp-ink: #0E1A33; --lp-graphite: #4A5568; --lp-steel: #8B97AD; --lp-hair: #E2E6EE; --lp-white: #fff; --lp-navy: #1F3B73; }
+#landing-page.lp .lp-dialog-box .lp-btn-line, .lp-dialog-box .lp-btn-line { color: #0E1A33; border-color: #C9D0DC; }
+#landing-page.lp .lp-dialog-box .lp-btn-dark, .lp-dialog-box .lp-btn-dark { background: #0E1A33; color: #fff; }

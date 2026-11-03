@@ -155,18 +155,18 @@
 
     function createOrgForm() {
         return '<div class="wv-panel wv-narrow">' +
-            '<h2 class="wv-panel-title">Apply for a club workspace</h2>' +
-            '<p class="wv-panel-sub">Weaver admits clubs and career centers by application. We review each one, usually within two days. Once you’re approved you get a join code to invite members.</p>' +
+            '<h2 class="wv-panel-title">Set up your club</h2>' +
+            '<p class="wv-panel-sub">Create a workspace and you’ll get a join code to share with members right away.</p>' +
             '<form id="wv-create-org" class="wv-form">' +
             '<label class="wv-field"><span>Club name</span><input id="wv-org-name" required maxlength="120" placeholder="BC Finance Society"></label>' +
-            '<label class="wv-field"><span>School</span><input id="wv-org-school" required maxlength="120" placeholder="Boston College"></label>' +
+            '<label class="wv-field"><span>School</span><input id="wv-org-school" maxlength="120" placeholder="Boston College"></label>' +
             '<fieldset class="wv-field"><legend>Type</legend><div class="wv-seg">' +
             '<label><input type="radio" name="wv-org-type" value="club" checked> Club</label>' +
             '<label><input type="radio" name="wv-org-type" value="career_center"> Career center</label></div></fieldset>' +
-            '<label class="wv-field"><span>About how many members?</span><input id="wv-org-members" type="number" min="1" max="100000" inputmode="numeric" placeholder="60"></label>' +
+            '<label class="wv-field"><span>About how many members? <em class="wv-optional">optional</em></span><input id="wv-org-members" type="number" min="1" max="100000" inputmode="numeric" placeholder="60"></label>' +
             '<label class="wv-field"><span>Club website or Instagram <em class="wv-optional">optional</em></span><input id="wv-org-website" maxlength="300" placeholder="bcfinancesociety.org"></label>' +
             '<label class="wv-field"><span>What does your club do? <em class="wv-optional">optional</em></span><textarea id="wv-org-about" rows="3" maxlength="1000" placeholder="Recruiting prep for sophomores and juniors going into banking and consulting."></textarea></label>' +
-            '<button type="submit" class="wv-btn wv-btn-primary">Submit application</button></form></div>';
+            '<button type="submit" class="wv-btn wv-btn-primary">Create club</button></form></div>';
     }
 
     function bindCreateOrg() {
@@ -175,7 +175,7 @@
         f.onsubmit = async function (e) {
             e.preventDefault();
             var btn = f.querySelector('button[type=submit]');
-            busy(btn, true, 'Submitting…');
+            busy(btn, true, 'Creating…');
             try {
                 var type = (f.querySelector('input[name=wv-org-type]:checked') || {}).value || 'club';
                 var data = await api('POST', '/api/orgs', { name: $('wv-org-name').value, school: $('wv-org-school').value, orgType: type,
@@ -186,23 +186,24 @@
                 if (window.wvApplyRole) window.wvApplyRole();
                 if (window.wvReloadWorkspace) window.wvReloadWorkspace();
                 updateSidebarUser();
-                toast('Application received. We’ll email you when it’s approved.', 'success');
+                toast('Your club is ready. Share the join code with members.', 'success');
                 renderConsole();
             } catch (err) { busy(btn, false); reportError(err); }
         };
     }
 
-    // Status note for a club Weaver hasn't approved yet.
+    // Note for a club Weaver hasn't verified yet. The club works either way; verification
+    // gives members the free club allowance and the verified badge.
     function reviewNote(org) {
         if (org.verified) return '';
-        if (org.reviewStatus === 'declined') return '<div class="wv-note wv-note-warn">Weaver couldn’t approve this club. If something has changed, email <a href="mailto:info@studentweaver.com">info@studentweaver.com</a> and we’ll take another look.</div>';
-        return '<div class="wv-note wv-review-note"><strong>Application under review.</strong> We review every club, usually within two days, and email you when it’s approved. Then you’ll get a join code and can invite members. You can use Weaver yourself in the meantime.</div>';
+        if (org.reviewStatus === 'declined') return '<div class="wv-note wv-note-warn">We couldn’t verify this club yet, so members are on the Starter plan. Everything else works. Email <a href="mailto:info@studentweaver.com">info@studentweaver.com</a> with your club’s page or an adviser contact and we’ll take another look.</div>';
+        return '<div class="wv-note wv-review-note">Members can join with your code now. Once Weaver verifies your club, usually within two days, they get the free club allowance and your club gets the verified badge.</div>';
     }
     window.wvReviewNote = reviewNote;
 
     function statusPill(org) {
         var pills = [];
-        pills.push(org.verified ? '<span class="wv-pill wv-pill-ok">' + (window.wvVerifiedIcon || '') + 'Verified</span>' : org.reviewStatus === 'declined' ? '<span class="wv-pill wv-pill-warn">Not approved</span>' : '<span class="wv-pill wv-pill-warn">Under review</span>');
+        pills.push(org.verified ? '<span class="wv-pill wv-pill-ok">' + (window.wvVerifiedIcon || '') + 'Verified</span>' : org.reviewStatus === 'declined' ? '<span class="wv-pill wv-pill-warn">Not verified</span>' : '<span class="wv-pill wv-pill-warn">Verification pending</span>');
         if (org.license === 'campus') pills.push('<span class="wv-pill wv-pill-ok">Campus license</span>');
         else if (org.planStatus === 'active' || org.planStatus === 'trialing') pills.push('<span class="wv-pill wv-pill-ok">Club plan active</span>');
         else if (org.planStatus === 'past_due') pills.push('<span class="wv-pill wv-pill-warn">Payment due</span>');
@@ -231,8 +232,7 @@
             kpi('Reply rate', k.replyRate + '%') +
             kpi('Calls logged', k.calls) +
             kpi('Offers shared', k.offers) + '</div>';
-        var tabs = org.verified ? [['members', 'Members'], ['outcomes', 'Outcomes'], ['invites', 'Invites'], ['billing', 'Billing']] : [['members', 'Members'], ['outcomes', 'Outcomes']];
-        if (!tabs.some(function (t) { return t[0] === consoleState.tab; })) consoleState.tab = 'members';
+        var tabs = [['members', 'Members'], ['outcomes', 'Outcomes'], ['invites', 'Invites'], ['billing', 'Billing']];
         html += '<div class="wv-tabs" role="tablist">' + tabs.map(function (t) {
             return '<button type="button" role="tab" class="wv-tab' + (consoleState.tab === t[0] ? ' is-on' : '') + '" aria-selected="' + (consoleState.tab === t[0]) + '" data-tab="' + t[0] + '">' + t[1] + '</button>';
         }).join('') + '<span class="wv-tabs-spacer"></span><button type="button" class="wv-btn wv-btn-sm" id="wv-club-report">Create club report</button></div>';

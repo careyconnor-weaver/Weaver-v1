@@ -61,17 +61,18 @@
     function applicationsHtml(apps) {
         var pending = apps.filter(function (x) { return x.status === 'pending'; });
         var decided = apps.filter(function (x) { return x.status !== 'pending'; }).slice(0, 10);
-        var h = '<h2 class="wv-admin-h">Club applications' + (pending.length ? ' <span class="wv-count">' + pending.length + ' waiting</span>' : '') + '</h2>';
-        if (!pending.length) h += '<p class="wv-muted">No applications waiting.</p>';
+        var h = '<h2 class="wv-admin-h">Clubs to verify' + (pending.length ? ' <span class="wv-count">' + pending.length + ' waiting</span>' : '') + '</h2>' +
+            '<p class="wv-muted" style="margin-top:-6px">Clubs work right away. Verifying one gives its members the free club allowance and the verified badge.</p>';
+        if (!pending.length) h += '<p class="wv-muted">No clubs waiting.</p>';
         pending.forEach(function (x) {
-            h += '<div class="wv-panel wv-app-card"><div class="wv-app-head"><div><h3>' + esc(x.name) + '</h3><div class="wv-muted">' + esc(x.school || 'No school given') + ' · ' + (x.type === 'career_center' ? 'Career center' : 'Club') + ' · applied ' + esc(when(x.createdAt)) + '</div></div>' +
-                '<div class="wv-app-actions"><button type="button" class="wv-btn wv-btn-primary" data-decide="approve:' + esc(x.id) + '">Approve</button><button type="button" class="wv-btn" data-decide="decline:' + esc(x.id) + '">Decline</button></div></div>' +
-                '<dl class="wv-app-facts"><dt>Applicant</dt><dd>' + esc(x.ownerEmail) + '</dd><dt>Members</dt><dd>' + esc(x.memberCount || 'Not given') + '</dd><dt>Website</dt><dd>' + (x.website ? safeUrl(x.website) : 'Not given') + '</dd>' +
+            h += '<div class="wv-panel wv-app-card"><div class="wv-app-head"><div><h3>' + esc(x.name) + '</h3><div class="wv-muted">' + esc(x.school || 'No school given') + ' · ' + (x.type === 'career_center' ? 'Career center' : 'Club') + ' · created ' + esc(when(x.createdAt)) + ' · ' + esc(x.members) + ' joined' + '</div></div>' +
+                '<div class="wv-app-actions"><button type="button" class="wv-btn wv-btn-primary" data-decide="approve:' + esc(x.id) + '">Verify</button><button type="button" class="wv-btn" data-decide="decline:' + esc(x.id) + '">Can’t verify</button></div></div>' +
+                '<dl class="wv-app-facts"><dt>Created by</dt><dd>' + esc(x.ownerEmail) + '</dd><dt>Members</dt><dd>' + esc(x.memberCount || 'Not given') + '</dd><dt>Website</dt><dd>' + (x.website ? safeUrl(x.website) : 'Not given') + '</dd>' +
                 (x.about ? '<dt>About</dt><dd>' + esc(x.about) + '</dd>' : '') + '</dl></div>';
         });
         if (decided.length) {
             h += '<details class="wv-admin-details"><summary>Recently decided (' + decided.length + ')</summary><table class="wv-table wv-table-plain"><tbody>' + decided.map(function (x) {
-                return '<tr><th scope="row">' + esc(x.name) + '</th><td>' + esc(x.school || '') + '</td><td>' + (x.status === 'approved' ? 'Approved' : 'Declined') + '</td><td class="num"><button type="button" class="wv-btn wv-btn-sm" data-decide="' + (x.status === 'approved' ? 'decline' : 'approve') + ':' + esc(x.id) + '">' + (x.status === 'approved' ? 'Revoke' : 'Approve') + '</button></td></tr>';
+                return '<tr><th scope="row">' + esc(x.name) + '</th><td>' + esc(x.school || '') + '</td><td>' + (x.status === 'verified' ? 'Verified' : 'Not verified') + '</td><td class="num"><button type="button" class="wv-btn wv-btn-sm" data-decide="' + (x.status === 'verified' ? 'decline' : 'approve') + ':' + esc(x.id) + '">' + (x.status === 'verified' ? 'Remove verification' : 'Verify') + '</button></td></tr>';
             }).join('') + '</tbody></table></details>';
         }
         return h;

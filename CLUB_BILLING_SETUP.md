@@ -109,14 +109,14 @@ The playbook is applied silently to every AI feature, the AI is instructed never
 reveal it, and every AI output is scrubbed of sentences that repeat its wording. The
 in-app Playbook page shows principles only.
 
-## 8. Club applications and demo requests
+## 8. Verifying clubs and demo requests
 
-Clubs and career centers now **apply**. A new club has no join code and can't invite
-anyone until Weaver approves it. Open `studentweaver.com/admin` (staff only) to:
+Anyone can create a club and invite members right away with its join code. Verifying a
+club gives its members the free club allowance and the club a verified badge (this stops
+people creating clubs just to get free AI). Open `studentweaver.com/admin` (staff only) to:
 
-- **Approve or decline** applications under "Club applications". Approving gives the
-  club its join code and verified badge and emails the leader; declining emails them too.
-  Clubs created before this change that were never verified also appear here.
-- **Follow up on demo requests** from the landing page's "Book a demo" form, and mark them handled.
+- **Verify** clubs under "Clubs to verify" (members get the allowance; the leader is emailed),
+  or mark one "Can’t verify" (the club keeps working; members stay on Starter).
+- **Follow up on demo requests** from the landing page's "Book a demo" form.
 
-New applications and demo requests are emailed to `ADMIN_EMAILS` (needs `RESEND_API_KEY`).
+New clubs and demo requests are emailed to `ADMIN_EMAILS` (needs `RESEND_API_KEY`).

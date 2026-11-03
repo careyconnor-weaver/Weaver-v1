@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/landing.css">
+<style>html, body { background: #0B1630; } #app-container { background: #F6F7F9; min-height: 100vh; }</style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/api.js"></script>
@@ -109,22 +110,22 @@
     <div class="lp-trust-grid lp-fade">
       <div><h3>Only you see your contacts</h3><p>Your club sees how active you are, never who you talk to or what you wrote down.</p></div>
       <div><h3>No made-up facts</h3><p>Drafts come from your notes. News comes with a link. If Weaver doesn’t know something, it leaves a blank for you.</p></div>
-      <div><h3><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Real clubs only</h3><p>A person on our team checks every club before it can invite anyone.</p></div>
+      <div><h3><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified clubs</h3><p>The badge means a person on our team checked the club is real.</p></div>
     </div>
   </div>
 </section>
 
 <section class="lp-admit" id="admissions" aria-labelledby="lp-admit-h">
   <div class="lp-wrap" data-reveal>
-    <h2 class="lp-kicker" id="lp-admit-h"><span class="lp-line"><span>Clubs join</span></span><span class="lp-line"><span>by application.</span></span></h2>
+    <h2 class="lp-kicker" id="lp-admit-h"><span class="lp-line"><span>Bring your</span></span><span class="lp-line"><span>whole club.</span></span></h2>
     <p class="lp-admit-lede lp-fade">Run your club’s recruiting season in one place: who’s reaching out, who’s getting calls, and who just got an offer. Students don’t need to wait for their club to start.</p>
     <ol class="lp-steps lp-fade">
-      <li><h3>Apply</h3><p>Tell us about your club. It takes two minutes.</p></li>
-      <li><h3>We check it</h3><p>Most clubs hear back within two days.</p></li>
-      <li><h3>Invite your members</h3><p>Share your club’s code. Members get Weaver free.</p></li>
+      <li><h3>Create your club</h3><p>Takes two minutes. You get a join code right away.</p></li>
+      <li><h3>Share the code</h3><p>Members join with it, and once we verify your club they use Weaver free.</p></li>
+      <li><h3>See who’s moving</h3><p>Who’s reaching out, who’s getting calls, and who just got an offer.</p></li>
     </ol>
     <div class="lp-admit-cta lp-fade">
-      <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Apply as a club</a>
+      <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Create your club</a>
       <a href="#" class="lp-btn lp-btn-ghost" onclick="return openDemo(event)">Book a demo</a>
     </div>
   </div>
@@ -134,9 +135,9 @@
   <div class="lp-wrap" data-reveal>
     <h2 class="lp-kicker" id="lp-price-h"><span class="lp-line"><span>Free to start.</span></span></h2>
     <div class="lp-plans lp-fade">
-      <div class="lp-plan"><h3>Student</h3><div class="lp-price">$0</div><ul><li>Up to 20 contacts</li><li>Warmth ratings and follow-up reminders</li><li>A few AI drafts to try</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="openAuthModal('signup'); return false;">Start free</a></div>
-      <div class="lp-plan is-featured"><h3>Pro</h3><div class="lp-price" id="pro-price"><small>Price shown at checkout</small></div><ul><li>Up to 5,000 contacts</li><li>A full month of AI drafts and scout reports</li><li>Free if your club is on Weaver</li></ul><a href="#" class="lp-btn lp-btn-dark" onclick="openAuthModal('signup'); return false;">Get Pro</a></div>
-      <div class="lp-plan"><h3>Clubs and career centers</h3><div class="lp-price" id="club-seat-price"><small>By application</small></div><ul><li>See who’s networking and who’s stuck</li><li>Offers members choose to share</li><li>Pay only for members who use it</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="return openDemo(event)">Book a demo</a></div>
+      <div class="lp-plan"><h3>Student</h3><div class="lp-price">$0</div><ul><li>Up to 20 contacts</li><li>Warmth ratings and follow-up reminders</li><li>A few AI drafts to try, more if your club is on Weaver</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="openAuthModal('signup'); return false;">Start free</a></div>
+      <div class="lp-plan is-featured"><h3>Pro</h3><div class="lp-price" id="pro-price"><small>Price shown at checkout</small></div><ul><li>Up to 5,000 contacts</li><li>A full month of AI drafts and scout reports</li><li>Email reminders</li></ul><a href="#" class="lp-btn lp-btn-dark" onclick="openAuthModal('signup'); return false;">Get Pro</a></div>
+      <div class="lp-plan"><h3>Clubs and career centers</h3><div class="lp-price" id="club-seat-price"><small>Per active member</small></div><ul><li>See who’s networking and who’s stuck</li><li>Offers members choose to share</li><li>Pay only for members who use it</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="return openDemo(event)">Book a demo</a></div>
     </div>
   </div>
   <script>
@@ -979,28 +980,30 @@
 
     <!-- Step 2b: org — create organization -->
     <div id="onboarding-step-org" style="display:none;">
-      <h2 style="margin-bottom:0.25rem;">Apply for a club workspace</h2>
-      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Weaver admits clubs by application. We review each one, usually within two days. Once you’re approved you get a code to invite members.</p>
+      <h2 style="margin-bottom:0.25rem;">Set up your club</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">You’ll get a join code to share with members right away.</p>
       <div class="form-group"><label for="onboard-org-name">Club name</label><input type="text" id="onboard-org-name" maxlength="120" placeholder="BC Finance Society"></div>
-      <div class="form-group"><label for="onboard-org-school">School</label><input type="text" id="onboard-org-school" maxlength="120" placeholder="Boston College"></div>
-      <div class="form-group"><label for="onboard-org-members">About how many members?</label><input type="number" min="1" id="onboard-org-members" placeholder="60"></div>
+      <div class="form-group"><label for="onboard-org-school">School (optional)</label><input type="text" id="onboard-org-school" maxlength="120" placeholder="Boston College"></div>
+      <div class="form-group"><label for="onboard-org-members">About how many members? (optional)</label><input type="number" min="1" id="onboard-org-members" placeholder="60"></div>
       <div class="form-group"><label for="onboard-org-website">Club website or Instagram (optional)</label><input type="text" id="onboard-org-website" maxlength="300"></div>
       <div class="form-group"><span style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Type</span>
         <label style="margin-right:16px;font-size:14px;"><input type="radio" name="onboard-org-type" value="club" checked> Club</label>
         <label style="font-size:14px;"><input type="radio" name="onboard-org-type" value="career_center"> Career center</label></div>
       <div id="onboard-org-status" class="upload-status" style="display:none;"></div>
       <div style="display:flex;gap:0.75rem;margin-top:1rem;">
-        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardCreateOrg()" style="flex:1;">Submit application</button>
+        <button type="button" class="tb-btn tb-btn-primary" onclick="window.onboardCreateOrg()" style="flex:1;">Create club</button>
         <button type="button" class="tb-btn tb-btn-outline" onclick="window.onboardBack()">Back</button>
       </div>
     </div>
 
-    <!-- Step 3: club application sent -->
+    <!-- Step 3: club created, share the code -->
     <div id="onboarding-step-done" style="display:none;text-align:center;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2" style="margin-bottom:0.5rem;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <h2 style="margin-bottom:0.25rem;">Application received</h2>
-      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">We review every club, usually within two days, and email you when you’re approved. Then you’ll get a join code to invite members. You can start using Weaver yourself now.</p>
-      <div style="margin-top:1.25rem;"><button type="button" class="tb-btn tb-btn-primary" style="width:100%;" onclick="window.finishOnboarding()">Start using Weaver</button></div>
+      <h2 style="margin-bottom:0.25rem;">Your club is ready</h2>
+      <p style="color:var(--slate);margin-bottom:1rem;font-size:14px;">Share this code with members. Once Weaver verifies your club, usually within two days, they get the free club allowance.</p>
+      <div style="font-size:24px;font-weight:600;letter-spacing:2px;color:var(--navy);background:#F6F7F9;border:1px solid #E3E6EB;padding:14px 18px;border-radius:8px;" id="onboard-join-code-display">WVR-XXXXXX</div>
+      <button type="button" class="tb-btn tb-btn-outline tb-btn-sm" style="margin-top:0.75rem;" onclick="window.copyJoinCode(document.getElementById('onboard-join-code-display').textContent)">Copy code</button>
+      <div style="margin-top:1.25rem;"><button type="button" class="tb-btn tb-btn-primary" style="width:100%;" onclick="window.finishOnboarding()">Open the console</button></div>
     </div>
 
   </div>

@@ -227,10 +227,10 @@ async function notifyOwner(ownerId, clubName, approved) {
     await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || 'Weaver <reminders@studentweaver.com>',
         to: owner.email,
-        subject: approved ? `${clubName} is approved on Weaver` : `Your Weaver application for ${clubName}`,
+        subject: approved ? `${clubName} is verified on Weaver` : `About verifying ${clubName} on Weaver`,
         text: approved
-            ? `Good news: ${clubName} has been approved on Weaver.\n\nOpen your club console to get your join code and invite members: ${url}/app/console\n\nThe Weaver team`
-            : `Thanks for applying to bring ${clubName} to Weaver. We aren't able to approve it right now.\n\nIf you think this is a mistake, or your club has changed, reply to info@studentweaver.com and we'll take another look.\n\nThe Weaver team`,
+            ? `Good news: ${clubName} is now verified on Weaver. Your members get the free club allowance and your club shows the verified badge.\n\nOpen your club console: ${url}/app/console\n\nThe Weaver team`
+            : `We weren't able to verify ${clubName} yet, so members are on the Starter plan for now. Your club keeps working as usual.\n\nIf you can share your club's page or an adviser contact, reply to info@studentweaver.com and we'll take another look.\n\nThe Weaver team`,
     });
 }
 
@@ -2497,12 +2497,13 @@ app.post('/api/users/account-type', async (req, res) => {
 // Owners and admins are "managers". Members can see the roster and leaderboard;
 // only managers see member emails, billing and invites.
 
-// What members see about a club. Until Weaver approves a club, its join code is hidden,
-// so nobody can be brought into a club that hasn't been accepted.
+// What members see about a club. reviewStatus: 'verified' (free member allowance and badge),
+// 'pending' (Weaver hasn't checked it yet) or 'declined' (Weaver couldn't verify it).
+// Clubs work either way; verification only unlocks the free allowance and the badge.
 function stripOrg(o) {
     const { stripeCustomerId, stripeSubscriptionId, billingEmail, application, ...rest } = o;
-    const status = rest.verified ? 'approved' : rest.declinedAt ? 'declined' : 'pending';
-    return { ...rest, reviewStatus: status, joinCode: rest.verified ? rest.joinCode : null };
+    const status = rest.verified ? 'verified' : rest.declinedAt ? 'declined' : 'pending';
+    return { ...rest, reviewStatus: status };
 }
 
 async function emailAdmins(subject, text) {
@@ -2530,7 +2531,6 @@ app.post('/api/orgs', async (req, res) => {
         const school = String(b.school || '').trim().slice(0, 120) || null;
         const orgType = b.orgType === 'career_center' ? 'career_center' : 'club';
         if (!name) return res.status(400).json({ error: 'Enter your club’s name.' });
-        if (!school) return res.status(400).json({ error: 'Enter your school.' });
         const size = Math.max(0, Math.min(100000, parseInt(b.memberCount, 10) || 0)) || null;
         const website = String(b.website || '').trim().slice(0, 300) || null;
         const about = String(b.about || '').trim().slice(0, 1000) || null;
@@ -2546,8 +2546,8 @@ app.post('/api/orgs', async (req, res) => {
         });
         if (orgType === 'career_center') await dbAPI.setOrgBilling(org.id, { orgType });
         await dbAPI.setUserAccountType(req.user.id, 'org');
-        emailAdmins(`New ${orgType === 'career_center' ? 'career center' : 'club'} application: ${name}`,
-            `${name} (${school}) applied to Weaver.\n\nApplicant: ${req.user.email}\nMembers: ${size || 'not given'}\nWebsite: ${website || 'not given'}\n\n${about || ''}\n\nReview it at ${(process.env.WEAVER_URL || 'https://studentweaver.com').replace(/\/+$/, '')}/admin`)
+        emailAdmins(`New ${orgType === 'career_center' ? 'career center' : 'club'} to verify: ${name}`,
+            `${name} (${school || 'no school given'}) created a workspace on Weaver. Members can already join; verifying it gives them the free club allowance and the verified badge.\n\nCreated by: ${req.user.email}\nMembers: ${size || 'not given'}\nWebsite: ${website || 'not given'}\n\n${about || ''}\n\nVerify it at ${(process.env.WEAVER_URL || 'https://studentweaver.com').replace(/\/+$/, '')}/admin`)
             .catch((e) => console.error('Application email failed:', e.message));
         res.json({ success: true, org: stripOrg({ ...org, orgType, role: 'owner' }) });
     } catch (error) {
@@ -2603,7 +2603,6 @@ app.post('/api/orgs/join', async (req, res) => {
         if (!limit.allowed) return res.status(429).json({ error: 'Too many attempts. Try again in an hour, or ask your club leader for the code.' });
         const org = await dbAPI.getOrganizationByJoinCode(joinCode);
         if (!org) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
-        if (!org.verified) return res.status(404).json({ error: 'No club found with that code. Check the code and try again.' });
         await dbAPI.addOrgMember({ orgId: org.id, userId: req.user.id, role: 'member', displayName });
         try { await pool.query("UPDATE org_invites SET status = 'accepted' WHERE org_id = $1 AND email = $2", [org.id, req.user.email]); } catch (e) { /* invites optional */ }
         res.json({ success: true, org: stripOrg(org) });
@@ -2645,7 +2644,6 @@ app.post('/api/orgs/:orgId/invite', async (req, res) => {
         const me = await membershipFor(req.user.id, req.params.orgId);
         if (!me) return res.status(404).json({ error: 'Club not found.' });
         if (!isManagerRole(me.role)) return res.status(403).json({ error: 'Only club owners and admins can invite members.' });
-        if (!me.verified) return res.status(403).json({ error: 'You can invite members once Weaver approves your club.' });
         const email = String((req.body && req.body.email) || '').trim().toLowerCase();
         if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
         const limit = auth.hit('invite:' + me.id, 200, 86400000);

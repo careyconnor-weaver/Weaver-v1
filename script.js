@@ -7446,7 +7446,6 @@ window.onboardCreateOrg = async function () {
     const status = document.getElementById('onboard-org-status');
     const name = (nameEl?.value || '').trim();
     if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
-    if (!(schoolEl?.value || '').trim()) { showInlineStatus(status, 'Enter your school.', 'error'); return; }
     try {
         const res = await fetch('/api/orgs', {
             method: 'POST',
@@ -7456,8 +7455,10 @@ window.onboardCreateOrg = async function () {
                 website: document.getElementById('onboard-org-website')?.value || '' })
         });
         const data = await res.json();
-        if (!res.ok) { showInlineStatus(status, data.error || 'Could not send your application.', 'error'); return; }
+        if (!res.ok) { showInlineStatus(status, data.error || 'Could not create your club.', 'error'); return; }
         updateCurrentUserFields({ accountType: 'org', primaryOrgId: data.org.id });
+        const disp = document.getElementById('onboard-join-code-display');
+        if (disp) disp.textContent = data.org.joinCode || '';
         onboardSetStep('done');
     } catch (e) {
         showInlineStatus(status, 'Something went wrong. Please try again.', 'error');
@@ -7670,15 +7671,15 @@ function clubEmptyStateHtml(u) {
     let html = '<div class="settings-card" style="max-width:560px;">';
     if (isOrg) {
         const inp = 'style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"';
-        html += '<h3 class="settings-card-title">Apply for a club workspace</h3>';
-        html += '<p style="color:var(--slate);font-size:14px;">Weaver admits clubs by application. We review each one, usually within two days, and email you when you’re approved. Then you get a join code to invite members.</p>';
+        html += '<h3 class="settings-card-title">Set up your club</h3>';
+        html += '<p style="color:var(--slate);font-size:14px;">Create a workspace and you’ll get a join code to share with members right away.</p>';
         html += '<div class="form-group" style="margin-top:0.75rem;"><label for="club-create-name">Club name</label><input type="text" id="club-create-name" maxlength="120" placeholder="e.g. BC Finance Society" ' + inp + '></div>';
-        html += '<div class="form-group"><label for="club-create-school">School</label><input type="text" id="club-create-school" maxlength="120" placeholder="e.g. Boston College" ' + inp + '></div>';
-        html += '<div class="form-group"><label for="club-create-members">About how many members?</label><input type="number" min="1" id="club-create-members" placeholder="60" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-school">School (optional)</label><input type="text" id="club-create-school" maxlength="120" placeholder="e.g. Boston College" ' + inp + '></div>';
+        html += '<div class="form-group"><label for="club-create-members">About how many members? (optional)</label><input type="number" min="1" id="club-create-members" placeholder="60" ' + inp + '></div>';
         html += '<div class="form-group"><label for="club-create-website">Club website or Instagram (optional)</label><input type="text" id="club-create-website" maxlength="300" ' + inp + '></div>';
         html += '<div class="form-group"><label for="club-create-about">What does your club do? (optional)</label><textarea id="club-create-about" rows="3" maxlength="1000" ' + inp + '></textarea></div>';
         html += '<div id="club-create-status" class="upload-status" style="display:none;margin:0.5rem 0;"></div>';
-        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubCreate()">Submit application</button>';
+        html += '<button class="tb-btn tb-btn-primary" onclick="window.clubCreate()">Create club</button>';
     } else {
         html += '<h3 class="settings-card-title">Join your club</h3>';
         html += '<p style="color:var(--slate);font-size:14px;">Enter your club code to join the roster and see how your networking compares with your peers.</p>';
@@ -7731,7 +7732,6 @@ window.clubCreate = async function () {
     const school = (document.getElementById('club-create-school')?.value || '').trim();
     const status = document.getElementById('club-create-status');
     if (!name) { showInlineStatus(status, 'Give your club a name.', 'error'); return; }
-    if (!school) { showInlineStatus(status, 'Enter your school.', 'error'); return; }
     try {
         const res = await fetch('/api/orgs', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },

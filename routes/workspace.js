@@ -809,9 +809,8 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
                 success: true,
                 org: {
                     id: org.id, name: org.name, school: org.school, role: org.role,
-                    // The join code only exists for members once Weaver has approved the club.
-                    joinCode: org.verified ? org.joinCode : null,
-                    reviewStatus: org.verified ? 'approved' : org.declinedAt ? 'declined' : 'pending',
+                    joinCode: org.joinCode,
+                    reviewStatus: org.verified ? 'verified' : org.declinedAt ? 'declined' : 'pending',
                     verified: !!org.verified, orgType: org.orgType || 'club', planStatus: org.planStatus || 'none',
                     license: org.license || 'none', licenseExpiresAt: org.licenseExpiresAt || null,
                 },
@@ -960,7 +959,7 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
         } catch (e) { fail(res, e, 'Could not load the stats'); }
     });
 
-    // Club applications: pending first, then recently decided.
+    // Clubs waiting for verification first, then recently decided.
     router.get('/admin/applications', async (req, res) => {
         if (!requireAdmin(req, res)) return;
         try {
@@ -971,7 +970,7 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
                 ORDER BY (o.verified = false AND o.declined_at IS NULL) DESC, o.created_at DESC LIMIT 200`);
             res.json({ success: true, applications: rows.map((r) => ({
                 id: r.id, name: r.name, school: r.school, type: r.org_type || 'club', createdAt: r.created_at, ownerEmail: r.owner_email, members: r.members,
-                status: r.verified ? 'approved' : r.declined_at ? 'declined' : 'pending',
+                status: r.verified ? 'verified' : r.declined_at ? 'declined' : 'pending',
                 memberCount: r.application && r.application.memberCount || null,
                 website: r.application && r.application.website || null,
                 about: r.application && r.application.about || null,
@@ -991,7 +990,7 @@ Write like a thoughtful, specific human, never like a template: no buzzwords, no
                 [req.params.orgId]);
             if (!rows.length) return res.status(404).json({ error: 'Club not found.' });
             if (notifyOwner) notifyOwner(rows[0].owner_id, rows[0].name, approve).catch((e) => console.error('Decision email failed:', e.message));
-            res.json({ success: true, status: approve ? 'approved' : 'declined' });
+            res.json({ success: true, status: approve ? 'verified' : 'declined' });
         } catch (e) { fail(res, e, 'Could not save the decision'); }
     });
 
