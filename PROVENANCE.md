@@ -732,5 +732,37 @@ end to end. Regression: 18 end-to-end (updated for applications), 6 metering, 5 
 hostile-data browser test.
 
 ## Deploy status
-Committed to the `feature/ai-native` branch. Not yet live: deploying to studentweaver.com
-waits for the owner's go-ahead.
+Deployed to studentweaver.com on 2026-11-02 with change set 14, on the owner's instruction.
+
+---
+
+# Change set 14: Landing copy rewrite and launch
+
+**Product direction by:** shindon@bc.edu ("remove the short AI texts that aren't witty and just
+read like AI; review marketing research and design research; design in a way that will attract
+users to sign up; deploy"). He chose to deploy change sets 13 and 14 together.
+**Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-11-02
+
+## Research applied
+- Unbounce Conversion Benchmark Report: pages at a 5th to 7th grade reading level convert about
+  twice as well as professional-level copy; long words and word count both correlate negatively
+  with conversion; most visits are on phones.
+- Nielsen Norman Group (via UXPin): most users scan headings and keywords; limit choices to one
+  primary action; alternating left/right layouts slow scanning.
+- Wikipedia's "Signs of AI writing" (via ContentGrip) and PRSA: rule of three, "not X but Y",
+  inflated importance, ad clichés and em dashes read as machine-written.
+
+## Changed (`index.html`, `landing.css`)
+- Rewrote every headline and line of body copy in plain student language with concrete
+  situations: "Your spreadsheet won't get you the offer", "See who's warm. And who ghosted",
+  "The thank-you you forgot to send", "Never ask 'So what does your group do?'", and "Someone
+  you met last month is still waiting on a thank-you". Removed tricolons, slogans and jargon.
+- One primary action everywhere: **Start free** (nav, hero, closing). Club leaders get a
+  secondary path to the admissions section and Book a demo.
+- Text now always sits on the left of the product examples (no zigzag).
+- Hero subline: "Free for students. Built at Boston College."
+- Copy measured at about a 6th-grade reading level, with about 6% long words.
+
+## Verified
+11 landing checks, 8 app checks, 18 end-to-end and 22 address checks re-run before deploy.
+The headline is checked to sit on two lines on desktop, wide and tablet screens.

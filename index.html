@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weaver | The networking workspace for students and clubs</title>
-<meta name="description" content="Weaver is the private networking workspace for students and the clubs that train them. Know who’s warm, say the right thing, and walk into every conversation prepared.">
+<title>Weaver | Networking for recruiting, without the spreadsheet</title>
+<meta name="description" content="Weaver keeps track of every alum you reach out to, tells you who’s going cold, and writes your next email from your own call notes. Free for students.">
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png">
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -31,10 +31,10 @@
     <a href="#" class="lp-brand" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"><img src="/weaver-badge.png" alt="">Weaver</a>
     <nav class="lp-links" aria-label="Main">
       <a href="#product">Product</a>
-      <a href="#admissions">Clubs</a>
+      <a href="#admissions">For clubs</a>
       <a href="#pricing">Pricing</a>
       <a href="#" class="lp-login" onclick="openAuthModal('login'); return false;">Log in</a>
-      <a href="#" class="lp-btn lp-btn-light lp-btn-sm" onclick="return openDemo(event)">Book a demo</a>
+      <a href="#" class="lp-btn lp-btn-light lp-btn-sm" onclick="openAuthModal('signup'); return false;">Start free</a>
     </nav>
   </div>
 </header>
@@ -42,13 +42,13 @@
 <section class="lp-hero" aria-label="Weaver">
   <canvas id="lp-network" aria-hidden="true"></canvas>
   <div class="lp-wrap lp-hero-in">
-    <h1>Recruiting runs on relationships.</h1>
-    <p class="lp-hero-sub">Weaver is the private networking workspace for students and the clubs that train them. Know who’s warm, say the right thing, and walk into every conversation prepared.</p>
+    <h1>Your spreadsheet won’t get you the offer.</h1>
+    <p class="lp-hero-sub">Weaver keeps track of every alum you reach out to, tells you who’s going cold, and writes your next email from your own call notes.</p>
     <div class="lp-hero-cta">
-      <a href="#" class="lp-btn lp-btn-light" onclick="return openDemo(event)">Book a demo</a>
-      <a href="#" class="lp-btn lp-btn-ghost" onclick="openAuthModal('signup'); return false;">Start as a student</a>
+      <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Start free</a>
+      <a href="#admissions" class="lp-btn lp-btn-ghost">For club leaders</a>
     </div>
-    <div class="lp-hero-note"><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Clubs join by application.</div>
+    <div class="lp-hero-note"><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Free for students. Built at Boston College.</div>
   </div>
 </section>
 
@@ -56,8 +56,8 @@
   <div class="lp-wrap">
     <div class="lp-st" data-reveal>
       <div class="lp-st-text">
-        <h2><span class="lp-line"><span>Know who’s</span></span><span class="lp-line"><span>warm.</span></span></h2>
-        <p class="lp-fade">Every contact gets a warmth rating from what actually happened: calls, replies, and how long it’s been. You always know who’s ready for the next step.</p>
+        <h2><span class="lp-line"><span>See who’s warm.</span></span><span class="lp-line"><span>And who ghosted.</span></span></h2>
+        <p class="lp-fade">Every contact gets a rating based on what really happened. Had two calls last month? Strong. Sent one email in September? Time for a nudge.</p>
       </div>
       <div class="lp-card lp-fade" aria-label="Example: contacts by warmth">
         <p class="lp-card-h">Your network <span style="color:#B0B8C7">(example)</span></p>
@@ -72,8 +72,8 @@
 
     <div class="lp-st" data-reveal>
       <div class="lp-st-text">
-        <h2><span class="lp-line"><span>Say the</span></span><span class="lp-line"><span>right thing.</span></span></h2>
-        <p class="lp-fade">Drafts written from your own notes, in your voice, matched to where the relationship stands. You edit every word before it goes out.</p>
+        <h2><span class="lp-line"><span>The thank-you</span></span><span class="lp-line"><span>you forgot to send.</span></span></h2>
+        <p class="lp-fade">Weaver drafts it from what they actually told you on the call. You make it sound like you, then hit send.</p>
       </div>
       <div class="lp-card lp-mail lp-fade" aria-label="Example: a drafted email">
         <p class="lp-card-h">Draft · to Sophie Laurent <span style="color:#B0B8C7">(example)</span></p>
@@ -87,8 +87,8 @@
 
     <div class="lp-st" data-reveal>
       <div class="lp-st-text">
-        <h2><span class="lp-line"><span>Walk in</span></span><span class="lp-line"><span>prepared.</span></span></h2>
-        <p class="lp-fade">A scout report on their firm and group before every call: recent news with sources, common ground, and questions a search engine can’t answer.</p>
+        <h2><span class="lp-line"><span>Never ask</span></span><span class="lp-line"><span>“So what does your group do?”</span></span></h2>
+        <p class="lp-fade">Before each call, get the latest news on their firm and group with links to the sources, plus questions worth their time.</p>
       </div>
       <div class="lp-card lp-scout lp-fade" aria-label="Example: a scout report">
         <p class="lp-card-h">Scout report · Northgate Partners, Restructuring <span style="color:#B0B8C7">(example)</span></p>
@@ -105,11 +105,11 @@
 
 <section class="lp-trust" aria-labelledby="lp-trust-h">
   <div class="lp-wrap" data-reveal>
-    <h2 class="lp-kicker" id="lp-trust-h"><span class="lp-line"><span>You get one shot.</span></span><span class="lp-line"><span>We take that seriously.</span></span></h2>
+    <h2 class="lp-kicker" id="lp-trust-h"><span class="lp-line"><span>Your network is yours.</span></span></h2>
     <div class="lp-trust-grid lp-fade">
-      <div><h3>Private by default</h3><p>Your contacts, notes and emails are yours alone. Clubs see activity totals and only the outcomes you choose to share.</p></div>
-      <div><h3>Closed, purpose-built AI</h3><p>Weaver’s recruiting method runs inside a private, metered system. It works from your notes and cites its sources, and it never invents facts.</p></div>
-      <div><h3><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified clubs</h3><p>Every club is reviewed by the Weaver team before it can invite a single member.</p></div>
+      <div><h3>Only you see your contacts</h3><p>Your club sees how active you are, never who you talk to or what you wrote down.</p></div>
+      <div><h3>No made-up facts</h3><p>Drafts come from your notes. News comes with a link. If Weaver doesn’t know something, it leaves a blank for you.</p></div>
+      <div><h3><svg class="lp-check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1-2.7-1.8.9-3.1-.9-3.1 2.7-1.8 1-3.1 3.2.2z"/><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Real clubs only</h3><p>A person on our team checks every club before it can invite anyone.</p></div>
     </div>
   </div>
 </section>
@@ -117,11 +117,11 @@
 <section class="lp-admit" id="admissions" aria-labelledby="lp-admit-h">
   <div class="lp-wrap" data-reveal>
     <h2 class="lp-kicker" id="lp-admit-h"><span class="lp-line"><span>Clubs join</span></span><span class="lp-line"><span>by application.</span></span></h2>
-    <p class="lp-admit-lede lp-fade">Weaver is built for clubs that take recruiting seriously, especially at schools without a pipeline. Students can start on their own today.</p>
+    <p class="lp-admit-lede lp-fade">Run your club’s recruiting season in one place: who’s reaching out, who’s getting calls, and who just got an offer. Students don’t need to wait for their club to start.</p>
     <ol class="lp-steps lp-fade">
-      <li><h3>Apply</h3><p>Tell us about your club and your members. It takes two minutes.</p></li>
-      <li><h3>We review</h3><p>Our team verifies every club, usually within two days.</p></li>
-      <li><h3>Invite your members</h3><p>Approved clubs get a private code, a console, and a verified badge.</p></li>
+      <li><h3>Apply</h3><p>Tell us about your club. It takes two minutes.</p></li>
+      <li><h3>We check it</h3><p>Most clubs hear back within two days.</p></li>
+      <li><h3>Invite your members</h3><p>Share your club’s code. Members get Weaver free.</p></li>
     </ol>
     <div class="lp-admit-cta lp-fade">
       <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Apply as a club</a>
@@ -132,11 +132,11 @@
 
 <section class="lp-pricing" id="pricing" aria-labelledby="lp-price-h">
   <div class="lp-wrap" data-reveal>
-    <h2 class="lp-kicker" id="lp-price-h"><span class="lp-line"><span>Simple pricing.</span></span></h2>
+    <h2 class="lp-kicker" id="lp-price-h"><span class="lp-line"><span>Free to start.</span></span></h2>
     <div class="lp-plans lp-fade">
-      <div class="lp-plan"><h3>Student</h3><div class="lp-price">$0</div><ul><li>Up to 20 contacts</li><li>Warmth, follow-ups and checklists</li><li>A sample of the AI</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="openAuthModal('signup'); return false;">Start free</a></div>
-      <div class="lp-plan is-featured"><h3>Pro</h3><div class="lp-price" id="pro-price"><small>Price shown at checkout</small></div><ul><li>Up to 5,000 contacts</li><li>The full AI allowance</li><li>Drafts, scout reports and documents</li><li>Free for members of verified clubs</li></ul><a href="#" class="lp-btn lp-btn-dark" onclick="openAuthModal('signup'); return false;">Get Pro</a></div>
-      <div class="lp-plan"><h3>Clubs and career centers</h3><div class="lp-price" id="club-seat-price"><small>By application</small></div><ul><li>A console for every member’s activity</li><li>Shared outcomes and club reports</li><li>Billed only for active members</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="return openDemo(event)">Book a demo</a></div>
+      <div class="lp-plan"><h3>Student</h3><div class="lp-price">$0</div><ul><li>Up to 20 contacts</li><li>Warmth ratings and follow-up reminders</li><li>A few AI drafts to try</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="openAuthModal('signup'); return false;">Start free</a></div>
+      <div class="lp-plan is-featured"><h3>Pro</h3><div class="lp-price" id="pro-price"><small>Price shown at checkout</small></div><ul><li>Up to 5,000 contacts</li><li>A full month of AI drafts and scout reports</li><li>Free if your club is on Weaver</li></ul><a href="#" class="lp-btn lp-btn-dark" onclick="openAuthModal('signup'); return false;">Get Pro</a></div>
+      <div class="lp-plan"><h3>Clubs and career centers</h3><div class="lp-price" id="club-seat-price"><small>By application</small></div><ul><li>See who’s networking and who’s stuck</li><li>Offers members choose to share</li><li>Pay only for members who use it</li></ul><a href="#" class="lp-btn lp-btn-line" onclick="return openDemo(event)">Book a demo</a></div>
     </div>
   </div>
   <script>
@@ -158,10 +158,10 @@
 
 <section class="lp-close" aria-label="Get started">
   <div class="lp-wrap" data-reveal>
-    <h2><span class="lp-line"><span>Make every</span></span><span class="lp-line"><span>conversation count.</span></span></h2>
+    <h2><span class="lp-line"><span>Someone you met last month</span></span><span class="lp-line"><span>is still waiting on a thank-you.</span></span></h2>
     <div class="lp-hero-cta lp-fade">
-      <a href="#" class="lp-btn lp-btn-light" onclick="return openDemo(event)">Book a demo</a>
-      <a href="#" class="lp-btn lp-btn-ghost" onclick="openAuthModal('signup'); return false;">Start as a student</a>
+      <a href="#" class="lp-btn lp-btn-light" onclick="openAuthModal('signup'); return false;">Start free</a>
+      <a href="#" class="lp-btn lp-btn-ghost" onclick="return openDemo(event)">Book a demo for your club</a>
     </div>
   </div>
 </section>
@@ -177,7 +177,7 @@
   <div class="lp-dialog-box">
     <div id="lp-demo-body">
       <h2 id="lp-demo-title">Book a demo</h2>
-      <p>For club leaders and career centers. Tell us a little about you and we’ll reach out to set up a time.</p>
+      <p>For club leaders and career centers. Tell us who you are and we’ll email you to find a time.</p>
       <form id="lp-demo-form" class="lp-form" novalidate>
         <label>Name<input name="name" required maxlength="120" autocomplete="name"></label>
         <label>Email<input name="email" type="email" required maxlength="255" autocomplete="email"></label>
@@ -191,7 +191,7 @@
     </div>
     <div id="lp-demo-done" class="lp-done" hidden>
       <h2>Thank you.</h2>
-      <p style="color:#4A5568;line-height:1.5;margin:0 0 20px;">We’ve got your request and will email you shortly to find a time.</p>
+      <p style="color:#4A5568;line-height:1.5;margin:0 0 20px;">We’ll email you within a day to find a time.</p>
       <button type="button" class="lp-btn lp-btn-dark" onclick="closeDemo()">Done</button>
     </div>
   </div>
