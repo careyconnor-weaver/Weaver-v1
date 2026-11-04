@@ -151,7 +151,7 @@ Go back to GoDaddy DNS management and add each record Resend provides:
 Update your `.env` file to use the new domain:
 
 ```bash
-RESEND_API_KEY=re_D1HGx1Bw_6DVca2jDfHkb3Pw5EH6jxABt
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY
 RESEND_FROM_EMAIL=Weaver <noreply@studentweaver.com>
 RESEND_FROM_NAME=Weaver
 WEAVER_URL=https://studentweaver.com

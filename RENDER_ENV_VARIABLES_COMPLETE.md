@@ -35,7 +35,7 @@ This is a comprehensive list of ALL environment variables you need to set in Ren
   5. Add `?sslmode=require` at the end if it's not there
 - **Example**: 
   ```
-  postgresql://weaver_user:C0KZ2FZFot9azEUJMGdVdrYb3hVgGfeq@dpg-d52dup63jp1c73c1ms2g-a/weaver?sslmode=require
+  postgresql://weaver_user:YOUR_DB_PASSWORD@dpg-xxxxx-a/weaver?sslmode=require
   ```
 - **Important**: Use the **Internal** URL (for Render services), not External
 - **How to add**:

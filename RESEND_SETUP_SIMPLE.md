@@ -4,7 +4,7 @@
 
 Your Resend integration is **already working**. Here's what you have:
 
-1. ✅ **API Key**: `re_D1HGx1Bw_6DVca2jDfHkb3Pw5EH6jxABt` (configured)
+1. ✅ **API Key**: `re_YOUR_RESEND_API_KEY` (configured)
 2. ✅ **From Email**: `Weaver <onboarding@resend.dev>` (using Resend's test domain)
 3. ✅ **Code**: Already integrated in `server.js`
 

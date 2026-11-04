@@ -44,7 +44,7 @@ git push origin main
    ```
    NODE_ENV = production
    PORT = 10000
-   DATABASE_URL = postgresql://weaver_user:YOUR_PASSWORD@dpg-d52dup63jp1c73c1ms2g-a/weaver?sslmode=require
+   DATABASE_URL = postgresql://weaver_user:YOUR_PASSWORD@dpg-xxxxx-a/weaver?sslmode=require
    GOOGLE_CLIENT_ID = YOUR_GOOGLE_CLIENT_ID
    GOOGLE_CLIENT_SECRET = YOUR_GOOGLE_CLIENT_SECRET
    GOOGLE_REDIRECT_URI = https://your-app-name.onrender.com/api/gmail/callback
@@ -87,7 +87,7 @@ For Render deployment, use these values:
 |----------|-------|
 | `NODE_ENV` | `production` |
 | `PORT` | `10000` |
-| `DATABASE_URL` | `postgresql://weaver_user:YOUR_PASSWORD@dpg-d52dup63jp1c73c1ms2g-a/weaver?sslmode=require` |
+| `DATABASE_URL` | `postgresql://weaver_user:YOUR_PASSWORD@dpg-xxxxx-a/weaver?sslmode=require` |
 | `GOOGLE_CLIENT_ID` | `YOUR_GOOGLE_CLIENT_ID` |
 | `GOOGLE_CLIENT_SECRET` | `YOUR_GOOGLE_CLIENT_SECRET` |
 | `GOOGLE_REDIRECT_URI` | `https://YOUR-APP-NAME.onrender.com/api/gmail/callback` |
