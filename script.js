@@ -416,9 +416,30 @@ function showAppView() {
 function showLandingView() {
     var landing = document.getElementById('landing-page');
     var app = document.getElementById('app-container');
+    var out = document.getElementById('signed-out');
+    if (out) out.hidden = true;
     if (landing) landing.style.display = '';
     if (app) app.style.display = 'none';
 }
+
+// After logging out, show a quiet signed-out screen in the app's light colors instead of
+// jumping straight to the dark, animated landing page.
+function showSignedOutView(message) {
+    var landing = document.getElementById('landing-page');
+    var app = document.getElementById('app-container');
+    var out = document.getElementById('signed-out');
+    if (!out) return showLandingView();
+    if (app) app.style.display = 'none';
+    if (landing) landing.style.display = 'none';
+    var msg = document.getElementById('signed-out-msg');
+    if (msg) msg.textContent = message || 'See you next time.';
+    out.hidden = false;
+    document.title = 'Signed out – Weaver';
+    try { if (location.pathname !== '/' || location.search) history.replaceState(null, '', '/'); } catch (e) {}
+    try { sessionStorage.removeItem('weaver_pending_route'); } catch (e) {}
+}
+window.showSignedOutView = showSignedOutView;
+window.leaveSignedOut = function () { showLandingView(); window.scrollTo(0, 0); document.title = 'Weaver | Networking for recruiting, without the spreadsheet'; };
 
 // Update sidebar user info
 function updateSidebarUser() {
@@ -972,7 +993,7 @@ function logout() {
     updateSidebarUser();
     const contactsList = document.getElementById('contacts-list');
     if (contactsList) contactsList.innerHTML = '';
-    showLandingView();
+    showSignedOutView();
 }
 
 // Any API call that finds the session gone signs the user out once, with a message.
@@ -7363,7 +7384,11 @@ function endSession(message) {
     setCurrentUser(null);
     document.querySelectorAll('.modal.active').forEach(function (m) { m.classList.remove('active'); });
     document.querySelectorAll('.wv-dialog-backdrop, .wv-confirm-backdrop').forEach(function (el) { el.remove(); });
-    showLandingView();
+    // Keep the screen they were on, so signing back in returns them there.
+    try { if (/^\/app\//.test(location.pathname)) sessionStorage.setItem('weaver_pending_route', location.pathname); } catch (e) {}
+    var keep = null; try { keep = sessionStorage.getItem('weaver_pending_route'); } catch (e) {}
+    showSignedOutView(message);
+    try { if (keep) sessionStorage.setItem('weaver_pending_route', keep); } catch (e) {}
     if (message) {
         showAuthModal('login');
         if (typeof setAuthStatus === 'function') setAuthStatus(message, 'info');

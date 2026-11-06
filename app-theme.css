@@ -756,3 +756,13 @@
 #app-container .main-content > .section { max-width: 1240px; margin-left: auto; margin-right: auto; }
 @media (min-width: 1500px) { #app-container .main-content { zoom: 1.08; } }
 @media (min-width: 1800px) { #app-container .main-content { zoom: 1.16; } }
+
+/* ── Signed out ─────────────────────────────────────────────────── */
+.wv-signed-out { position: fixed; inset: 0; z-index: 900; background: #F6F7F9; display: flex; align-items: center; justify-content: center; padding: 24px; font-family: var(--wv-ui, 'IBM Plex Sans', system-ui, sans-serif); color: #16203A; }
+.wv-signed-out[hidden] { display: none; }
+.wv-signed-out-card { background: #fff; border: 1px solid #E3E6EB; border-radius: 16px; padding: 36px 32px 30px; width: min(420px, 100%); text-align: center; }
+.wv-signed-out-card img { margin: 0 auto 14px; display: block; }
+.wv-signed-out-card h1 { font-family: var(--wv-display, Georgia, serif); font-weight: 400; font-size: 28px; margin: 0 0 6px; }
+.wv-signed-out-card p { margin: 0 0 22px; color: #5B6474; font-size: 15px; line-height: 1.5; }
+.wv-signed-out-actions { display: flex; flex-direction: column; gap: 10px; }
+.wv-signed-out-actions .wv-btn { width: 100%; justify-content: center; height: 42px; }

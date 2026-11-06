@@ -803,3 +803,6 @@ Brightness measured at every scroll step on desktop and phone; 11 landing checks
 checks, 18 end-to-end (updated: a new club gets its code at once), 5 club verification checks
 (join and invite work immediately, members stay on Starter until verified, verifying unlocks
 the allowance, removing verification keeps the club working).
+
+## Change set 16: calm signed-out screen
+- Logging out (or a session ending) now shows a quiet "You're signed out" card in the app's light colors instead of jumping to the dark, animated landing page. It offers "Sign in again" and "Go to the home page". The address resets to `/`; a session that expires still returns you to the screen you were on after signing back in.

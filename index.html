@@ -899,6 +899,19 @@
 </div>
 
 <!-- Login/Signup Modal -->
+<!-- Shown after logging out or when a session ends: calm, light, no animation. -->
+<div id="signed-out" class="wv-signed-out" hidden>
+  <div class="wv-signed-out-card">
+    <img src="/weaver-badge.png" alt="" width="40" height="40">
+    <h1>You’re signed out</h1>
+    <p id="signed-out-msg">See you next time.</p>
+    <div class="wv-signed-out-actions">
+      <button type="button" class="wv-btn wv-btn-primary" onclick="openAuthModal('login')">Sign in again</button>
+      <button type="button" class="wv-btn" onclick="window.leaveSignedOut()">Go to the home page</button>
+    </div>
+  </div>
+</div>
+
 <div id="auth-modal" class="modal">
   <div class="modal-content" style="max-width:400px;">
     <span class="close-modal" onclick="closeAuthModal()">&times;</span>

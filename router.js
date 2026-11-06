@@ -141,6 +141,8 @@
 
     // Entering the app: open the screen in the address (or the one saved before sign-in).
     wrap('showAppView', function () {
+        var out = document.getElementById('signed-out');
+        if (out) out.hidden = true;
         var route = parse(location.pathname, location.hash);
         var pending = null;
         try { pending = sessionStorage.getItem(PENDING_KEY); sessionStorage.removeItem(PENDING_KEY); } catch (e) {}
