@@ -402,7 +402,7 @@ version afterwards would stop existing users signing in, so problems should be f
 
 # Change set 5: Grinders, human connection and a confidential playbook
 
-**Product direction by:** shindon@bc.edu (Weaver co-founder). The ideas, priorities and the
+**Product direction by:** shindon@bc.edu (volunteer contributor). The ideas, priorities and the
 recruiting playbook itself are his; this change set implements them.
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
