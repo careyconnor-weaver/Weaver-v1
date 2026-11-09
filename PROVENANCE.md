@@ -1,3 +1,17 @@
+# Contributor status (shindon@bc.edu)
+
+Every contribution by shindon@bc.edu recorded in this file was made voluntarily and without
+pay, for self-enrichment: to build skills relevant to his major, Economics. He received no
+wages, salary, stipend, bonus, commission, benefits or other compensation for this work. He is
+not an employee of Student Weaver, was not involved in its daily operations, and had no set
+hours or schedule. Where this record says "Product direction by" or "Your contribution", it
+describes ideas and decisions he volunteered, not duties of a job.
+
+This matches the Acknowledgment of Voluntary, Unpaid Participation signed by him and by
+Connor Carey for Student Weaver.
+
+---
+
 # Code Provenance — Club / Enterprise feature
 
 **Author (requested & directed by):** shindon@bc.edu
@@ -392,7 +406,7 @@ version afterwards would stop existing users signing in, so problems should be f
 recruiting playbook itself are his; this change set implements them.
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
-## Your contribution (shindon@bc.edu)
+## Your contribution (shindon@bc.edu, voluntary and unpaid)
 - **The Weaver playbook (original IP).** The core recruiting method (call structure,
   outreach timing and execution, calendar invites, after-call follow-through, no-response
   and rescheduling, referral introductions, expanding the pipeline) was written by you.
@@ -464,7 +478,7 @@ for the library and a custom tab where you can write your own"; "put it live"; "
 security check after")
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
-## Your contribution (shindon@bc.edu)
+## Your contribution (shindon@bc.edu, voluntary and unpaid)
 - The Library design: Weaver's prompts under **Default**, the user's own under **Custom**.
 - The release decision: ship change sets 5 and 6 to studentweaver.com after a security check.
 
