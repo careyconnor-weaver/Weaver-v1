@@ -746,7 +746,7 @@ end to end. Regression: 18 end-to-end (updated for applications), 6 metering, 5 
 hostile-data browser test.
 
 ## Deploy status
-Deployed to studentweaver.com on 2026-11-02 with change set 14, on the owner's instruction.
+Deployed to studentweaver.com on 2026-11-02 with change set 14, at shindon@bc.edu's request.
 
 ---
 
