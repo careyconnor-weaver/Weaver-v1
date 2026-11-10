@@ -1,17 +1,8 @@
 # Contributor status (shindon@bc.edu)
 
-Every contribution by shindon@bc.edu to Student Weaver (the official name of the venture
-operating studentweaver.com) recorded in this file was made voluntarily and without pay, for
-self-enrichment. All of his contributions were related to his field of study, Economics, and
-were made to build skills relevant to an Economics degree. He took part on a voluntary,
-time-flexible basis, as and when he chose. He received no wages, salary, stipend, bonus,
-commission, benefits or other compensation for this work. He is not an employee of Student
-Weaver, was not involved in its daily operations, and had no set hours or schedule. Where this
-record says "Product direction by" or "Your contribution", it describes ideas and decisions he
-volunteered, not duties of a job.
-
-This matches the Acknowledgment of Voluntary, Unpaid Participation signed by him and by
-Connor Carey for Student Weaver.
+Student Weaver was founded by Connor Carey, its sole founder and CEO. shindon@bc.edu joined
+partway through as a volunteer, starting with website design. He has not been paid and holds no
+equity. The change sets below record the ideas and requests he contributed.
 
 ---
 
