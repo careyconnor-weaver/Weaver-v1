@@ -61,7 +61,7 @@ portal (Settings → Billing → Customer portal) for "Manage billing".
 ## 4. Admins
 
 Set `ADMIN_EMAILS` to a comma-separated list of Weaver staff accounts, e.g.
-`ADMIN_EMAILS=shindon@bc.edu,connor@example.com`. Admins can verify clubs, grant campus
+`ADMIN_EMAILS=connor@example.com,dominic@example.com`. Admins can verify clubs, grant campus
 licenses and use the maintenance endpoints. Nobody else can.
 
 ## 5. Verifying a club, granting a campus license
