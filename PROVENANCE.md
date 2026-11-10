@@ -1,14 +1,13 @@
-# Contributor status (shindon@bc.edu)
+# Contributor status (Dan Shin)
 
-Student Weaver was founded by Connor Carey, its sole founder and CEO. shindon@bc.edu joined
-partway through as a volunteer, starting with website design. He has not been paid and holds no
-equity. The change sets below record the ideas and requests he contributed.
+Student Weaver was founded by Connor Carey, its sole founder and CEO. Dan Shin joined
+partway through as an unpaid volunteer, starting with website design. He holds no equity. The change sets below record the ideas and requests he contributed.
 
 ---
 
 # Code Provenance — Club / Enterprise feature
 
-**Author (requested & directed by):** shindon@bc.edu
+**Author (requested & directed by):** Dan Shin
 **Implemented by:** Claude Opus 4.8 (claude-opus-4-8), via Claude Code
 **Session:** https://claude.ai/code/session_01J5PZc2FvLyEJ462zYpKyzQ
 **Date:** 2026-10-23
@@ -152,7 +151,7 @@ code → leaderboard.
 
 # Change set 2 — AI-native assistant, per-active-member B2B billing, redesign
 
-**Author (requested & directed by):** shindon@bc.edu
+**Author (requested & directed by):** Dan Shin
 **Implemented by:** Claude (claude-opus-4-8 for the interrupted first pass; claude-opus-5-5 to completion), via Claude Code
 **Session:** https://claude.ai/code/session_01J5PZc2FvLyEJ462zYpKyzQ
 **Date:** 2026-10-23
@@ -245,7 +244,7 @@ code → leaderboard.
 
 # Change set 3: Security, metering, plans and roles, outcomes, Legora-style workspace, polish
 
-**Author (requested & directed by):** shindon@bc.edu
+**Author (requested & directed by):** Dan Shin
 **Implemented by:** Claude (claude-opus-5-5, with a brief claude-haiku-4-5 stretch for deployment support), via Claude Code
 **Session:** https://claude.ai/code/session_01J5PZc2FvLyEJ462zYpKyzQ
 **Date:** 2026-10-24
@@ -333,7 +332,7 @@ due first; Stripe return pages rebuilt; landing pricing uses drawn check marks.
 
 # Addendum: local demo mode (commit 4ce93e5, updated in change set 3)
 
-**Requested by:** shindon@bc.edu, to demo unreleased work without touching production
+**Requested by:** Dan Shin, to demo unreleased work without touching production
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-23, updated 2026-10-24
 
 - `demo.js` + `npm run demo`: starts a private Postgres (`embedded-postgres`, installed
@@ -354,7 +353,7 @@ due first; Stripe return pages rebuilt; landing pricing uses drawn check marks.
 
 # Change set 4: Pre-launch security audit
 
-**Requested by:** shindon@bc.edu ("conduct a security check and once you are sure everything is safe, push Weaver v2")
+**Requested by:** Dan Shin ("conduct a security check and once you are sure everything is safe, push Weaver v2")
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
 ## Checked
@@ -396,11 +395,11 @@ version afterwards would stop existing users signing in, so problems should be f
 
 # Change set 5: Grinders, human connection and a confidential playbook
 
-**Product direction by:** shindon@bc.edu (volunteer contributor). The ideas, priorities and the
+**Product direction by:** Dan Shin (volunteer contributor). The ideas, priorities and the
 recruiting playbook itself are his; this change set implements them.
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
-## Your contribution (shindon@bc.edu, voluntary and unpaid)
+## Your contribution (Dan Shin, voluntary and unpaid)
 - **The Weaver playbook (original IP).** The core recruiting method (call structure,
   outreach timing and execution, calendar invites, after-call follow-through, no-response
   and rescheduling, referral introductions, expanding the pipeline) was written by you.
@@ -467,12 +466,12 @@ checked at desktop and phone width with no page errors.
 
 # Change set 6: Library tabs, security check, launch of change sets 5-6
 
-**Product direction by:** shindon@bc.edu ("add a default tab for the prompts we already have
+**Product direction by:** Dan Shin ("add a default tab for the prompts we already have
 for the library and a custom tab where you can write your own"; "put it live"; "conduct
 security check after")
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
-## Your contribution (shindon@bc.edu, voluntary and unpaid)
+## Your contribution (Dan Shin, voluntary and unpaid)
 - The Library design: Weaver's prompts under **Default**, the user's own under **Custom**.
 - The release decision: ship change sets 5 and 6 to studentweaver.com after a security check.
 
@@ -514,7 +513,7 @@ security check after")
 
 # Change set 7: Every screen gets its own address
 
-**Product direction by:** shindon@bc.edu (asked why Weaver always stays at studentweaver.com
+**Product direction by:** Dan Shin (asked why Weaver always stays at studentweaver.com
 while professional sites use addresses like /feed/foryou, then "add it")
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-29
 
@@ -549,7 +548,7 @@ cookie/error checks, the hostile-data browser test and the Library test. Request
 
 # Change set 8: Clear handling when OpenAI refuses requests
 
-**Product direction by:** shindon@bc.edu, after the live assistant failed with a generic
+**Product direction by:** Dan Shin, after the live assistant failed with a generic
 error. Render logs showed `429 You have no credits remaining`. He approved the proposed fix
 ("add that").
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
@@ -581,7 +580,7 @@ confidentiality, 4 security probes, 22 address checks, production cookie/error c
 
 # Change set 9: Admin usage dashboard
 
-**Product direction by:** shindon@bc.edu ("how can i check how many users use weaver";
+**Product direction by:** Dan Shin ("how can i check how many users use weaver";
 chose the in-app dashboard over querying the database)
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
 
@@ -613,7 +612,7 @@ Full regression re-run (18 end-to-end, 6 metering, 5 confidentiality, 4 security
 
 # Change set 10: Admin dashboard moved out of the public site
 
-**Product direction by:** shindon@bc.edu ("why is the admin page on the website that other
+**Product direction by:** Dan Shin ("why is the admin page on the website that other
 people use. can we hide it")
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
 
@@ -640,7 +639,7 @@ dashboard loads all sections; phone layout. Regression: 18 end-to-end (updated f
 
 # Change set 11: One public address
 
-**Product direction by:** shindon@bc.edu (noticed the site opening at weaver-kuwd.onrender.com
+**Product direction by:** Dan Shin (noticed the site opening at weaver-kuwd.onrender.com
 and asked for it to be fixed)
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
 
@@ -662,7 +661,7 @@ studentweaver.com (no open redirect). 18 end-to-end checks re-run.
 
 # Change set 12: Address cleanup (Stripe return links)
 
-**Product direction by:** shindon@bc.edu ("cleanup", after the onrender redirect)
+**Product direction by:** Dan Shin ("cleanup", after the onrender redirect)
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-10-30
 
 ## Changed
@@ -684,7 +683,7 @@ club checkout to the console, old-style return links), 22 address checks, 18 end
 
 # Change set 13: Warmth, scout reports, admissions, redesigned landing, analytics
 
-**Product direction by:** shindon@bc.edu. His brainstorm: warmth from context, editable drafts,
+**Product direction by:** Dan Shin. His brainstorm: warmth from context, editable drafts,
 a "scout report" on each contact, an Apple/Palantir-style landing with a moving hero and
 scroll animations, less text, exclusivity and an admissions process, Book a demo, sidebar
 sections, removing the Playbook page, "Dashboard", bigger type to fill the white space,
@@ -740,13 +739,13 @@ end to end. Regression: 18 end-to-end (updated for applications), 6 metering, 5 
 hostile-data browser test.
 
 ## Deploy status
-Deployed to studentweaver.com on 2026-11-02 with change set 14, at shindon@bc.edu's request.
+Deployed to studentweaver.com on 2026-11-02 with change set 14, at Dan Shin's request.
 
 ---
 
 # Change set 14: Landing copy rewrite and launch
 
-**Product direction by:** shindon@bc.edu ("remove the short AI texts that aren't witty and just
+**Product direction by:** Dan Shin ("remove the short AI texts that aren't witty and just
 read like AI; review marketing research and design research; design in a way that will attract
 users to sign up; deploy"). He chose to deploy change sets 13 and 14 together.
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-11-02
@@ -779,7 +778,7 @@ The headline is checked to sit on two lines on desktop, wide and tablet screens.
 
 # Change set 15: No admissions gate; landing page dark throughout
 
-**Product direction by:** shindon@bc.edu ("scratch the exclusivity"; "the hero page is a
+**Product direction by:** Dan Shin ("scratch the exclusivity"; "the hero page is a
 flashbang, gonna give people epilepsy").
 **Implemented by:** Claude (claude-opus-5-5), via Claude Code · **Date:** 2026-11-02
 
