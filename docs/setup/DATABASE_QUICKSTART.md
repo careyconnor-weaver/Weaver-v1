@@ -6,7 +6,7 @@
 ✅ **Database schema created** - Tables for users, contacts, emails, notes, and Gmail tokens  
 ✅ **Database API created** - Functions to interact with the database  
 ✅ **API endpoints added** - REST API routes in `server.js`  
-✅ **Migration guide created** - See `DATABASE_MIGRATION.md` for details
+✅ **Migration guide created** - See [DATABASE_MIGRATION.md](DATABASE_MIGRATION.md) for details
 
 ## Files Created
 
@@ -14,7 +14,7 @@
 - `db/index.js` - Database connection setup
 - `db/api.js` - Database query functions
 - `drizzle.config.js` - Drizzle configuration
-- `DATABASE_MIGRATION.md` - Complete migration guide
+- [DATABASE_MIGRATION.md](DATABASE_MIGRATION.md) - Complete migration guide
 
 ## Next Steps
 
@@ -100,7 +100,7 @@ The frontend (`script.js`) still uses localStorage. You'll need to:
 2. Replace `saveContacts()` to save via API
 3. Update all contact operations to use API endpoints
 
-See `DATABASE_MIGRATION.md` for detailed instructions.
+See [DATABASE_MIGRATION.md](DATABASE_MIGRATION.md) for detailed instructions.
 
 ## API Endpoints Available
 
@@ -143,5 +143,5 @@ See `DATABASE_MIGRATION.md` for detailed instructions.
 
 ## Need Help?
 
-Check `DATABASE_MIGRATION.md` for detailed instructions and troubleshooting.
+Check [DATABASE_MIGRATION.md](DATABASE_MIGRATION.md) for detailed instructions and troubleshooting.
 

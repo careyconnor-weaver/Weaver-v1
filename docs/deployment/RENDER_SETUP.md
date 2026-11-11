@@ -187,7 +187,7 @@ Once your database is set up:
 1. ✅ Database created on Render
 2. ✅ Connection string added to `.env`
 3. ✅ Tables created with `npm run db:push`
-4. ⏳ Update frontend to use API (see `DATABASE_MIGRATION.md`)
+4. ⏳ Update frontend to use API (see [DATABASE_MIGRATION.md](../setup/DATABASE_MIGRATION.md))
 
 ## Need Help?
 

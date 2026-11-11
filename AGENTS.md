@@ -9,6 +9,8 @@
 3. Keep changes small, reversible, and tied to one clear user or reliability problem.
 4. If a requested change conflicts with these instructions or the documented current architecture, explain the conflict and ask for a decision instead of silently rewriting the application.
 
+Find setup, deployment, and integration guides in the [documentation index](docs/README.md). Only the project README and these agent instructions stay at the repository root.
+
 ## Current application (verify against the code)
 
 - Frontend: vanilla HTML, CSS, and JavaScript served from the Express application (`index.html`, `script.js`, `workspace-ui.js`, `router.js`, other root-level assets).

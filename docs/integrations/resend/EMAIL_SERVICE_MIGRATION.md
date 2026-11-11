@@ -135,7 +135,7 @@ For most users, the free tier is sufficient (3,000 emails = ~100 active users).
 - Ensure domain is verified (if using custom domain)
 
 ### Need help?
-- See `RESEND_SETUP.md` for detailed setup
+- See [RESEND_SETUP.md](RESEND_SETUP.md) for detailed setup
 - Resend Docs: https://resend.com/docs
 - Resend Support: support@resend.com
 

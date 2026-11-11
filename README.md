@@ -48,4 +48,4 @@ There is currently no application test or lint script in `package.json`, and no 
 
 Do not push, merge, deploy, modify production configuration, or run shared-database migrations without explicit approval. Follow the [engineering workflow](docs/CONTRIBUTING.md).
 
-Older root-level guides remain indexed for review. They may describe historical settings or actions that affect production; consult them as references rather than verified runbooks.
+Older guides are grouped under `docs/setup/`, `docs/deployment/`, and `docs/integrations/` and indexed for review. They may describe historical settings or actions that affect production; consult them as references rather than verified runbooks.

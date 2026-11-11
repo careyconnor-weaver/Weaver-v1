@@ -52,7 +52,7 @@ Once you have your production URL, you need to:
 ## Still Can't Find It?
 
 If you haven't deployed your web service yet:
-1. You need to create a web service first (see `RENDER_DEPLOYMENT.md`)
+1. You need to create a web service first (see [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md))
 2. Once deployed, the URL will be automatically generated
 3. It will appear in your service dashboard
 
