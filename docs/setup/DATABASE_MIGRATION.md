@@ -7,7 +7,7 @@ This guide will help you migrate your Weaver application from localStorage to a 
 1. **PostgreSQL Database**: You need a PostgreSQL database. Options:
    - **Local**: Install PostgreSQL on your machine
    - **Cloud**: Use services like:
-     - **[Render](https://render.com)** (Recommended - Free tier available, see `RENDER_SETUP.md`)
+     - **[Render](https://render.com)** (Recommended - Free tier available, see [RENDER_SETUP.md](../deployment/RENDER_SETUP.md))
      - [Supabase](https://supabase.com) (Free tier available)
      - [Neon](https://neon.tech) (Free tier available)
      - [Railway](https://railway.app) (Free tier available)

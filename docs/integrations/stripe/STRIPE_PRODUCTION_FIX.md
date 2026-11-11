@@ -40,7 +40,7 @@ Make sure these environment variables are set in your Render dashboard:
 1. **STRIPE_SECRET_KEY** (Required)
    - Get from: https://dashboard.stripe.com/apikeys
    - **For testing**: Use `sk_test_...` (test mode key)
-   - **For real payments**: Use `sk_live_...` (live mode key) - See STRIPE_TEST_TO_LIVE.md
+   - **For real payments**: Use `sk_live_...` (live mode key) - See [STRIPE_TEST_TO_LIVE.md](STRIPE_TEST_TO_LIVE.md)
    - Add in Render: Settings → Environment Variables
 
 2. **STRIPE_WEBHOOK_SECRET** (Required for webhooks)

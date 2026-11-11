@@ -1,3 +1,5 @@
+> Imported design reference, preserved from the former root `readme.md`. This is historical material, not the current application setup guide. It mentions template files that are not present and styling rules that may not match the live UI. Validate against the source before applying it.
+
 # Industry design system
 
 Industry is a wireframe: steel-blue on a light technical ground, Barlow Condensed headings over Barlow, a modular grid, and cards, figures and buttons framed as blueprint objects — square-cornered, hairline-bordered, with "+" registration marks at the corners. Cards and figures stay transparent line drawings; the primary button is the one solid object on the board, an accent fill that keeps the square corners and the marks. Photography is duotoned into the steel accent and icons are thin-stroke.
