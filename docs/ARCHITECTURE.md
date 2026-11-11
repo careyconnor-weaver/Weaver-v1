@@ -1,8 +1,8 @@
 # Weaver — Architecture & Engineering Direction
 
 **Status:** Draft proposal; not yet approved
-**Last reviewed:** 2026-11-11  
-**Source of truth for coding agents:** `AGENTS.md` (repo root) + this document  
+**Last reviewed:** 2026-11-11
+**Source of truth for coding agents:** `AGENTS.md` (repo root) + this document
 **Scope:** Architecture and process direction, not authorization to deploy or migrate
 
 ## 1. Goals and decision principles
@@ -42,7 +42,11 @@ PostgreSQL (Render Postgres is declared in `render.yaml`)
 | Billing | `routes/stripe.js`, subscription fields in database | Checkout, subscription events, club billing. |
 | Hosting | `render.yaml` | Config describes a Node web service and Postgres. Verify actual plans/autodeploy in Render dashboard. |
 
-**Important operational note:** `render.yaml` currently uses `buildCommand: npm install && npm run migrate`. Review migration contents and target database before deploying. The repository declares free Render plans, but this file does not verify the live billing plan.
+The browser also persists contacts and settings in localStorage. Contact edits sync snapshots to PostgreSQL; assistant chat receives a client-supplied network snapshot, while reviews and documents load server records. These paths can disagree when synchronization is incomplete. Most application routes are still in `server.js`.
+
+Schema evolution is split between the original Drizzle migration and additions in `lib/schema-sql.js`, invoked by both the migration script and server startup. The Drizzle schema does not describe every newer table.
+
+**Important operational note:** `render.yaml` currently uses `buildCommand: npm install && npm run migrate`. Review migration contents and target database before deploying. Server startup also attempts schema changes and legacy password hashing, and schedules reminder emails and Stripe seat updates (including a seat sync shortly after startup). Demo mode replaces the database URL but retains configured integration credentials. The repository declares free Render plans, but this file does not verify the live billing plan or deploy triggers.
 
 ## 3. Proposed target architecture (incremental)
 

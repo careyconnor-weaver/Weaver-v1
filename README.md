@@ -1,90 +1,51 @@
-# Weaver - Networking Services for Students
+# Weaver
 
-## Setup Instructions
+Weaver is a networking and recruiting platform for students, clubs, and career centers.
 
-### 1. Install Node.js (Required First Step)
+## Start here
 
-**If you don't have Node.js installed:**
+- [Documentation index](docs/README.md): architecture, engineering workflow, and existing guides.
+- [Architecture and proposed direction](docs/ARCHITECTURE.md): current implementation, proposals, and open decisions.
+- [Engineering workflow](docs/CONTRIBUTING.md): branches, verification, review, and production boundaries.
+- [Agent instructions](AGENTS.md): repository rules for coding agents.
 
-- **Option A (Recommended)**: Download from https://nodejs.org/
-  - Download the LTS version for macOS
-  - Run the installer
-  - Restart your terminal
+React, TypeScript, a repository restructure, and semantic retrieval remain proposals requiring separate approval.
 
-- **Option B**: Install via Homebrew (if you have it):
-  ```bash
-  brew install node
-  ```
+## Repository map
 
-**Verify installation:**
-```bash
-node --version
-npm --version
-```
+| Path | Responsibility |
+| --- | --- |
+| `index.html`, root CSS and browser JavaScript | Vanilla browser UI; `script.js`, `assistant.js`, `workspace-ui.js`, and `router.js` share application behavior |
+| `server.js` | Express entry point, static assets, API middleware, many routes, integrations, and scheduled jobs |
+| `routes/` | Extracted authentication, billing, and workspace routes |
+| `lib/` | Shared authentication, AI context, playbook loading, usage accounting, plans, and schema additions |
+| `db/` | PostgreSQL connection, Drizzle schema, and database helpers |
+| `drizzle/`, `migrate-db.js` | Existing database migration paths |
+| `analytics/` | SQL, Python, and R reporting tools; separate Python tests |
+| `docs/` | Architecture, workflow, and documentation navigation |
+| `render.yaml` | Declared Render service/database configuration; live settings are unverified |
 
-### 2. Install Dependencies
+## Local development status
 
-```bash
-npm install
-```
+Local setup is not yet verified end to end. Confirm a separate development PostgreSQL database and an integration configuration that cannot contact production before starting the app. Never copy production credentials into local configuration or commit secrets.
 
-### 3. Environment Variables
+The project uses Node.js and npm; `package.json` does not currently pin a Node version. Dependency installation uses `npm install` and writes local files. No dependency installation is required to read the repository.
 
-Create a `.env` file in the root directory with the following format:
+| Command | Current behavior and precautions |
+| --- | --- |
+| `npm start` / `npm run dev` | Starts Express. Startup can alter schema and hash legacy passwords; scheduled jobs can send email and change Stripe seat quantities. Use only after environment isolation is confirmed. |
+| `npm run demo` | Installs an additional package, creates a local database, seeds data, and starts the app. It retains configured integration credentials and is not an offline sandbox. |
+| `npm run migrate`, `npm run db:migrate`, `npm run db:push` | Can modify the configured database. Shared-database changes require explicit approval. |
+| `npm run db:generate` | Generates migration files; review them before any application to a database. |
 
-```
-OPENAI_API_KEY=your_openai_api_key_here
-```
+OpenAI features can incur API charges. Stripe operations can affect billing, and Resend can deliver real messages. Routine tests must mock external integrations and use synthetic data.
 
-**Example `.env` file format:**
+There is currently no application test or lint script in `package.json`, and no tracked GitHub Actions workflow. Analytics has [separate Python tests](analytics/python/test_weekly_report.py). Establishing application verification is a proposed follow-up.
 
-```
-OPENAI_API_KEY=your_openai_api_key_here
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/gmail/callback
-```
+## Production boundaries
 
-### 4. Start the Server
+`render.yaml` declares `npm install && npm run migrate` as the build command. The server also applies schema additions at startup. Even a documentation-only merge could trigger a deployment if Render auto-deploy is enabled; that setting is unknown.
 
-```bash
-npm start
-```
+Do not push, merge, deploy, modify production configuration, or run shared-database migrations without explicit approval. Follow the [engineering workflow](docs/CONTRIBUTING.md).
 
-Or for development with auto-reload:
-
-```bash
-npm run dev
-```
-
-The server will run on `http://localhost:3000`
-
-### 5. Access the Application
-
-Open your browser and navigate to:
-- Frontend: `http://localhost:3000`
-- API Health Check: `http://localhost:3000/api/health`
-
-## Features
-
-- Upload networking spreadsheets
-- Manage contacts and track interactions
-- Visual network map
-- Web search integration with OpenAI
-- **AI-Powered Call Notes**: Upload photos of call notes - the system will:
-  - Extract all text from images using OpenAI Vision API (OCR)
-  - Automatically summarize the notes using AI
-  - Store both the full extracted text and summary
-- Automated follow-up recommendations
-
-## API Endpoints
-
-- `POST /api/search` - Search the web with OpenAI processing
-- `GET /api/health` - Health check endpoint
-
-## Notes
-
-- The `.env` file is gitignored for security
-- Make sure your OpenAI API key has sufficient credits
-- The web search uses DuckDuckGo as a free search provider
-
+Older root-level guides remain indexed for review. They may describe historical settings or actions that affect production; consult them as references rather than verified runbooks.
