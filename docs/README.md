@@ -2,10 +2,9 @@
 
 ## Current engineering entry points
 
-- [Project README](../README.md): source map and local development precautions.
+- [Project README](../README.md): existing project overview and setup instructions.
 - [Agent instructions](../AGENTS.md): engineering and production safety rules.
 - [Architecture and direction](ARCHITECTURE.md): observed architecture, proposals, and decisions needed.
-- [Engineering workflow](CONTRIBUTING.md): branches, verification, and review.
 - [Analytics overview](../analytics/README.md): reporting tools maintained alongside the app.
 
 ## Existing guides awaiting review
